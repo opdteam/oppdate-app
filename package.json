@@ -1,0 +1,26 @@
+{
+  "name": "oppdate",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "yarn workspace @oppdate/api dev",
+    "dev:web": "yarn workspace @oppdate/web dev",
+    "dev": "concurrently \"yarn dev:api\" \"yarn dev:web\"",
+    "build:api": "yarn workspace @oppdate/api build",
+    "build:web": "yarn workspace @oppdate/web build",
+    "build": "yarn build:api && yarn build:web",
+    "db:migrate": "yarn workspace @oppdate/api db:migrate",
+    "db:generate": "yarn workspace @oppdate/api db:generate",
+    "db:seed-admin": "yarn workspace @oppdate/api db:seed-admin",
+    "type-check": "yarn workspaces run type-check",
+    "lint": "yarn workspace @oppdate/web lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.5.3"
+  }
+}

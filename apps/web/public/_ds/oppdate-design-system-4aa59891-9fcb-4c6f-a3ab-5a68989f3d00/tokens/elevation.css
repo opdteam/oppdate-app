@@ -1,0 +1,15 @@
+:root{
+  /* Warm shadows keyed to the primary, for light surfaces */
+  --shadow-xs: 0 1px 2px rgba(194,65,12,0.06);
+  --shadow-card: 0 4px 16px rgba(194,65,12,0.10);
+  --shadow-md: 0 10px 32px rgba(194,65,12,0.16);
+  --shadow-lg: 0 16px 40px rgba(194,65,12,0.14), 0 28px 64px rgba(194,65,12,0.10);
+
+  /* The one neutral shadow — light elements floating over an ink section */
+  --shadow-ink-drop: 0 20px 48px rgba(0,0,0,0.35);
+  --shadow-cursor-badge: 0 6px 20px rgba(0,0,0,0.18);
+
+  --elevation-card-rest: var(--shadow-card);
+  --elevation-card-hover: var(--shadow-md);
+  --elevation-frame: var(--shadow-lg);
+}

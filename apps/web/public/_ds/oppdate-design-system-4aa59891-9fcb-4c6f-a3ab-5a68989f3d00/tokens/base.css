@@ -1,0 +1,13 @@
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--surface-page);color:var(--text-body);font-family:var(--font-sans);font-size:var(--type-body-size);line-height:var(--type-body-leading);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,h4{font-family:var(--font-serif);color:var(--text-heading);margin:0;text-wrap:pretty}
+h1{font-size:var(--type-hero-size);font-weight:var(--type-hero-weight);line-height:var(--type-hero-leading);letter-spacing:var(--type-hero-tracking)}
+h2{font-size:var(--type-h2-size);font-weight:var(--type-h2-weight);line-height:var(--type-h2-leading)}
+h3{font-size:var(--type-h3-size);font-weight:var(--type-h3-weight);line-height:var(--type-h3-leading)}
+p{margin:0;text-wrap:pretty}
+a{color:var(--text-link);text-decoration:none;transition:color var(--duration-fast) var(--ease-out-soft)}
+a:hover{color:var(--action-hover);text-decoration:underline;text-underline-offset:3px}
+button{font-family:inherit}
+::selection{background:var(--action-wash);color:var(--color-text-ink)}
+@media (max-width:600px){h1{font-size:var(--type-hero-size-sm)}h2{font-size:var(--type-h2-size-sm)}}

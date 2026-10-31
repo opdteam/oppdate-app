@@ -1,0 +1,13 @@
+:root{
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  --radius-chip: var(--radius-sm);
+  --radius-input: var(--radius-md);
+  --radius-card: var(--radius-lg);
+  --radius-frame: var(--radius-xl);
+  --radius-pill: var(--radius-full);
+}

@@ -1,0 +1,58 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: oppdate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: oppdate
+    ports:
+      - '5433:5432'
+    volumes:
+      - oppdate_postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d oppdate']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: oppdate-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - oppdate_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: pgAdmin for database browsing (visit http://localhost:5050)
+  # Comment out if you prefer Drizzle Studio instead
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: oppdate-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@oppdate.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '5050:80'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools  # Only starts with: docker compose --profile tools up
+
+volumes:
+  oppdate_postgres_data:
+    driver: local
+  oppdate_redis_data:
+    driver: local

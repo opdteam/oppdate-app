@@ -1,0 +1,31 @@
+:root{
+  --space-base: 4px;
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 80px;
+  --space-10: 120px;
+
+  /* Layout */
+  --container-max: 1240px;
+  --container-pad: 24px;
+  --container-pad-sm: 20px;
+  --section-rhythm-loose: 120px; /* hero and ink breaks */
+  --section-rhythm-tight: 80px;  /* dense content sections */
+
+  /* Breakpoints, for reference in component docs */
+  --bp-lg: 960px;
+  --bp-sm: 600px;
+
+  /* Control heights */
+  --control-height: 56px;
+  --control-height-lg: 52px;
+  --control-height-sm: 40px;
+  --control-pad-x: 30px;
+}

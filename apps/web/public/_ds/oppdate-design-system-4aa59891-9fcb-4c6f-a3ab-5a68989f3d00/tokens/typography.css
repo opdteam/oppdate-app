@@ -1,0 +1,55 @@
+:root{
+  /* Display and headings — Fraunces only */
+  --type-hero-size: 72px;
+  --type-hero-weight: 800;
+  --type-hero-leading: 1.0;
+  --type-hero-tracking: -0.01em;
+
+  --type-h2-size: 48px;
+  --type-h2-weight: 700;
+  --type-h2-leading: 1.05;
+
+  --type-h2-split-size: 40px;
+  --type-h2-split-leading: 1.08;
+
+  --type-h3-size: 26px;
+  --type-h3-weight: 600;
+  --type-h3-leading: 1.15;
+
+  --type-tagline-size: 30px;
+  --type-tagline-weight: 600;
+  --type-tagline-leading: 1.2;
+
+  --type-stat-size: 60px;
+  --type-stat-weight: 800;
+  --type-stat-leading: 0.95;
+
+  --type-index-size: 20px;
+  --type-index-weight: 700;
+
+  /* Functional — DM Sans only */
+  --type-body-large-size: 18px;
+  --type-body-large-leading: 1.6;
+  --type-body-size: 16px;
+  --type-body-leading: 1.55;
+
+  --type-eyebrow-size: 11px;
+  --type-eyebrow-weight: 700;
+  --type-eyebrow-tracking: 0.12em;
+
+  --type-nav-size: 15px;
+  --type-nav-weight: 500;
+
+  --type-button-size: 16px;
+  --type-button-weight: 700;
+
+  /* Monospace — countdown digits and code only */
+  --type-countdown-size: 20px;
+  --type-countdown-weight: 700;
+  --type-code-size: 12px;
+  --type-code-leading: 1.4;
+
+  /* Mobile step-down (<=600px) */
+  --type-hero-size-sm: 40px;
+  --type-h2-size-sm: 32px;
+}

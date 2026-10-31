@@ -1,0 +1,76 @@
+{
+  "version": "6",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1779489507148,
+      "tag": "0000_parallel_harry_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1779787165315,
+      "tag": "0001_first_sphinx",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788436800000,
+      "tag": "0002_sow_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1757116800000,
+      "tag": "0003_user_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1757203200000,
+      "tag": "0004_missing_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1757289600000,
+      "tag": "0005_application_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1757376000000,
+      "tag": "0006_consultation_calendar",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1758067200000,
+      "tag": "0007_institution_logo",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1758153600000,
+      "tag": "0008_mentor_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1758240000000,
+      "tag": "0009_consultation_sessions",
+      "breakpoints": true
+    }
+  ]
+}

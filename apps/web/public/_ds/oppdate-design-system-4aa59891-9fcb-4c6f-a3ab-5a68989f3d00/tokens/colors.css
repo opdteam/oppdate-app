@@ -1,0 +1,64 @@
+:root{
+  /* Base — brand action. One clay orange carries every interactive element. */
+  --color-primary: #C2410C;
+  --color-primary-hover: #A8380A;
+  --color-primary-press: #8F2F08;
+  --color-primary-tint: #F4DCC9;
+
+  /* Base — ink. A warm near black used as a full section surface. */
+  --color-ink: #160E08;
+  --color-ink-raised: #241708;
+  --color-ink-line: rgba(255,249,244,0.12);
+
+  /* Base — light surfaces */
+  --color-background: #FFF9F4;
+  --color-surface: #FFFFFF;
+  --color-surface-sunken: #FBEEE1;
+  --color-border: #E4D5C6;
+  --color-border-strong: #CBB59F;
+
+  /* Base — text */
+  --color-text-ink: #1A0F06;
+  --color-text-secondary: #4A3626;
+  --color-text-muted: #8C7461;
+  --color-text-inverse: #FFF9F4;
+  --color-text-inverse-muted: rgba(255,249,244,0.64);
+
+  /* Base — decorative accents. Never on anything clickable. */
+  --color-accent-gold: #E8A84D;
+  --color-mascot-ginger: #B5530A;
+
+  /* Base — status */
+  --color-status-success: #3F7D45;
+  --color-status-success-bg: #E7F2E5;
+  --color-status-pending: #B8791C;
+  --color-status-pending-bg: #FBF0DC;
+  --color-status-info: #33608C;
+  --color-status-info-bg: #E7EFF6;
+
+  /* Semantic aliases — prefer these in component code */
+  --action: var(--color-primary);
+  --action-hover: var(--color-primary-hover);
+  --action-press: var(--color-primary-press);
+  --action-wash: var(--color-primary-tint);
+
+  --surface-page: var(--color-background);
+  --surface-card: var(--color-surface);
+  --surface-band: var(--color-surface-sunken);
+  --surface-dark: var(--color-ink);
+  --surface-dark-raised: var(--color-ink-raised);
+
+  --text-heading: var(--color-text-ink);
+  --text-body: var(--color-text-secondary);
+  --text-quiet: var(--color-text-muted);
+  --text-on-dark: var(--color-text-inverse);
+  --text-on-dark-quiet: var(--color-text-inverse-muted);
+  --text-link: var(--color-primary);
+
+  --line: var(--color-border);
+  --line-strong: var(--color-border-strong);
+  --line-on-dark: var(--color-ink-line);
+
+  --decor-numeral: var(--color-accent-gold);
+  --decor-mascot: var(--color-mascot-ginger);
+}

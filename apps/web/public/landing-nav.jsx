@@ -33,7 +33,10 @@
   /* Two-line burger that morphs into an X. The shipped control swaps a menu icon for an x
      with no transition, so it is replaced with two bars that rotate and converge. */
   function Burger({ open, onClick }) {
-    const bar = { position: 'absolute', left: 11, width: 22, height: 2, borderRadius: 2, background: 'currentColor', transition: 'translate var(--duration-base) var(--ease-out-soft), rotate var(--duration-base) var(--ease-out-soft)' };
+    const narrow = window.matchMedia('(max-width: 430px)').matches;
+    const sz = narrow ? 34 : 44;
+    const mid = sz / 2;
+    const bar = { position: 'absolute', left: narrow ? 7 : 11, width: 20, height: 2, borderRadius: 2, background: 'currentColor', transition: 'translate var(--duration-base) var(--ease-out-soft), rotate var(--duration-base) var(--ease-out-soft)' };
     return (
       <button
         type="button"
@@ -41,10 +44,10 @@
         aria-label={open ? 'Close menu' : 'Menu'}
         aria-expanded={open}
         onClick={onClick}
-        style={{ display: 'none', position: 'relative', width: 44, height: 44, background: 'none', border: 'none', color: 'var(--text-on-dark)', cursor: 'pointer', padding: 0 }}
+        style={{ display: 'none', position: 'relative', width: sz, height: sz, background: 'none', border: 'none', color: 'var(--text-on-dark)', cursor: 'pointer', padding: 0 }}
       >
-        <span style={Object.assign({}, bar, { top: 21, translate: open ? '0 0' : '0 -4px', rotate: open ? '45deg' : '0deg' })} />
-        <span style={Object.assign({}, bar, { top: 21, translate: open ? '0 0' : '0 4px', rotate: open ? '-45deg' : '0deg' })} />
+        <span style={Object.assign({}, bar, { top: mid - 1, translate: open ? '0 0' : '0 -4px', rotate: open ? '45deg' : '0deg' })} />
+        <span style={Object.assign({}, bar, { top: mid - 1, translate: open ? '0 0' : '0 4px', rotate: open ? '-45deg' : '0deg' })} />
       </button>
     );
   }

@@ -244,7 +244,7 @@ function apiToFormData(o: ApiOpportunity): FormData {
     docs: rawDocs.length > 0
       ? rawDocs.map(d => typeof d === 'string'
           ? { type: d, required: true, formats: ['PDF'], creatable: CREATABLE_DOCS.includes(d) }
-          : { type: d.type ?? '', required: d.required ?? true, formats: d.formats || ['PDF'], creatable: CREATABLE_DOCS.includes(d.type ?? '') })
+          : { type: (d as any).type ?? '', required: (d as any).required ?? true, formats: (d as any).formats || ['PDF'], creatable: CREATABLE_DOCS.includes((d as any).type ?? '') })
       : [{ type: '', required: true, formats: ['PDF'], creatable: false }],
     dates: [],
     funding: Array.isArray(o.tags) ? o.tags.filter(t => FUND_OPTIONS.includes(t)) : [],

@@ -114,7 +114,7 @@ export async function messagingRoutes(server: FastifyInstance) {
       socket.on('close', cleanupConnection)
       socket.on('error', cleanupConnection)
 
-      socket.on('message', async (raw) => {
+      socket.on('message', async (raw: Buffer) => {
         try {
           const data = JSON.parse(raw.toString())
           const isAdmin = ['staff_admin', 'manager_admin', 'super_admin'].includes(payload.role)

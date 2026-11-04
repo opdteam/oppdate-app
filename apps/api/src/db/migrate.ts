@@ -107,7 +107,7 @@ async function applyNeon(sql: any, files: string[]) {
       .filter(Boolean)
 
     for (const stmt of statements) {
-      await sql.unsafe(stmt)
+      await sql.query(stmt)
     }
     await sql`INSERT INTO _migrations (name) VALUES (${file})`
   }

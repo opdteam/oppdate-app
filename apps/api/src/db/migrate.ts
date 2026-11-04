@@ -81,7 +81,8 @@ async function applyPg(client: import('pg').PoolClient, files: string[]) {
 // ---------------------------------------------------------------------------
 // Neon serverless HTTP (production)
 // ---------------------------------------------------------------------------
-async function applyNeon(sql: ReturnType<typeof import('@neondatabase/serverless').neon>, files: string[]) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function applyNeon(sql: any, files: string[]) {
   await sql`
     CREATE TABLE IF NOT EXISTS _migrations (
       name TEXT PRIMARY KEY,

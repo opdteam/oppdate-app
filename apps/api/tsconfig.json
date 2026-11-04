@@ -4,7 +4,6 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "module": "commonjs",
-    "moduleResolution": "node10",
     "target": "ES2022",
     "lib": ["ES2022"],
     "skipLibCheck": true,

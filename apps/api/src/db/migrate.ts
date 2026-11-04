@@ -25,7 +25,7 @@ async function runMigrations() {
 
   if (isNeon) {
     const { neon } = await import('@neondatabase/serverless')
-    const sql = neon(process.env.DATABASE_URL!)
+    const sql = neon(process.env.DATABASE_URL!, { fullResults: true })
     await applyNeon(sql, files)
   } else {
     const { Pool } = await import('pg')
@@ -107,7 +107,7 @@ async function applyNeon(sql: any, files: string[]) {
       .filter(Boolean)
 
     for (const stmt of statements) {
-      await sql.query(stmt)
+      await sql(stmt, [])
     }
     await sql`INSERT INTO _migrations (name) VALUES (${file})`
   }

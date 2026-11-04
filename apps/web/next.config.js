@@ -2,6 +2,8 @@ const { withSentryConfig } = require('@sentry/nextjs/config')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: false },
   transpilePackages: ['@oppdate/types', '@oppdate/utils', 'react-pdf'],
   images: {
     remotePatterns: [

@@ -131,12 +131,19 @@ export function middleware(request: NextRequest) {
     }
 
     if (subdomain === 'admin') {
-      // On admin subdomain, all paths are rewritten with /admin prefix internally
-      // e.g. admin.oppdate.app/dashboard → /admin/dashboard
-      // e.g. admin.oppdate.app/login → /admin/login
+      // On admin subdomain, rewrite paths to /admin/* internally
+      // e.g. admin.oppdate.app/dashboard → serves /admin/dashboard
+      // e.g. admin.oppdate.app/login → serves /admin/login
+      // e.g. admin.oppdate.app/ → redirect to /admin/login
+      if (pathname === '/') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/admin/login'
+        return NextResponse.redirect(url)
+      }
       if (!pathname.startsWith('/admin')) {
         const url = request.nextUrl.clone()
         url.pathname = '/admin' + pathname
+        // Use rewrite so the browser URL stays as admin.oppdate.app/dashboard
         return NextResponse.rewrite(url)
       }
     }
@@ -164,8 +171,13 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAdminRoute && !adminToken) {
-    // On admin subdomain the path is already /admin/login after the rewrite above
-    // On other hosts build the full redirect
+    if (!isLocalhost && subdomain === 'admin') {
+      // On admin subdomain: redirect to /login (middleware will rewrite to /admin/login)
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = '/login'
+      loginUrl.search = '?redirect=' + encodeURIComponent(pathname.replace(/^\/admin/, '') + request.nextUrl.search)
+      return NextResponse.redirect(loginUrl)
+    }
     const loginUrl = new URL('/admin/login', request.url)
     if (!isLocalhost) loginUrl.host = getAdminHost(host)
     loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)

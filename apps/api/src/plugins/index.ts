@@ -32,9 +32,11 @@ export async function registerPlugins(server: FastifyInstance) {
   await server.register(cors, {
     origin: process.env.NODE_ENV === 'production'
       ? [
-          process.env.WEB_URL || 'https://oppdate.com',
-          'https://oppdate.com',
-          'https://www.oppdate.com',
+          process.env.WEB_URL || 'https://oppdate.app',
+          'https://oppdate.app',
+          'https://www.oppdate.app',
+          'https://dashboard.oppdate.app',
+          'https://admin.oppdate.app',
         ]
       : (origin, cb) => {
           // In dev, allow localhost and any LAN IP (192.168.x.x, 10.x.x.x, 172.x.x.x)

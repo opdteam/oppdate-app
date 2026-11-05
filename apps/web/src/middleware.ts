@@ -50,7 +50,6 @@ const PUBLIC_SUBDOMAIN_PATHS = [
   '/services/ebooks',
   '/services/apply',
   '/pricing',
-  '/',
 ]
 
 function getSubdomain(request: NextRequest): 'dashboard' | 'admin' | 'public' {
@@ -111,6 +110,14 @@ export function middleware(request: NextRequest) {
     }
 
     if (subdomain === 'dashboard') {
+      // Root of dashboard subdomain: token exists → serve /dashboard, else → /auth/login
+      if (pathname === '/') {
+        const userToken = request.cookies.get('oppdate_token')?.value
+        const url = request.nextUrl.clone()
+        url.pathname = userToken ? '/dashboard' : '/auth/login'
+        return NextResponse.rewrite(url)
+      }
+
       // Admin paths on dashboard → redirect to admin subdomain, strip /admin prefix
       if (pathname.startsWith('/admin')) {
         const url = request.nextUrl.clone()

@@ -126,14 +126,22 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // Public-only paths on dashboard → redirect to public subdomain
+      // Public-only paths on dashboard subdomain:
+      // - RSC prefetch requests (_rsc param): serve in place (no cross-origin redirect)
+      // - Direct browser navigation: redirect to oppdate.app
       const isPublicOnlyPath = PUBLIC_SUBDOMAIN_PATHS.some(
         (r) => pathname === r || (r !== '/' && pathname.startsWith(r))
       )
       if (isPublicOnlyPath) {
-        const url = request.nextUrl.clone()
-        url.host = getPublicHost(host)
-        return NextResponse.redirect(url)
+        const isRscPrefetch = request.nextUrl.searchParams.has('_rsc') ||
+          request.headers.get('rsc') === '1' ||
+          request.headers.get('next-router-prefetch') === '1'
+        if (!isRscPrefetch) {
+          const url = request.nextUrl.clone()
+          url.host = getPublicHost(host)
+          url.searchParams.delete('_rsc')
+          return NextResponse.redirect(url)
+        }
       }
     }
 

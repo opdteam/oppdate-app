@@ -9,16 +9,21 @@ const USER_ROUTES = [
   '/profile',
   '/credentials',
   '/opportunities',
-  '/services',
   '/notifications',
   '/onboarding',
   '/apply',
+  '/help',
+  '/services/consultations/book',
+  '/services/ebooks/checkout',
+  '/services/ebooks/library',
+  '/services/ebooks/reader',
+  '/services',
 ]
 
 // Routes that require authentication as an admin
 const ADMIN_ROUTES = ['/admin']
 
-// Public sub-routes under otherwise-protected prefixes
+// Public routes — no auth required
 const PUBLIC_ROUTES = [
   '/services/consultations',
   '/services/mentorship',
@@ -32,38 +37,141 @@ const PUBLIC_ROUTES = [
   '/admin/accept-invite',
 ]
 
-// Routes only for guests (redirect to dashboard if logged in as a regular user)
-const GUEST_ONLY_ROUTES = ['/auth/login', '/auth/register', '/auth/forgot-password']
+// Routes only for guests (clear token and let through so user can re-authenticate)
+const GUEST_ONLY_ROUTES = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
+
+// Public subdomain hosts
+const PUBLIC_HOSTS = ['oppdate.app', 'www.oppdate.app']
+
+// Pages that live on oppdate.app (public subdomain)
+const PUBLIC_SUBDOMAIN_PATHS = [
+  '/services/consultations',
+  '/services/mentorship',
+  '/services/ebooks',
+  '/services/apply',
+  '/pricing',
+  '/',
+]
+
+function getSubdomain(request: NextRequest): 'dashboard' | 'admin' | 'public' {
+  const host = request.headers.get('host') ?? ''
+  if (host.startsWith('dashboard.')) return 'dashboard'
+  if (host.startsWith('admin.')) return 'admin'
+  return 'public'
+}
+
+function getDashboardHost(host: string): string {
+  if (host === 'oppdate.app' || host === 'www.oppdate.app') return 'dashboard.oppdate.app'
+  // localhost: keep as-is (no subdomain enforcement in dev)
+  return host
+}
+
+function getAdminHost(host: string): string {
+  if (host === 'oppdate.app' || host === 'www.oppdate.app') return 'admin.oppdate.app'
+  if (host.startsWith('dashboard.')) return host.replace('dashboard.', 'admin.')
+  return host
+}
+
+function getPublicHost(host: string): string {
+  if (host.startsWith('dashboard.')) return host.replace('dashboard.', '')
+  if (host.startsWith('admin.')) return host.replace('admin.', '')
+  return host
+}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const host = request.headers.get('host') ?? ''
+  const subdomain = getSubdomain(request)
+  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1')
+
+  // Skip subdomain enforcement in local development
+  if (!isLocalhost) {
+    // --- Subdomain enforcement ---
+
+    if (subdomain === 'public') {
+      // Admin paths on public host → redirect to admin subdomain
+      if (pathname.startsWith('/admin')) {
+        const url = request.nextUrl.clone()
+        url.host = getAdminHost(host)
+        // Strip /admin prefix so admin.oppdate.app/dashboard not /admin/dashboard
+        url.pathname = pathname.replace(/^\/admin/, '') || '/dashboard'
+        return NextResponse.redirect(url)
+      }
+
+      // User app paths on public host → redirect to dashboard subdomain
+      const isDashboardPath =
+        USER_ROUTES.some((r) => pathname.startsWith(r)) ||
+        GUEST_ONLY_ROUTES.some((r) => pathname.startsWith(r))
+
+      if (isDashboardPath) {
+        const url = request.nextUrl.clone()
+        url.host = getDashboardHost(host)
+        return NextResponse.redirect(url)
+      }
+    }
+
+    if (subdomain === 'dashboard') {
+      // Admin paths on dashboard → redirect to admin subdomain, strip /admin prefix
+      if (pathname.startsWith('/admin')) {
+        const url = request.nextUrl.clone()
+        url.host = getAdminHost(host)
+        url.pathname = pathname.replace(/^\/admin/, '') || '/dashboard'
+        return NextResponse.redirect(url)
+      }
+
+      // Public-only paths on dashboard → redirect to public subdomain
+      const isPublicOnlyPath = PUBLIC_SUBDOMAIN_PATHS.some(
+        (r) => pathname === r || (r !== '/' && pathname.startsWith(r))
+      )
+      if (isPublicOnlyPath) {
+        const url = request.nextUrl.clone()
+        url.host = getPublicHost(host)
+        return NextResponse.redirect(url)
+      }
+    }
+
+    if (subdomain === 'admin') {
+      // On admin subdomain, all paths are rewritten with /admin prefix internally
+      // e.g. admin.oppdate.app/dashboard → /admin/dashboard
+      // e.g. admin.oppdate.app/login → /admin/login
+      if (!pathname.startsWith('/admin')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/admin' + pathname
+        return NextResponse.rewrite(url)
+      }
+    }
+  }
+
+  // --- Auth guards ---
+
+  const isPublic = PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + '/')
+  )
+  const isUserRoute =
+    !isPublic && USER_ROUTES.some((route) => pathname.startsWith(route))
+  const isAdminRoute =
+    !isPublic && ADMIN_ROUTES.some((route) => pathname.startsWith(route))
+  const isGuestOnly = GUEST_ONLY_ROUTES.some((route) => pathname.startsWith(route))
+
   const userToken = request.cookies.get('oppdate_token')?.value
   const adminToken = request.cookies.get('oppdate_admin_token')?.value
 
-  const isPublic = PUBLIC_ROUTES.some((route) => pathname === route)
-  const isUserRoute = !isPublic && USER_ROUTES.some((route) => pathname.startsWith(route))
-  const isAdminRoute = !isPublic && ADMIN_ROUTES.some((route) => pathname.startsWith(route))
-  const isGuestOnly = GUEST_ONLY_ROUTES.some((route) => pathname.startsWith(route))
-
-  // No user token on a protected user route - redirect to user login
   if (isUserRoute && !userToken) {
     const loginUrl = new URL('/auth/login', request.url)
-    const search = request.nextUrl.search
-    loginUrl.searchParams.set('redirect', pathname + search)
+    if (!isLocalhost) loginUrl.host = getDashboardHost(host)
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 
-  // No admin token on a protected admin route - redirect to admin login
   if (isAdminRoute && !adminToken) {
+    // On admin subdomain the path is already /admin/login after the rewrite above
+    // On other hosts build the full redirect
     const loginUrl = new URL('/admin/login', request.url)
-    const search = request.nextUrl.search
-    loginUrl.searchParams.set('redirect', pathname + search)
+    if (!isLocalhost) loginUrl.host = getAdminHost(host)
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Logged-in regular user hitting guest-only pages - clear their session and let them through
-  // so they can log in as a different account without being bounced to the dashboard.
-  // (admin session does NOT affect this check - sessions are fully independent)
   if (isGuestOnly && userToken) {
     const response = NextResponse.next()
     response.cookies.set('oppdate_token', '', { path: '/', maxAge: 0, sameSite: 'lax' })

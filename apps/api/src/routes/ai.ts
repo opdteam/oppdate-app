@@ -161,13 +161,13 @@ async function getUserApplicationContext(userId: string): Promise<ApplicationCon
 const TOOLS: Anthropic.Tool[] = [
   {
     name: 'search_web',
-    description: 'Search the web for up-to-date information about an opportunity, institution, scholarship requirements, eligibility rules, deadlines, or any external fact that is not in the listing data. Use this whenever the user asks about something that might have changed or that is not covered by the listing details provided.',
+    description: 'Search the web for information about any opportunity, programme, scholarship, fellowship, internship, institution, or organisation the user mentions by name. ALWAYS call this tool first when the user asks you to "look up", "find", "search", or "check" something specific by name — even if it sounds unfamiliar, local, or like a business. Never decide from your own knowledge whether something is a scholarship or not; search first, then answer. Also use this for eligibility details, deadlines, requirements, or any external fact that may have changed.',
     input_schema: {
       type: 'object' as const,
       properties: {
         query: {
           type: 'string',
-          description: 'A specific, targeted search query. Include the opportunity name, institution, and year where known.',
+          description: 'A specific, targeted search query. Include the name the user mentioned plus "scholarship", "fellowship", "internship", or "programme" to narrow results. Add country or year if known.',
         },
       },
       required: ['query'],
@@ -345,11 +345,12 @@ ${opportunityContext}
 When the user's name is known, use it occasionally but not in every message. Use the profile and application context to give specific, relevant answers without asking for details the user has already provided.
 
 Tool use guidance:
-- Use search_web when the user asks about eligibility details, interview processes, specific programme requirements, recent changes, or anything not fully covered by the listing data above.
+- If the user asks to "look up", "find", "search", "check", or "tell me about" anything by name, call search_web immediately. Do not decide from your own knowledge whether the name sounds like an opportunity or not. Search first, always.
+- Use search_web for eligibility details, interview processes, specific programme requirements, recent changes, or any external fact not covered by the listing data above.
 - Use search_opportunities when the user asks for similar or alternative opportunities, or when browsing without a specific listing open.
 - Use get_application_context mid-conversation when the user asks what stage they are at, what to do next, or whether they have a specific document — this fetches their live pipeline state.
-- Never invent facts about an opportunity. If unsure, search the web first.
-- When web results are used, briefly acknowledge the source (e.g. "according to the official programme page").
+- Never invent facts or make assumptions about what something is. If you do not know, search the web.
+- When web results are used, briefly cite the source domain (e.g. "according to chevening.org").
 - OppDate listing data takes precedence over web results if they conflict.
 
 Guidelines:

@@ -317,6 +317,14 @@ export async function consultationRoutes(server: FastifyInstance) {
 
       if (!rows[0]) return notFound(reply, 'Consultation')
 
+      // Release the slot back to available when a booking is cancelled
+      if (body.data.status === 'cancelled' && rows[0].slotId) {
+        await db
+          .update(schema.consultationSlots)
+          .set({ claimed: false, consultationId: null })
+          .where(eq(schema.consultationSlots.id, rows[0].slotId))
+      }
+
       return ok(reply, rows[0])
     }
   )

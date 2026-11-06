@@ -740,7 +740,9 @@ export function GuidePanel({ onClose, initialGreeting, opportunitySlug, opportun
   const saveSession = useCallback(async () => {
     if (savedRef.current) return
     const msgs = messagesRef.current.filter(m => m.kind !== 'system')
-    if (msgs.length === 0) return
+    // Only save once the user has actually sent at least one message
+    const hasUserMessage = msgs.some(m => m.kind === 'user')
+    if (!hasUserMessage) return
     savedRef.current = true
     try {
       await api.post('/api/v1/guide-sessions', {

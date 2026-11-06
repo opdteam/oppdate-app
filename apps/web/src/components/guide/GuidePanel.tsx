@@ -797,7 +797,7 @@ export function GuidePanel({ onClose, initialGreeting, opportunitySlug, opportun
       ...(mobile
         ? { position: 'fixed' as const, inset: 0, zIndex: 9999, borderRadius: 0 }
         : { position: 'fixed' as const, right: 24, bottom: 24, width: 420,
-            maxHeight: 'min(640px, calc(100vh - 48px))', borderRadius: 20, zIndex: 45 }
+            maxHeight: 'min(640px, calc(100vh - 96px))', borderRadius: 20, zIndex: 45 }
       ),
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
       background: mobile ? '#FAF7F4' : 'rgba(255,255,255,0.82)',

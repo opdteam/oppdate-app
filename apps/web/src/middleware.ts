@@ -22,7 +22,7 @@ const USER_ROUTES = [
 // Routes that require authentication as an admin
 const ADMIN_ROUTES = ['/admin']
 
-// Public routes — no auth required
+// Public routes - no auth required
 const PUBLIC_ROUTES = [
   '/services/consultations',
   '/services/mentorship',
@@ -39,140 +39,31 @@ const PUBLIC_ROUTES = [
 // Routes only for guests (clear token and let through so user can re-authenticate)
 const GUEST_ONLY_ROUTES = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
 
-function getSubdomain(request: NextRequest): 'dashboard' | 'admin' | 'public' {
-  const host = request.headers.get('host') ?? ''
-  if (host.startsWith('dashboard.')) return 'dashboard'
-  if (host.startsWith('admin.')) return 'admin'
-  return 'public'
-}
-
-function getDashboardHost(host: string): string {
-  if (host === 'oppdate.app' || host === 'www.oppdate.app') return 'dashboard.oppdate.app'
-  // localhost: keep as-is (no subdomain enforcement in dev)
-  return host
-}
-
-function getAdminHost(host: string): string {
-  if (host === 'oppdate.app' || host === 'www.oppdate.app') return 'admin.oppdate.app'
-  if (host.startsWith('dashboard.')) return host.replace('dashboard.', 'admin.')
-  return host
-}
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const host = request.headers.get('host') ?? ''
-  const subdomain = getSubdomain(request)
-  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1')
-
-  // Skip subdomain enforcement in local development
-  if (!isLocalhost) {
-    // --- Subdomain enforcement ---
-
-    if (subdomain === 'public') {
-      // Admin paths on public host → redirect to admin subdomain
-      if (pathname.startsWith('/admin')) {
-        const url = request.nextUrl.clone()
-        url.host = getAdminHost(host)
-        // Strip /admin prefix so admin.oppdate.app/dashboard not /admin/dashboard
-        url.pathname = pathname.replace(/^\/admin/, '') || '/dashboard'
-        return NextResponse.redirect(url)
-      }
-
-      // User app paths on public host → redirect to dashboard subdomain
-      const isDashboardPath =
-        USER_ROUTES.some((r) => pathname.startsWith(r)) ||
-        GUEST_ONLY_ROUTES.some((r) => pathname.startsWith(r))
-
-      if (isDashboardPath) {
-        const url = request.nextUrl.clone()
-        url.host = getDashboardHost(host)
-        return NextResponse.redirect(url)
-      }
-    }
-
-    if (subdomain === 'dashboard') {
-      // Root of dashboard subdomain: token exists → /dashboard, else → /auth/login
-      if (pathname === '/') {
-        const userToken = request.cookies.get('oppdate_token')?.value
-        const url = request.nextUrl.clone()
-        url.pathname = userToken ? '/dashboard' : '/auth/login'
-        return NextResponse.redirect(url)
-      }
-
-      // /services/apply is a standalone public marketing page — redirect to oppdate.app
-      if (pathname === '/services/apply' || pathname.startsWith('/services/apply/')) {
-        const url = request.nextUrl.clone()
-        url.host = host.replace('dashboard.', '')
-        return NextResponse.redirect(url)
-      }
-
-      // Admin paths on dashboard → redirect to admin subdomain, strip /admin prefix
-      if (pathname.startsWith('/admin')) {
-        const url = request.nextUrl.clone()
-        url.host = getAdminHost(host)
-        url.pathname = pathname.replace(/^\/admin/, '') || '/dashboard'
-        return NextResponse.redirect(url)
-      }
-
-      // Public service paths are accessible on dashboard subdomain too — no redirect.
-      // Next.js prefetches links cross-origin redirects break RSC fetches.
-      // Users navigating from the dashboard stay on dashboard.oppdate.app.
-    }
-
-    if (subdomain === 'admin') {
-      // On admin subdomain, rewrite paths to /admin/* internally
-      // e.g. admin.oppdate.app/dashboard → serves /admin/dashboard
-      // e.g. admin.oppdate.app/login → serves /admin/login
-      // e.g. admin.oppdate.app/ → redirect to /admin/login
-      if (pathname === '/') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/admin/login'
-        return NextResponse.rewrite(url)
-      }
-      if (!pathname.startsWith('/admin')) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/admin' + pathname
-        return NextResponse.rewrite(url)
-      }
-    }
-  }
-
-  // --- Auth guards ---
+  const userToken = request.cookies.get('oppdate_token')?.value
+  const adminToken = request.cookies.get('oppdate_admin_token')?.value
 
   const isPublic = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/')
   )
-  const isUserRoute =
-    !isPublic && USER_ROUTES.some((route) => pathname.startsWith(route))
-  const isAdminRoute =
-    !isPublic && ADMIN_ROUTES.some((route) => pathname.startsWith(route))
+  const isUserRoute = !isPublic && USER_ROUTES.some((route) => pathname.startsWith(route))
+  const isAdminRoute = !isPublic && ADMIN_ROUTES.some((route) => pathname.startsWith(route))
   const isGuestOnly = GUEST_ONLY_ROUTES.some((route) => pathname.startsWith(route))
-
-  const userToken = request.cookies.get('oppdate_token')?.value
-  const adminToken = request.cookies.get('oppdate_admin_token')?.value
 
   if (isUserRoute && !userToken) {
     const loginUrl = new URL('/auth/login', request.url)
-    if (!isLocalhost) loginUrl.host = getDashboardHost(host)
     loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 
   if (isAdminRoute && !adminToken) {
-    if (!isLocalhost && subdomain === 'admin') {
-      // On admin subdomain: rewrite to /admin/login so URL stays as admin.oppdate.app/login
-      const loginUrl = request.nextUrl.clone()
-      loginUrl.pathname = '/admin/login'
-      const bare = pathname.replace(/^\/admin/, '')
-      if (bare) loginUrl.searchParams.set('redirect', bare + request.nextUrl.search)
-      return NextResponse.rewrite(loginUrl)
-    }
     const loginUrl = new URL('/admin/login', request.url)
-    if (!isLocalhost) loginUrl.host = getAdminHost(host)
     loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 
+  // Logged-in user hitting guest-only pages - clear session so they can re-authenticate
   if (isGuestOnly && userToken) {
     const response = NextResponse.next()
     response.cookies.set('oppdate_token', '', { path: '/', maxAge: 0, sameSite: 'lax' })
@@ -183,5 +74,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|public/|_ds/|assets/|.*\\.jsx|.*\\.js$|.*\\.css$|.*\\.webp|.*\\.jpg|.*\\.png|.*\\.jpeg|.*\\.svg|.*\\.woff2?).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|public/|_ds/|assets/|.*\.jsx|.*\.js$|.*\.css$|.*\.webp|.*\.jpg|.*\.png|.*\.jpeg|.*\.svg|.*\.woff2?).*)'],
 }

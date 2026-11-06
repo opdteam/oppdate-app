@@ -21,7 +21,7 @@ const SERVICES = [
     title: 'eBooks',
     description: 'Practical, no-fluff handbooks on scholarships, visas, and building a career across borders.',
     icon: BookOpen,
-    href: '/services/ebooks',
+    href: '/services/ebooks/library',
   },
 ]
 

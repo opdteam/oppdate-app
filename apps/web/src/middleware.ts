@@ -17,7 +17,6 @@ const USER_ROUTES = [
   '/services/ebooks/checkout',
   '/services/ebooks/library',
   '/services/ebooks/reader',
-  '/services',
 ]
 
 // Routes that require authentication as an admin
@@ -92,18 +91,11 @@ export function middleware(request: NextRequest) {
     }
 
     if (subdomain === 'dashboard') {
-      // Root of dashboard subdomain: token exists → serve /dashboard, else → /auth/login
+      // Root of dashboard subdomain: token exists → /dashboard, else → /auth/login
       if (pathname === '/') {
         const userToken = request.cookies.get('oppdate_token')?.value
         const url = request.nextUrl.clone()
         url.pathname = userToken ? '/dashboard' : '/auth/login'
-        return NextResponse.rewrite(url)
-      }
-
-      // /dashboard on the dashboard subdomain → redirect to / so URL bar stays clean
-      if (pathname === '/dashboard') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/'
         return NextResponse.redirect(url)
       }
 

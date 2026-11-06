@@ -386,13 +386,23 @@ Writing rules (follow strictly):
       let finalText = ''
       const MAX_TOOL_ROUNDS = 4 // prevent runaway loops
 
+      // Detect if the user's message is clearly a lookup/search/find intent
+      const lowerMsg = message.toLowerCase()
+      const isSearchIntent = /\b(lookup|look up|find|search|check|tell me about|what is|who is|show me|get me|fetch)\b/.test(lowerMsg)
+
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        // Force a tool call on round 0 when user clearly wants a search
+        const toolChoice: Anthropic.Messages.ToolChoiceAuto | Anthropic.Messages.ToolChoiceAny =
+          round === 0 && isSearchIntent
+            ? { type: 'any' }
+            : { type: 'auto' }
+
         const response = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           system: systemPrompt,
           tools: TOOLS,
-          tool_choice: { type: 'auto' },
+          tool_choice: toolChoice,
           messages,
         })
 

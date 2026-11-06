@@ -186,44 +186,37 @@ export async function consultationRoutes(server: FastifyInstance) {
 
     if (!slot) return badRequest(reply, 'This slot is no longer available. Please choose another time.')
 
-    // Atomically claim slot and create booking
-    const result = await db.transaction(async (tx) => {
-      // Re-check inside transaction to prevent race conditions
-      const [freshSlot] = await tx
-        .select()
-        .from(schema.consultationSlots)
-        .where(
-          and(
-            eq(schema.consultationSlots.id, slotId),
-            eq(schema.consultationSlots.claimed, false)
-          )
+    // Create booking then claim slot — use the claimed=false WHERE clause as an optimistic lock
+    const [booking] = await db
+      .insert(schema.consultations)
+      .values({
+        userId: user.id,
+        sessionId,
+        slotId,
+        durationMinutes: session.durationMinutes,
+        priceUsd: session.priceUsd,
+        scheduledAt: slot.startsAt,
+        status: 'pending',
+      })
+      .returning()
+
+    // Claim the slot only if it is still unclaimed (race condition guard)
+    const claimed = await db
+      .update(schema.consultationSlots)
+      .set({ claimed: true, consultationId: booking.id })
+      .where(
+        and(
+          eq(schema.consultationSlots.id, slotId),
+          eq(schema.consultationSlots.claimed, false)
         )
-        .limit(1)
+      )
+      .returning()
 
-      if (!freshSlot) return null
-
-      const [booking] = await tx
-        .insert(schema.consultations)
-        .values({
-          userId: user.id,
-          sessionId,
-          slotId,
-          durationMinutes: session.durationMinutes,
-          priceUsd: session.priceUsd,
-          scheduledAt: slot.startsAt,
-          status: 'pending',
-        })
-        .returning()
-
-      await tx
-        .update(schema.consultationSlots)
-        .set({ claimed: true, consultationId: booking.id })
-        .where(eq(schema.consultationSlots.id, slotId))
-
-      return booking
-    })
-
-    if (!result) return badRequest(reply, 'This slot was just taken. Please choose another time.')
+    if (!claimed.length) {
+      // Another request claimed it first — delete the orphaned booking
+      await db.delete(schema.consultations).where(eq(schema.consultations.id, booking.id))
+      return badRequest(reply, 'This slot was just taken. Please choose another time.')
+    }
 
     return created(reply, result, 'Consultation booked. Proceed to payment.')
   })

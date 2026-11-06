@@ -19,6 +19,7 @@ function getConnection(): IORedis {
 }
 
 // Email worker -- sends emails via Resend
+// Critical: keep concurrency and polling responsive for transactional emails
 const emailWorker = new Worker<EmailJobData>(
   'email',
   async (job) => {
@@ -26,10 +27,16 @@ const emailWorker = new Worker<EmailJobData>(
     const sent = await sendEmail({ to, subject, html })
     if (!sent) throw new Error('Email send failed')
   },
-  { connection: getConnection(), concurrency: 5 }
+  {
+    connection: getConnection(),
+    concurrency: 3,         // reduced from 5 — still fast enough for transactional volume
+    stalledInterval: 60000, // check for stalled jobs every 60s (default: 30s)
+    maxStalledCount: 1,
+  }
 )
 
 // Notification worker -- creates in-app notifications
+// Slight delay (a few seconds) is acceptable for in-app notifications
 const notificationWorker = new Worker<NotificationJobData>(
   'notification',
   async (job) => {
@@ -44,10 +51,16 @@ const notificationWorker = new Worker<NotificationJobData>(
     }).returning()
     broadcastToUser(userId, { type: 'new_notification', notification: notif })
   },
-  { connection: getConnection(), concurrency: 10 }
+  {
+    connection: getConnection(),
+    concurrency: 5,          // reduced from 10
+    stalledInterval: 60000,  // check for stalled jobs every 60s (default: 30s)
+    maxStalledCount: 1,
+  }
 )
 
-// Scheduled worker -- handles recurring tasks
+// Scheduled worker -- handles recurring cron tasks
+// These run at most a few times per day so aggressive polling is wasteful
 const scheduledWorker = new Worker<ScheduledJobData>(
   'scheduled',
   async (job) => {
@@ -245,7 +258,12 @@ const scheduledWorker = new Worker<ScheduledJobData>(
       }
     }
   },
-  { connection: getConnection(), concurrency: 3 }
+  {
+    connection: getConnection(),
+    concurrency: 1,           // cron jobs never need parallelism
+    stalledInterval: 300000,  // check for stalled jobs every 5 min (default: 30s)
+    maxStalledCount: 1,
+  }
 )
 
 export function startWorkers() {

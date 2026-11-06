@@ -49,10 +49,11 @@ export async function enqueueNotification(data: NotificationJobData) {
 
 // Register repeatable cron jobs
 export async function registerScheduledJobs() {
-  // Check for expired premium subscriptions every hour
+  // Check for expired premium subscriptions once daily at midnight UTC
+  // Hourly was wasteful — a subscription expiring a few hours late has no real impact
   await scheduledQueue.upsertJobScheduler(
     'subscription_expiry_check',
-    { pattern: '0 * * * *' },
+    { pattern: '0 0 * * *' },
     {
       name: 'subscription_expiry_check',
       data: { type: 'subscription_expiry_check', payload: {} },
@@ -69,10 +70,10 @@ export async function registerScheduledJobs() {
     }
   )
 
-  // Check for new opportunities matching saved searches every 6 hours
+  // Check for new opportunities matching saved searches every 12 hours
   await scheduledQueue.upsertJobScheduler(
     'saved_search_alert',
-    { pattern: '0 */6 * * *' },
+    { pattern: '0 */12 * * *' },
     {
       name: 'saved_search_alert',
       data: { type: 'saved_search_alert', payload: {} },

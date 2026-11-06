@@ -218,7 +218,7 @@ export async function consultationRoutes(server: FastifyInstance) {
       return badRequest(reply, 'This slot was just taken. Please choose another time.')
     }
 
-    return created(reply, result, 'Consultation booked. Proceed to payment.')
+    return created(reply, booking, 'Consultation booked. Proceed to payment.')
   })
 
   // GET /api/v1/consultations/:id -- booking detail

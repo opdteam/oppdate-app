@@ -87,11 +87,23 @@ function detectCtaChips(aiText: string): CtaChip[] {
 
 interface CtaChip { label: string; message: string }
 
+interface OppCard {
+  slug: string
+  title: string
+  institution: string
+  country: string
+  type: string
+  deadline: string | null
+  fundingLabel: string | null
+  oppDateApply: boolean
+}
+
 interface Message {
   kind: 'user' | 'ai' | 'system'
   text: string
   stream?: boolean
   chips?: CtaChip[]
+  cards?: OppCard[]
 }
 
 function TypingDots() {
@@ -417,6 +429,64 @@ function ResultCard({ eligible, reason, compact }: { eligible: boolean; reason: 
   )
 }
 
+function InlineOppCard({ card, compact }: { card: OppCard; compact?: boolean }) {
+  const deadlineDate = card.deadline ? new Date(card.deadline) : null
+  const daysLeft = deadlineDate ? Math.ceil((deadlineDate.getTime() - Date.now()) / 86400000) : null
+  const deadlineUrgent = daysLeft !== null && daysLeft <= 7
+
+  return (
+    <a
+      href={`/opportunities/${card.slug}`}
+      style={{
+        display: 'block', textDecoration: 'none',
+        background: 'rgba(255,255,255,0.78)',
+        border: '1px solid rgba(212,132,58,0.22)',
+        borderRadius: compact ? 12 : 14,
+        padding: compact ? '10px 12px' : '12px 15px',
+        animation: 'msgRise 300ms var(--ease-out-soft) both',
+        boxShadow: '0 2px 8px rgba(73,42,12,0.06)',
+        transition: 'box-shadow 160ms ease, border-color 160ms ease',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+        <span style={{
+          fontFamily: 'var(--font-serif)', fontWeight: 600,
+          fontSize: compact ? 12.5 : 13.5, color: '#1C0B02', lineHeight: 1.3,
+          flex: 1,
+        }}>{card.title}</span>
+        {card.oppDateApply && (
+          <span style={{
+            flexShrink: 0,
+            fontFamily: 'var(--font-sans)', fontSize: compact ? 9.5 : 10.5,
+            fontWeight: 600, color: '#7A2D05',
+            background: 'rgba(122,45,5,0.08)',
+            border: '1px solid rgba(122,45,5,0.2)',
+            borderRadius: 999, padding: '2px 7px',
+            whiteSpace: 'nowrap',
+          }}>OppDate Apply</span>
+        )}
+      </div>
+      <div style={{
+        fontFamily: 'var(--font-sans)', fontSize: compact ? 11 : 12,
+        color: '#6B6660', lineHeight: 1.4,
+      }}>
+        {card.institution} &middot; {card.country}
+        {card.fundingLabel && <> &middot; <span style={{ color: '#059669', fontWeight: 500 }}>{card.fundingLabel}</span></>}
+      </div>
+      {daysLeft !== null && (
+        <div style={{
+          marginTop: 6,
+          fontFamily: 'var(--font-sans)', fontSize: compact ? 10.5 : 11,
+          fontWeight: 500,
+          color: deadlineUrgent ? '#DC2626' : '#A07040',
+        }}>
+          {daysLeft < 0 ? 'Deadline passed' : daysLeft === 0 ? 'Closes today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+        </div>
+      )}
+    </a>
+  )
+}
+
 interface GuidePanelProps {
   onClose: () => void
   initialGreeting?: string
@@ -507,14 +577,19 @@ export function GuidePanel({ onClose, initialGreeting, opportunitySlug, opportun
     setAiLoading(true)
     try {
       const history = buildHistory()
-      const res = await api.post<{ data: { reply: string } }>('/api/v1/ai/chat', {
+      const res = await api.post<{ data: { reply: string; cards?: OppCard[] } }>('/api/v1/ai/chat', {
         message: text,
         history,
         opportunitySlug,
       })
       const aiText = res.data?.data?.reply || 'I could not generate a response. Please try again.'
+      const cards = res.data?.data?.cards ?? []
       const chips = detectCtaChips(aiText)
-      setMessages(prev => [...prev, { kind: 'ai', text: aiText, stream: true, chips: chips.length ? chips : undefined }])
+      setMessages(prev => [...prev, {
+        kind: 'ai', text: aiText, stream: true,
+        chips: chips.length ? chips : undefined,
+        cards: cards.length ? cards : undefined,
+      }])
     } catch (err) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
       if (code === 'PREMIUM_REQUIRED') {
@@ -684,6 +759,16 @@ export function GuidePanel({ onClose, initialGreeting, opportunitySlug, opportun
                   <Bubble from={m.kind as 'user' | 'ai'} stream={m.stream} compact={mobile}>{m.text}</Bubble>
                   {isLastAi && m.chips && m.chips.length > 0 && (
                     <CtaRow chips={m.chips} onPick={sendMessage} compact={mobile} />
+                  )}
+                  {m.kind === 'ai' && m.cards && m.cards.length > 0 && (
+                    <div style={{
+                      display: 'flex', flexDirection: 'column', gap: mobile ? 6 : 8,
+                      paddingLeft: mobile ? 28 : 34,
+                    }}>
+                      {m.cards.map(card => (
+                        <InlineOppCard key={card.slug} card={card} compact={mobile} />
+                      ))}
+                    </div>
                   )}
                 </div>
               )

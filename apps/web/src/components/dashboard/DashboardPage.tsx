@@ -1758,12 +1758,19 @@ export function DashboardPage() {
   const [renewalDismissed, setRenewalDismissed] = useState(false)
 
   const isPaymentSuccess = searchParams.get('payment') === 'success'
+  const sessionId = searchParams.get('session_id')
 
   useEffect(() => {
     if (!isPaymentSuccess) return
     setShowUpgradeBanner(true)
-    // Invalidate user cache so isPremium reflects new state
-    queryClient.invalidateQueries({ queryKey: keys.me })
+    // If Stripe redirected back with a session_id, verify the payment server-side
+    // (handles webhook delivery latency — same logic as the webhook handler)
+    const activate = sessionId
+      ? api.post('/api/v1/payments/verify-session', { sessionId }).catch(() => {})
+      : Promise.resolve()
+    activate.then(() => {
+      queryClient.invalidateQueries({ queryKey: keys.me })
+    })
     // Strip the query params from URL without reload
     router.replace('/dashboard', { scroll: false })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

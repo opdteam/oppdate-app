@@ -40,18 +40,6 @@ const PUBLIC_ROUTES = [
 // Routes only for guests (clear token and let through so user can re-authenticate)
 const GUEST_ONLY_ROUTES = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
 
-// Public subdomain hosts
-const PUBLIC_HOSTS = ['oppdate.app', 'www.oppdate.app']
-
-// Pages that live on oppdate.app (public subdomain)
-const PUBLIC_SUBDOMAIN_PATHS = [
-  '/services/consultations',
-  '/services/mentorship',
-  '/services/ebooks',
-  '/services/apply',
-  '/pricing',
-]
-
 function getSubdomain(request: NextRequest): 'dashboard' | 'admin' | 'public' {
   const host = request.headers.get('host') ?? ''
   if (host.startsWith('dashboard.')) return 'dashboard'
@@ -68,12 +56,6 @@ function getDashboardHost(host: string): string {
 function getAdminHost(host: string): string {
   if (host === 'oppdate.app' || host === 'www.oppdate.app') return 'admin.oppdate.app'
   if (host.startsWith('dashboard.')) return host.replace('dashboard.', 'admin.')
-  return host
-}
-
-function getPublicHost(host: string): string {
-  if (host.startsWith('dashboard.')) return host.replace('dashboard.', '')
-  if (host.startsWith('admin.')) return host.replace('admin.', '')
   return host
 }
 
@@ -116,6 +98,20 @@ export function middleware(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.pathname = userToken ? '/dashboard' : '/auth/login'
         return NextResponse.rewrite(url)
+      }
+
+      // /dashboard on the dashboard subdomain → redirect to / so URL bar stays clean
+      if (pathname === '/dashboard') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/'
+        return NextResponse.redirect(url)
+      }
+
+      // /services/apply is a standalone public marketing page — redirect to oppdate.app
+      if (pathname === '/services/apply' || pathname.startsWith('/services/apply/')) {
+        const url = request.nextUrl.clone()
+        url.host = host.replace('dashboard.', '')
+        return NextResponse.redirect(url)
       }
 
       // Admin paths on dashboard → redirect to admin subdomain, strip /admin prefix

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { X, Send, CheckCircle, Info, Lock } from 'lucide-react'
+import { X, Send, CheckCircle, Info, Lock, Globe, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import { api, extractApiError } from '@/lib/api'
 
 function useIsMobile(bp = 960) {
@@ -98,12 +98,18 @@ interface OppCard {
   oppDateApply: boolean
 }
 
+interface WebSource {
+  title: string
+  url: string
+}
+
 interface Message {
   kind: 'user' | 'ai' | 'system'
   text: string
   stream?: boolean
   chips?: CtaChip[]
   cards?: OppCard[]
+  sources?: WebSource[]
 }
 
 function TypingDots() {
@@ -429,6 +435,101 @@ function ResultCard({ eligible, reason, compact }: { eligible: boolean; reason: 
   )
 }
 
+function getDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+function SourcesRow({ sources, compact }: { sources: WebSource[]; compact?: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  const COLLAPSED_LIMIT = 2
+  const visible = expanded ? sources : sources.slice(0, COLLAPSED_LIMIT)
+  const hasMore = sources.length > COLLAPSED_LIMIT
+
+  return (
+    <div style={{
+      paddingLeft: compact ? 28 : 34,
+      animation: 'msgRise 300ms var(--ease-out-soft) 160ms both',
+    }}>
+      {/* Label row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        marginBottom: compact ? 5 : 6,
+      }}>
+        <Globe size={compact ? 10 : 11} style={{ color: '#A07040', flexShrink: 0 }} />
+        <span style={{
+          fontFamily: 'var(--font-sans)', fontSize: compact ? 10 : 11,
+          color: '#A07040', fontWeight: 500, letterSpacing: '0.01em',
+        }}>Web sources</span>
+      </div>
+
+      {/* Source pills */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 5 : 6 }}>
+        {visible.map((s, i) => (
+          <a
+            key={i}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={s.title}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: compact ? 4 : 5,
+              fontFamily: 'var(--font-sans)', fontSize: compact ? 10.5 : 11.5,
+              color: '#5A3A18', textDecoration: 'none',
+              background: 'rgba(255,255,255,0.72)',
+              border: '1px solid rgba(212,132,58,0.28)',
+              borderRadius: 999,
+              padding: compact ? '3px 8px 3px 6px' : '4px 10px 4px 8px',
+              maxWidth: compact ? 140 : 180,
+              overflow: 'hidden',
+              transition: 'background 140ms ease, border-color 140ms ease',
+            }}
+          >
+            {/* Favicon */}
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${getDomain(s.url)}&sz=16`}
+              alt=""
+              width={compact ? 11 : 12}
+              height={compact ? 11 : 12}
+              style={{ borderRadius: 2, flexShrink: 0 }}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+            <span style={{
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              flex: 1,
+            }}>
+              {getDomain(s.url)}
+            </span>
+            <ExternalLink size={compact ? 8 : 9} style={{ color: '#A07040', flexShrink: 0 }} />
+          </a>
+        ))}
+
+        {/* Expand / collapse toggle */}
+        {hasMore && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              fontFamily: 'var(--font-sans)', fontSize: compact ? 10.5 : 11.5,
+              color: '#7A2D05', background: 'none', border: 'none',
+              cursor: 'pointer', padding: compact ? '3px 2px' : '4px 2px',
+              fontWeight: 500,
+            }}
+          >
+            {expanded
+              ? <><ChevronUp size={compact ? 10 : 11} /> less</>
+              : <><ChevronDown size={compact ? 10 : 11} /> +{sources.length - COLLAPSED_LIMIT} more</>
+            }
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function InlineOppCard({ card, compact }: { card: OppCard; compact?: boolean }) {
   const deadlineDate = card.deadline ? new Date(card.deadline) : null
   const daysLeft = deadlineDate ? Math.ceil((deadlineDate.getTime() - Date.now()) / 86400000) : null
@@ -577,18 +678,20 @@ export function GuidePanel({ onClose, initialGreeting, opportunitySlug, opportun
     setAiLoading(true)
     try {
       const history = buildHistory()
-      const res = await api.post<{ data: { reply: string; cards?: OppCard[] } }>('/api/v1/ai/chat', {
+      const res = await api.post<{ data: { reply: string; cards?: OppCard[]; sources?: WebSource[] } }>('/api/v1/ai/chat', {
         message: text,
         history,
         opportunitySlug,
       })
       const aiText = res.data?.data?.reply || 'I could not generate a response. Please try again.'
       const cards = res.data?.data?.cards ?? []
+      const sources = res.data?.data?.sources ?? []
       const chips = detectCtaChips(aiText)
       setMessages(prev => [...prev, {
         kind: 'ai', text: aiText, stream: true,
         chips: chips.length ? chips : undefined,
         cards: cards.length ? cards : undefined,
+        sources: sources.length ? sources : undefined,
       }])
     } catch (err) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
@@ -759,6 +862,9 @@ export function GuidePanel({ onClose, initialGreeting, opportunitySlug, opportun
                   <Bubble from={m.kind as 'user' | 'ai'} stream={m.stream} compact={mobile}>{m.text}</Bubble>
                   {isLastAi && m.chips && m.chips.length > 0 && (
                     <CtaRow chips={m.chips} onPick={sendMessage} compact={mobile} />
+                  )}
+                  {m.kind === 'ai' && m.sources && m.sources.length > 0 && (
+                    <SourcesRow sources={m.sources} compact={mobile} />
                   )}
                   {m.kind === 'ai' && m.cards && m.cards.length > 0 && (
                     <div style={{

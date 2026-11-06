@@ -42,8 +42,11 @@ async function tavilySearch(query: string, maxResults = 4): Promise<TavilyResult
     })
     if (!res.ok) return []
     const data = await res.json() as { results?: TavilyResult[] }
-    return (data.results ?? []).slice(0, maxResults)
-  } catch {
+    const results = (data.results ?? []).slice(0, maxResults)
+    console.log('tavily search: ' + query + ' -> ' + results.length + ' results')
+    return results
+  } catch (err) {
+    console.log('tavily search failed: ' + (err instanceof Error ? err.message : String(err)))
     return []
   }
 }
@@ -376,7 +379,9 @@ Writing rules (follow strictly):
         { role: 'user' as const, content: message },
       ]
 
+      interface WebSource { title: string; url: string }
       let collectedCards: OppCard[] = []
+      let collectedSources: WebSource[] = []
       let finalText = ''
       const MAX_TOOL_ROUNDS = 4 // prevent runaway loops
 
@@ -414,6 +419,8 @@ Writing rules (follow strictly):
                   if (results.length === 0) {
                     return { type: 'tool_result', tool_use_id: block.id, content: 'No results found.' }
                   }
+                  // Collect sources for frontend attribution
+                  collectedSources.push(...results.map(r => ({ title: r.title, url: r.url })))
                   const formatted = results.map(r =>
                     `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content}`
                   ).join('\n\n---\n\n')
@@ -479,7 +486,15 @@ Writing rules (follow strictly):
         .replace(/\u2013/g, '-')
         .replace(/--/g, '-')
 
-      return ok(reply, { reply: aiReply, cards: collectedCards })
+      // Deduplicate sources by URL
+      const seenUrls = new Set<string>()
+      const dedupedSources = collectedSources.filter(s => {
+        if (seenUrls.has(s.url)) return false
+        seenUrls.add(s.url)
+        return true
+      })
+
+      return ok(reply, { reply: aiReply, cards: collectedCards, sources: dedupedSources })
     },
   )
 

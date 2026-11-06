@@ -8,11 +8,11 @@ import {
   MessageSquare,
   Flag,
   ChevronLeft,
-  AlertTriangle,
   CheckCircle,
   Clock,
   User,
   TrendingUp,
+  Trash2,
 } from 'lucide-react'
 
 // -- Hook --
@@ -428,9 +428,11 @@ function ChatBubble({ msg, index, sessionId, existingFlag }: {
 
 // -- Session detail panel --
 
-function SessionDetailPanel({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
+function SessionDetailPanel({ sessionId, onClose, onDeleted }: { sessionId: string; onClose: () => void; onDeleted: () => void }) {
   const isMobile = useIsMobile()
   const [mounted, setMounted] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const qc = useQueryClient()
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 10)
@@ -440,6 +442,15 @@ function SessionDetailPanel({ sessionId, onClose }: { sessionId: string; onClose
   const { data, isLoading } = useQuery<DetailResponse>({
     queryKey: ['guide-session-detail', sessionId],
     queryFn: () => api.get(`/api/v1/guide-sessions/admin/${sessionId}`).then(r => r.data.data),
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: () => api.delete(`/api/v1/guide-sessions/admin/${sessionId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['guide-sessions-list'] })
+      qc.invalidateQueries({ queryKey: ['guide-sessions-insights'] })
+      onDeleted()
+    },
   })
 
   const flagsByIndex = (data?.flags ?? []).reduce<Record<number, FlagItem>>((acc, f) => {
@@ -499,7 +510,7 @@ function SessionDetailPanel({ sessionId, onClose }: { sessionId: string; onClose
           >
             <ChevronLeft size={20} />
           </button>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ color: '#fff', fontSize: 15, fontFamily: 'var(--font-serif)', fontWeight: 600 }}>
               {s?.userName ?? 'Session detail'}
             </div>
@@ -507,6 +518,33 @@ function SessionDetailPanel({ sessionId, onClose }: { sessionId: string; onClose
               {s?.opportunitySlug ?? ''}
             </div>
           </div>
+          {/* Delete button */}
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              title="Delete session"
+              style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, color: '#f87171', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontFamily: 'var(--font-sans)' }}
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'var(--font-sans)' }}>Delete permanently?</span>
+              <button
+                onClick={() => deleteMut.mutate()}
+                disabled={deleteMut.isPending}
+                style={{ background: '#dc2626', border: 'none', borderRadius: 7, color: '#fff', padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 600, opacity: deleteMut.isPending ? 0.6 : 1 }}
+              >
+                {deleteMut.isPending ? 'Deleting...' : 'Yes, delete'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 7, color: 'rgba(255,255,255,0.5)', padding: '6px 12px', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
 
         {isLoading && (
@@ -603,22 +641,30 @@ function SessionDetailPanel({ sessionId, onClose }: { sessionId: string; onClose
 
 // -- Session list row --
 
-function SessionRow({ session, onSelect }: { session: SessionListItem; onSelect: () => void }) {
+function SessionRow({ session, onSelect, checked, onCheck }: { session: SessionListItem; onSelect: () => void; checked: boolean; onCheck: (checked: boolean) => void }) {
   const [hovered, setHovered] = useState(false)
 
   return (
     <tr
-      onClick={onSelect}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         cursor: 'pointer',
-        borderLeft: hovered ? '3px solid #D4843A' : '3px solid transparent',
-        background: hovered ? 'rgba(181,83,10,0.1)' : 'transparent',
+        borderLeft: checked ? '3px solid #f87171' : hovered ? '3px solid #D4843A' : '3px solid transparent',
+        background: checked ? 'rgba(239,68,68,0.07)' : hovered ? 'rgba(181,83,10,0.1)' : 'transparent',
         transition: 'border-left 120ms ease, background 120ms ease',
       }}
     >
-      <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
+      {/* Checkbox cell */}
+      <td style={{ padding: '10px 10px 10px 14px', verticalAlign: 'middle', width: 36 }} onClick={e => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={e => onCheck(e.target.checked)}
+          style={{ width: 15, height: 15, accentColor: '#f87171', cursor: 'pointer' }}
+        />
+      </td>
+      <td style={{ padding: '10px 14px', verticalAlign: 'middle' }} onClick={onSelect}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {session.userAvatarUrl ? (
             <img src={session.userAvatarUrl} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
@@ -633,20 +679,20 @@ function SessionRow({ session, onSelect }: { session: SessionListItem; onSelect:
           </div>
         </div>
       </td>
-      <td style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.65)', fontSize: 13, fontFamily: 'var(--font-sans)', verticalAlign: 'middle' }}>
+      <td style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.65)', fontSize: 13, fontFamily: 'var(--font-sans)', verticalAlign: 'middle' }} onClick={onSelect}>
         {session.opportunitySlug}
       </td>
-      <td style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
+      <td style={{ padding: '10px 14px', verticalAlign: 'middle' }} onClick={onSelect}>
         <SentimentPill s={session.sentiment} />
       </td>
-      <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
+      <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }} onClick={onSelect}>
         {session.eligTriggered ? (
           <CheckCircle size={15} color="#4ade80" />
         ) : (
           <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>-</span>
         )}
       </td>
-      <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
+      <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }} onClick={onSelect}>
         {session.flagCount > 0 ? (
           <span style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '2px 8px', fontSize: 11, fontFamily: 'var(--font-sans)', fontWeight: 700 }}>
             {session.flagCount}
@@ -655,7 +701,7 @@ function SessionRow({ session, onSelect }: { session: SessionListItem; onSelect:
           <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>0</span>
         )}
       </td>
-      <td style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.45)', fontSize: 12, fontFamily: 'var(--font-sans)', verticalAlign: 'middle' }}>
+      <td style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.45)', fontSize: 12, fontFamily: 'var(--font-sans)', verticalAlign: 'middle' }} onClick={onSelect}>
         {fmt(session.createdAt)}
       </td>
     </tr>
@@ -667,6 +713,7 @@ function SessionRow({ session, onSelect }: { session: SessionListItem; onSelect:
 export function AdminGuideSessionsPage() {
   const isMobile = useIsMobile()
   const searchParams = useSearchParams()
+  const qc = useQueryClient()
 
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get('session'))
   const [sentiment, setSentiment] = useState<string>('all')
@@ -675,6 +722,32 @@ export function AdminGuideSessionsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Selection state for bulk delete
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: (ids: string[]) => api.delete('/api/v1/guide-sessions/admin/bulk', { data: { ids } }),
+    onSuccess: () => {
+      setSelectedIds(new Set())
+      setConfirmBulkDelete(false)
+      qc.invalidateQueries({ queryKey: ['guide-sessions-list'] })
+      qc.invalidateQueries({ queryKey: ['guide-sessions-insights'] })
+    },
+  })
+
+  const toggleSelect = useCallback((id: string, checked: boolean) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      checked ? next.add(id) : next.delete(id)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback((sessions: SessionListItem[], checked: boolean) => {
+    setSelectedIds(checked ? new Set(sessions.map(s => s.id)) : new Set())
+  }, [])
 
   const handleSearchChange = useCallback((val: string) => {
     setSearch(val)
@@ -778,12 +851,66 @@ export function AdminGuideSessionsPage() {
         </select>
       </div>
 
+      {/* Bulk delete toolbar */}
+      {selectedIds.size > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 16px', marginBottom: 12,
+          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.28)',
+          borderRadius: 10,
+          animation: 'fadeIn 160ms ease both',
+        }}>
+          <span style={{ color: '#f87171', fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 600, flex: 1 }}>
+            {selectedIds.size} session{selectedIds.size === 1 ? '' : 's'} selected
+          </span>
+          {!confirmBulkDelete ? (
+            <button
+              onClick={() => setConfirmBulkDelete(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(239,68,68,0.18)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8, color: '#f87171', padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 600 }}
+            >
+              <Trash2 size={14} /> Delete selected
+            </button>
+          ) : (
+            <>
+              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'var(--font-sans)' }}>Delete permanently?</span>
+              <button
+                onClick={() => bulkDeleteMut.mutate(Array.from(selectedIds))}
+                disabled={bulkDeleteMut.isPending}
+                style={{ background: '#dc2626', border: 'none', borderRadius: 7, color: '#fff', padding: '6px 16px', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 600, opacity: bulkDeleteMut.isPending ? 0.6 : 1 }}
+              >
+                {bulkDeleteMut.isPending ? 'Deleting...' : 'Yes, delete'}
+              </button>
+              <button
+                onClick={() => setConfirmBulkDelete(false)}
+                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 7, color: 'rgba(255,255,255,0.5)', padding: '6px 12px', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)' }}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => { setSelectedIds(new Set()); setConfirmBulkDelete(false) }}
+            style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-sans)', padding: '4px 6px' }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div style={{ ...glass(0.5), borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
+                <th style={{ ...thStyle, width: 36, padding: '10px 10px 10px 14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={sessions.length > 0 && sessions.every(s => selectedIds.has(s.id))}
+                    onChange={e => toggleSelectAll(sessions, e.target.checked)}
+                    style={{ width: 15, height: 15, accentColor: '#f87171', cursor: 'pointer' }}
+                  />
+                </th>
                 <th style={thStyle}>User</th>
                 <th style={thStyle}>Opportunity</th>
                 <th style={thStyle}>Sentiment</th>
@@ -795,20 +922,26 @@ export function AdminGuideSessionsPage() {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={6} style={{ padding: '40px 14px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-sans)', fontSize: 14 }}>
+                  <td colSpan={7} style={{ padding: '40px 14px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-sans)', fontSize: 14 }}>
                     Loading...
                   </td>
                 </tr>
               )}
               {!isLoading && sessions.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: '40px 14px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-sans)', fontSize: 14 }}>
+                  <td colSpan={7} style={{ padding: '40px 14px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-sans)', fontSize: 14 }}>
                     No sessions found.
                   </td>
                 </tr>
               )}
               {sessions.map(s => (
-                <SessionRow key={s.id} session={s} onSelect={() => setSelectedId(s.id)} />
+                <SessionRow
+                  key={s.id}
+                  session={s}
+                  onSelect={() => setSelectedId(s.id)}
+                  checked={selectedIds.has(s.id)}
+                  onCheck={checked => toggleSelect(s.id, checked)}
+                />
               ))}
             </tbody>
           </table>
@@ -854,7 +987,11 @@ export function AdminGuideSessionsPage() {
 
       {/* Detail panel */}
       {selectedId && (
-        <SessionDetailPanel sessionId={selectedId} onClose={() => setSelectedId(null)} />
+        <SessionDetailPanel
+          sessionId={selectedId}
+          onClose={() => setSelectedId(null)}
+          onDeleted={() => setSelectedId(null)}
+        />
       )}
     </div>
     </div>

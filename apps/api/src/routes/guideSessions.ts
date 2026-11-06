@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { db, schema } from '../db'
-import { eq, desc, and, count, sql } from 'drizzle-orm'
+import { eq, desc, and, count, sql, inArray } from 'drizzle-orm'
 import { ok, created, badRequest, notFound } from '../utils/response'
 import { requireAuth, requireRole } from '../middleware/auth'
 
@@ -278,6 +278,40 @@ export async function guideSessionRoutes(server: FastifyInstance) {
       .orderBy(schema.guideResponseFlags.messageIndex)
 
     return ok(reply, { session, flags })
+  })
+
+  // DELETE /api/v1/guide-sessions/admin/:id — delete a single session (super_admin / manager_admin only)
+  server.delete('/admin/:id', { preHandler: [requireAuth, requireRole('manager_admin', 'super_admin')] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const [session] = await db
+      .select({ id: schema.guideSessionLogs.id })
+      .from(schema.guideSessionLogs)
+      .where(eq(schema.guideSessionLogs.id, id))
+      .limit(1)
+
+    if (!session) return notFound(reply, 'Session not found.')
+
+    // Flags cascade via FK, but delete explicitly to be safe
+    await db.delete(schema.guideResponseFlags).where(eq(schema.guideResponseFlags.sessionId, id))
+    await db.delete(schema.guideSessionLogs).where(eq(schema.guideSessionLogs.id, id))
+
+    return ok(reply, null, 'Session deleted.')
+  })
+
+  // DELETE /api/v1/guide-sessions/admin/bulk — delete multiple sessions
+  server.delete('/admin/bulk', { preHandler: [requireAuth, requireRole('manager_admin', 'super_admin')] }, async (request, reply) => {
+    const body = z.object({
+      ids: z.array(z.string().uuid()).min(1).max(100),
+    }).safeParse(request.body)
+    if (!body.success) return badRequest(reply, body.error.errors[0].message)
+
+    const { ids } = body.data
+
+    await db.delete(schema.guideResponseFlags).where(inArray(schema.guideResponseFlags.sessionId, ids))
+    await db.delete(schema.guideSessionLogs).where(inArray(schema.guideSessionLogs.id, ids))
+
+    return ok(reply, { deleted: ids.length }, `${ids.length} session${ids.length === 1 ? '' : 's'} deleted.`)
   })
 
   // POST /api/v1/guide-sessions/admin/flags — flag a message in a session

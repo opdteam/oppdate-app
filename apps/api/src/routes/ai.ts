@@ -142,7 +142,7 @@ Writing rules (follow strictly):
       const anthropic = makeAnthropicClient(apiKey);
 
       const completion = await anthropic.messages.create({
-        model: "claude-haiku-4-5",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 1024,
         system: systemPrompt,
         messages: [

@@ -87,10 +87,16 @@ async function start() {
     server.log.info(`Environment: ${process.env.NODE_ENV || 'development'}`)
 
     // Start background job workers (BullMQ + Redis)
+    // Wrapped in its own try/catch — a Redis quota error must not crash the server
     if (process.env.REDIS_URL || process.env.NODE_ENV !== 'test') {
-      startWorkers()
-      await registerScheduledJobs()
-      server.log.info('BullMQ workers and scheduled jobs started')
+      try {
+        startWorkers()
+        await registerScheduledJobs()
+        server.log.info('BullMQ workers and scheduled jobs started')
+      } catch (redisErr: unknown) {
+        const msg = redisErr instanceof Error ? redisErr.message : String(redisErr)
+        server.log.warn('BullMQ init failed (Redis unavailable) — background jobs disabled: ' + msg)
+      }
     }
   } catch (err) {
     server.log.error(err)

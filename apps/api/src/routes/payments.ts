@@ -311,11 +311,15 @@ export async function paymentRoutes(server: FastifyInstance) {
         ? `${webUrl}/apply/confirm?applicationId=${referenceId}&session_id={CHECKOUT_SESSION_ID}`
         : purpose === 'mentorship'
         ? `${webUrl}/services/mentorship/enrol?enrolment=${referenceId}&payment=success&session_id={CHECKOUT_SESSION_ID}`
+        : purpose === 'consultation'
+        ? `${webUrl}/services/consultations/book?bookingId=${referenceId}&payment=success`
         : `${webUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: purpose === 'oppdate_apply'
         ? `${webUrl}/opportunities?payment=cancelled`
         : purpose === 'mentorship'
         ? `${webUrl}/services/mentorship/enrol?enrolment=${referenceId}&payment=cancelled`
+        : purpose === 'consultation'
+        ? `${webUrl}/services/consultations/book?bookingId=${referenceId}&payment=cancelled`
         : `${webUrl}/dashboard?payment=cancelled`,
     })
 
@@ -1012,6 +1016,8 @@ async function handlePaystackCheckout(
       reference: paystackRef,
       callbackUrl: purpose === 'oppdate_apply' && referenceId
         ? `${webUrl}/apply/confirm?applicationId=${referenceId}&reference=${paystackRef}`
+        : purpose === 'consultation' && referenceId
+        ? `${webUrl}/services/consultations/book?bookingId=${referenceId}&payment=success&reference=${paystackRef}`
         : `${webUrl}/dashboard?payment=success&reference=${paystackRef}`,
       metadata: { userId, purpose, referenceId: referenceId || userId, plan: plan || '', tier: tier || '' },
     })

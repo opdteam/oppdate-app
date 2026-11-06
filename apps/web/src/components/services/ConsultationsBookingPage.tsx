@@ -47,6 +47,8 @@ interface ApiSlot {
 
 interface BookingResult {
   id: string
+  sessionId: string
+  slotId: string
   scheduledAt: string
   durationMinutes: number
   priceUsd: number
@@ -94,20 +96,44 @@ export function ConsultationsBookingPage() {
   const searchParams = useSearchParams()
   const mob = useIsMobile()
   const sessionParam = searchParams.get('session')
+  const bookingIdParam = searchParams.get('bookingId')
+  const paymentParam = searchParams.get('payment')
   const [view, setView] = useState<View>({ screen: 'catalog' })
-  const [bootstrapping, setBootstrapping] = useState(!!sessionParam)
+  const [bootstrapping, setBootstrapping] = useState(!!(sessionParam || (bookingIdParam && paymentParam === 'success')))
 
-  // If ?session=<id> is present, fetch that session and jump straight to slots
   useEffect(() => {
-    if (!sessionParam) return
-    api.get<{ data: ApiSession[] }>('/api/v1/consultations/sessions')
-      .then(r => {
-        const session = (r.data?.data ?? []).find(s => s.id === sessionParam)
-        if (session) setView({ screen: 'slots', session })
-      })
-      .catch(() => {})
-      .finally(() => setBootstrapping(false))
-  }, [sessionParam])
+    // Return from payment gateway with a completed booking
+    if (bookingIdParam && paymentParam === 'success') {
+      Promise.all([
+        api.get<{ data: BookingResult }>(`/api/v1/consultations/${bookingIdParam}`),
+        api.get<{ data: ApiSession[] }>('/api/v1/consultations/sessions'),
+      ])
+        .then(([bookingRes, sessionsRes]) => {
+          const booking = bookingRes.data?.data
+          const sessions = sessionsRes.data?.data ?? []
+          const session = sessions.find(s => s.id === booking?.sessionId)
+          if (booking && session) {
+            const fakeSlot: ApiSlot = { id: booking.slotId, startsAt: booking.scheduledAt }
+            setView({ screen: 'confirmation', session, slot: fakeSlot, booking })
+          }
+        })
+        .catch(() => {})
+        .finally(() => setBootstrapping(false))
+      return
+    }
+
+    // ?session=<id> — jump straight to slot selection
+    if (sessionParam) {
+      api.get<{ data: ApiSession[] }>('/api/v1/consultations/sessions')
+        .then(r => {
+          const session = (r.data?.data ?? []).find(s => s.id === sessionParam)
+          if (session) setView({ screen: 'slots', session })
+        })
+        .catch(() => {})
+        .finally(() => setBootstrapping(false))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (bootstrapping) return null
 
@@ -137,7 +163,6 @@ export function ConsultationsBookingPage() {
           slot={view.slot}
           mob={mob}
           onBack={() => setView({ screen: 'slots', session: view.session })}
-          onConfirm={(booking) => setView({ screen: 'confirmation', session: view.session, slot: view.slot, booking })}
         />
       )
     case 'confirmation':
@@ -605,9 +630,9 @@ function CalEmpty({ mob }: { mob: boolean }) {
 // REVIEW SCREEN
 // ============================================================
 
-function ReviewScreen({ session, slot, mob, onBack, onConfirm }: {
+function ReviewScreen({ session, slot, mob, onBack }: {
   session: ApiSession; slot: ApiSlot; mob: boolean
-  onBack: () => void; onConfirm: (booking: BookingResult) => void
+  onBack: () => void
 }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -617,11 +642,24 @@ function ReviewScreen({ session, slot, mob, onBack, onConfirm }: {
     setError(null)
     setSubmitting(true)
     try {
-      const res = await api.post<{ data: BookingResult }>('/api/v1/consultations', {
+      // Step 1: reserve the slot and create a pending booking
+      const bookingRes = await api.post<{ data: BookingResult }>('/api/v1/consultations', {
         sessionId: session.id,
         slotId: slot.id,
       })
-      onConfirm(res.data.data)
+      const booking = bookingRes.data.data
+
+      // Step 2: create a payment checkout session
+      const paymentRes = await api.post<{ data: { checkoutUrl: string } }>('/api/v1/payments/create-session', {
+        purpose: 'consultation',
+        referenceId: booking.id,
+        gateway: 'stripe',
+      })
+      const checkoutUrl = paymentRes.data?.data?.checkoutUrl
+      if (!checkoutUrl) throw new Error('No checkout URL returned')
+
+      // Step 3: redirect to payment provider
+      window.location.href = checkoutUrl
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } }
       setError(err?.response?.data?.message || 'Booking failed. Please try again.')
@@ -638,7 +676,7 @@ function ReviewScreen({ session, slot, mob, onBack, onConfirm }: {
       </div>
 
       <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: mob ? 24 : 30, color: 'var(--app-ink)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Review your booking</h1>
-      <p style={{ fontFamily: 'var(--font-sans)', fontSize: mob ? 13 : 14, color: 'var(--app-text-sec)', margin: mob ? '0 0 18px' : '0 0 24px' }}>One step left. Confirm your session details and proceed to payment.</p>
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: mob ? 13 : 14, color: 'var(--app-text-sec)', margin: mob ? '0 0 18px' : '0 0 24px' }}>Confirm your session details. You will be redirected to Stripe to complete payment.</p>
 
       <div style={{
         background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)',
@@ -684,12 +722,12 @@ function ReviewScreen({ session, slot, mob, onBack, onConfirm }: {
           onMouseEnter={e => { if (!submitting) { e.currentTarget.style.background = '#5C2104'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
           onMouseLeave={e => { e.currentTarget.style.background = submitting ? 'rgba(122,45,5,0.5)' : 'var(--app-ginger)'; e.currentTarget.style.transform = 'none' }}
         >
-          {submitting ? 'Confirming...' : 'Confirm and pay'}
+          {submitting ? 'Redirecting to payment...' : 'Confirm and pay'}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14 }}>
           <ShieldCheck size={16} style={{ color: 'var(--app-green)', flexShrink: 0, marginTop: 1 }} />
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--app-text-sec)', lineHeight: 1.5 }}>Secure payment. Your meeting link will be sent by email once your booking is confirmed.</span>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--app-text-sec)', lineHeight: 1.5 }}>Secure payment via Stripe. Your meeting link will be sent by email once your booking is confirmed.</span>
         </div>
       </div>
     </div>
@@ -779,7 +817,7 @@ function ConfirmationScreen({ session, slot, booking, mob, onDashboard, onBrowse
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: mob ? 11 : 12, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--app-green)', marginBottom: mob ? 8 : 10, animation: 'ebRise 400ms var(--ease-out-soft) 200ms both' }}>Booking confirmed</div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: mob ? 26 : 32, color: 'var(--app-ink)', margin: '0 0 10px', lineHeight: 1.12, letterSpacing: '-0.02em', animation: 'ebRise 400ms var(--ease-out-soft) 260ms both' }}>Your session is booked.</h1>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: mob ? 13.5 : 14.5, color: 'var(--app-text-sec)', margin: mob ? '0 auto 20px' : '0 auto 26px', maxWidth: 360, lineHeight: 1.65, animation: 'ebRise 400ms var(--ease-out-soft) 320ms both' }}>
-            We have sent a confirmation email with your meeting link and calendar invite. Your session is also saved in Upcoming Sessions on your dashboard.
+            Payment received. Your meeting link will arrive by email shortly. Your session is also saved in Upcoming Sessions on your dashboard.
           </p>
 
           <div style={{

@@ -3,7 +3,11 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 export function GET() {
-  const html = readFileSync(join(process.cwd(), 'public/services/mentorship/index.html'))
+  let html = readFileSync(join(process.cwd(), 'public/services/mentorship/index.html'), 'utf-8')
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
+  if (apiBase) {
+    html = html.replace('<script>', `<script>window.__apiBase=${JSON.stringify(apiBase)};</script><script>`)
+  }
   return new NextResponse(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   })

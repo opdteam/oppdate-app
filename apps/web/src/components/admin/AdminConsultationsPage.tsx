@@ -1576,10 +1576,23 @@ function SessionCard({ variants, onEdit }: { variants: ApiConsultationSession[];
   // All variants in a group share the same groupKey; standalone sessions have null
   const gKey = lead.groupKey
 
+  const totalClaimed = variants.reduce((s, v) => s + (v.claimedSlots ?? 0), 0)
+
   function handleDelete() {
+    if (totalClaimed > 0) {
+      const deactivate = window.confirm(
+        `This session has ${totalClaimed} confirmed booking${totalClaimed !== 1 ? 's' : ''} and cannot be deleted.\n\nClick OK to deactivate it instead (hides it from new bookings while preserving existing ones), or Cancel to do nothing.`
+      )
+      if (!deactivate) return
+      Promise.all(variants.map(v => api.patch(`/api/v1/admin/consultation-sessions/${v.id}`, { active: false })))
+        .then(() => queryClient.invalidateQueries({ queryKey: ['admin-consultation-sessions'] }))
+        .catch(() => window.alert('Failed to deactivate session. Please try again.'))
+      return
+    }
     if (!window.confirm(`Delete this session${variants.length > 1 ? ' and all its duration variants' : ''}? This cannot be undone.`)) return
     Promise.all(variants.map(v => api.delete(`/api/v1/admin/consultation-sessions/${v.id}`)))
       .then(() => queryClient.invalidateQueries({ queryKey: ['admin-consultation-sessions'] }))
+      .catch(() => window.alert('Failed to delete session. Please try again.'))
   }
 
   const sorted = variants.slice().sort((a, b) => a.durationMinutes - b.durationMinutes)

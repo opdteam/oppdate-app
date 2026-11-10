@@ -1,6 +1,6 @@
-/* Patches the design system footer's Terms of service, Privacy policy and Help centre
-   links to point to the real routes. The DS bundle renders these with href="#"; this
-   script replaces them after the React tree mounts. Loaded by every public page. */
+/* Patches the footer's Terms of service, Privacy policy and Help centre
+   links to point to the real routes. The footer renders these with href="#";
+   this script replaces them after the React tree mounts. Loaded by every public page. */
 (function () {
   var LEGAL = {
     'Terms of service': '/legal/terms',
@@ -9,29 +9,28 @@
   };
 
   function patchLinks() {
-    var footer = document.querySelector('footer');
-    if (!footer) return false;
-    var anchors = Array.from(footer.querySelectorAll('a'));
-    var patched = 0;
+    var anchors = Array.from(document.querySelectorAll('a'));
     anchors.forEach(function (a) {
       var text = (a.textContent || '').trim();
-      if (LEGAL[text]) {
+      if (LEGAL[text] && a.getAttribute('href') === '#') {
         a.href = LEGAL[text];
-        patched++;
       }
     });
-    return patched > 0;
   }
 
-  var attempts = 60;
-  function tryPatch() {
-    if (patchLinks()) return;
-    if (attempts-- > 0) setTimeout(tryPatch, 200);
+  var observer = new MutationObserver(function () {
+    patchLinks();
+  });
+
+  function start() {
+    patchLinks();
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(function () { observer.disconnect(); }, 15000);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryPatch);
+    document.addEventListener('DOMContentLoaded', start);
   } else {
-    tryPatch();
+    start();
   }
 })();

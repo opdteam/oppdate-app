@@ -19,9 +19,6 @@ const sections: LegalSection[] = [
         <p>
           By creating an account or using any part of the Platform, you agree to be bound by these Terms. If you do not agree, do not use OppDate.
         </p>
-        <div className="notice">
-          <p><strong>OppDate is operated by Infinity Studioz.</strong> References to "OppDate", "we", "our", or "us" in these Terms mean Infinity Studioz and its authorised representatives.</p>
-        </div>
       </>
     ),
   },

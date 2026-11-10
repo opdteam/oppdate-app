@@ -104,7 +104,7 @@ const sections: LegalSection[] = [
       <>
         <p>We do not sell your personal data. We share your information only in the following circumstances:</p>
         <ul>
-          <li><strong>Service providers</strong> - we share data with trusted third-party vendors who help us operate the platform, including cloud hosting (Render, Neon, Cloudflare R2), payment processors (Stripe, Paystack, Flutterwave), email delivery (Resend), error monitoring (Sentry), and AI processing (Anthropic). These providers are bound by data processing agreements and may only use your data to provide their services to us.</li>
+          <li><strong>Service providers</strong> - we share data with trusted third-party vendors who help us operate the platform, including cloud hosting, payment processors, email delivery, error monitoring, and AI processing services. These providers are bound by data processing agreements and may only use your data to provide their services to us.</li>
           <li><strong>OppDate Apply submissions</strong> - when submitting your application on your behalf, we share your application materials with the target institution as directed by you.</li>
           <li><strong>Legal requirements</strong> - we may disclose your information if required to do so by law, court order, or in response to a lawful request from a government authority.</li>
           <li><strong>Business transfers</strong> - in the event of a merger, acquisition, or sale of all or part of our business, your data may be transferred as part of that transaction. We will notify you before your data becomes subject to a different privacy policy.</li>
@@ -118,13 +118,10 @@ const sections: LegalSection[] = [
     content: (
       <>
         <p>
-          OppDate Guide is powered by Anthropic's Claude AI models. When you send a message to OppDate Guide, your message and relevant context from your profile (preferences, application history, documents) are sent to Anthropic's API for processing. This is necessary to generate a personalised response.
+          OppDate Guide is powered by third-party AI services. Messages you send and relevant context from your session are processed externally to generate responses. This is necessary for the Guide to function.
         </p>
         <p>
-          Additionally, the Guide may perform web searches via the Tavily search API to retrieve current information about specific opportunities. Search queries and result snippets are processed by Tavily in accordance with their privacy policy.
-        </p>
-        <p>
-          Your Guide conversations are stored on OppDate's servers and may be reviewed by the OppDate team for quality assurance, safety monitoring, and to improve the AI's responses. We do not use your conversations to train external AI models.
+          Your Guide conversations are stored on OppDate's servers and may be reviewed by the OppDate team for quality assurance and safety monitoring. We do not use your conversations to train external AI models.
         </p>
       </>
     ),

@@ -8,10 +8,7 @@ const SECTIONS = [
     title: 'Overview',
     content: e('div', null,
       e('p', null, 'OppDate is an AI-powered opportunity platform that helps individuals discover, evaluate, and apply for international scholarships, fellowships, internships, training programmes, and entry-level jobs. These Terms of Service govern your access to and use of the OppDate website, mobile experience, AI Guide, and all associated services (collectively, the "Platform").'),
-      e('p', null, 'By creating an account or using any part of the Platform, you agree to be bound by these Terms. If you do not agree, do not use OppDate.'),
-      e('div', { className: 'notice' },
-        e('p', null, e('strong', null, 'OppDate is operated by Infinity Studioz.'), ' References to "OppDate", "we", "our", or "us" in these Terms mean Infinity Studioz and its authorised representatives.')
-      )
+      e('p', null, 'By creating an account or using any part of the Platform, you agree to be bound by these Terms. If you do not agree, do not use OppDate.')
     ),
   },
   {

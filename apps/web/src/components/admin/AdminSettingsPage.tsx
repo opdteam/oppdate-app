@@ -6,9 +6,10 @@ import { api } from '@/lib/api'
 import {
   Plus, Trash2, Check, Info,
   Instagram, Linkedin, Twitter, Facebook, Youtube,
+  type LucideIcon,
 } from 'lucide-react'
 
-const SOCIAL_PLATFORMS: { value: string; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
+const SOCIAL_PLATFORMS: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'instagram', label: 'Instagram', Icon: Instagram },
   { value: 'linkedin',  label: 'LinkedIn',  Icon: Linkedin },
   { value: 'twitter',   label: 'X (Twitter)', Icon: Twitter },

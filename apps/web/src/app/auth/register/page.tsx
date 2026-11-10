@@ -113,6 +113,13 @@ function RegisterForm() {
 
           {error && <p className="auth-error-msg">{error}</p>}
 
+          <p style={{ margin: '4px 0 12px', fontSize: 12, color: 'var(--auth-subtext)', textAlign: 'center', lineHeight: 1.6 }}>
+            By creating an account you agree to our{' '}
+            <Link href="/legal/terms" target="_blank" style={{ color: 'var(--auth-ginger)', textDecoration: 'none', fontWeight: 500 }}>Terms of Service</Link>
+            {' '}and{' '}
+            <Link href="/legal/privacy" target="_blank" style={{ color: 'var(--auth-ginger)', textDecoration: 'none', fontWeight: 500 }}>Privacy Policy</Link>.
+          </p>
+
           <button type="submit" className={'auth-btn-primary' + (loading ? ' loading' : '')} aria-busy={loading}>
             {loading ? <span className="auth-spinner" /> : 'Create account'}
           </button>

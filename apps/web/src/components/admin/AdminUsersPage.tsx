@@ -1090,7 +1090,11 @@ function AdminTab() {
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <RoleBadge role={a.role} />
-                        {isFounder && <Lock size={11} style={{ color: '#C4A882', flexShrink: 0 }} title="Role cannot be changed" />}
+                        {isFounder && (
+                          <span title="Role cannot be changed" style={{ display: 'inline-flex' }}>
+                            <Lock size={11} style={{ color: '#C4A882', flexShrink: 0 }} />
+                          </span>
+                        )}
                       </div>
                     )}
                   </td>

@@ -240,6 +240,42 @@ export interface DocumentRequest {
   items: DocumentRequestItem[]
 }
 
+// ─── ELIGIBILITY ─────────────────────────────────────────────────────────────
+
+export type EligibilityTier = 'eligible' | 'borderline' | 'ineligible'
+
+export interface EligibilityCriterionOption {
+  text: string
+  score: number       // 0 = neutral, negative = penalty (-30 soft, -100 hard disqualifier)
+}
+
+export interface EligibilityCriterion {
+  question: string
+  options: EligibilityCriterionOption[]
+  weightRationale?: string   // admin-visible note from AI explaining score assignment
+}
+
+export interface EligibilityAnswer {
+  question: string
+  answer: string
+  score: number
+}
+
+export interface EligibilityCheck {
+  id: string
+  userId: string
+  listingId: string
+  answers: EligibilityAnswer[]
+  score: number       // sum of all answer scores
+  tier: EligibilityTier
+  checkedAt: Date
+}
+
+export interface EligibilityResult {
+  score: number
+  tier: EligibilityTier
+}
+
 // ─── PAYMENTS ─────────────────────────────────────────────────────────────────
 
 export type PaymentStatus = 'pending' | 'processing' | 'succeeded' | 'failed' | 'refunded'

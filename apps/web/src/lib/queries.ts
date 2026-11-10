@@ -14,6 +14,7 @@ export interface ApiUser {
   avatarUrl?: string | null
   isEmailVerified: boolean
   passwordHash?: string | null
+  preferences?: Record<string, unknown> | null
 }
 
 export interface ApiApplication {

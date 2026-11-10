@@ -889,3 +889,32 @@ export const opportunityEventsRelations = relations(opportunityEvents, ({ one })
   opportunity: one(opportunities, { fields: [opportunityEvents.opportunityId], references: [opportunities.id] }),
   user:        one(users, { fields: [opportunityEvents.userId], references: [users.id] }),
 }))
+
+// ─── ELIGIBILITY ──────────────────────────────────────────────────────────────
+
+// Records the result of a user's eligibility check against a listing's criteria.
+// score = sum of option scores from all answers.
+// tier: 'eligible' (>=0), 'borderline' (<0 and >-50), 'ineligible' (<=-50).
+// answers = [{ question, answer, score }] for admin review in the application panel.
+export const eligibilityChecks = pgTable(
+  'eligibility_checks',
+  {
+    id:        uuid('id').primaryKey().defaultRandom(),
+    userId:    uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    listingId: uuid('listing_id').notNull().references(() => opportunities.id, { onDelete: 'cascade' }),
+    answers:   jsonb('answers').notNull().default([]),
+    score:     integer('score').notNull().default(0),
+    tier:      varchar('tier', { length: 20 }).notNull(),
+    checkedAt: timestamp('checked_at').notNull().defaultNow(),
+  },
+  (t) => ({
+    userIdx:       index('eligibility_checks_user_idx').on(t.userId),
+    listingIdx:    index('eligibility_checks_listing_idx').on(t.listingId),
+    userListingIdx: uniqueIndex('eligibility_checks_user_listing_idx').on(t.userId, t.listingId),
+  })
+)
+
+export const eligibilityChecksRelations = relations(eligibilityChecks, ({ one }) => ({
+  user:    one(users, { fields: [eligibilityChecks.userId], references: [users.id] }),
+  listing: one(opportunities, { fields: [eligibilityChecks.listingId], references: [opportunities.id] }),
+}))

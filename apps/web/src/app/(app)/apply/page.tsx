@@ -16,7 +16,7 @@ import {
 
 interface EligOption { text: string; score: number }
 interface EligCriterion { question: string; options: (string | EligOption)[] }
-interface RequiredDoc { type: string; required: boolean; formats?: string[] }
+interface RequiredDoc { type: string; required: boolean; formats?: string[]; creatable?: 'writes' | 'guides' }
 interface UserDocument { id: string; name: string; type: string; timesReused?: number; mimeType?: string }
 
 // Map a slot label to the nearest API document type enum value
@@ -1084,14 +1084,23 @@ function R2OptionBtn({
 }
 
 function R2DocCard({
-  label, required, value, onChange,
+  label, required, value, onChange, creatable,
 }: {
   label: string
   required: boolean
   value: ReadinessChoice | undefined
   onChange: (v: ReadinessChoice) => void
+  creatable?: 'writes' | 'guides'
 }) {
-  const selOpt = READINESS_OPTS.find(o => o.id === value)
+  const helpOpt = creatable === 'writes'
+    ? { ...READINESS_OPTS[2], label: 'I need help creating this' }
+    : creatable === 'guides'
+    ? { ...READINESS_OPTS[2], label: 'I need help obtaining this' }
+    : null
+  const visibleOpts = helpOpt
+    ? [READINESS_OPTS[0], READINESS_OPTS[1], helpOpt]
+    : [READINESS_OPTS[0], READINESS_OPTS[1]]
+  const selOpt = visibleOpts.find(o => o.id === value)
   const cardBorder = selOpt ? `1.5px solid ${selOpt.selBorder}` : `1px solid ${AP.hairline}`
   return (
     <div style={{
@@ -1112,7 +1121,7 @@ function R2DocCard({
         )}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
-        {READINESS_OPTS.map(opt => (
+        {visibleOpts.map(opt => (
           <R2OptionBtn key={opt.id} opt={opt} selected={value === opt.id} onSelect={() => onChange(opt.id)} />
         ))}
       </div>
@@ -1146,6 +1155,7 @@ function ReadinessStepView({
           required={doc.required}
           value={readiness[doc.type]}
           onChange={(v) => onChange(doc.type, v)}
+          creatable={doc.creatable}
         />
       ))}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 16 }}>
@@ -1466,15 +1476,27 @@ function PaymentStepView({
             )}
           </div>
           <p style={{ fontFamily: AP.sans, fontSize: 13, color: AP.sec, lineHeight: 1.6, margin: '0 0 10px' }}>
-            {catA
-              ? `By proceeding, you authorize OppDate to prepare your complete application package. You will complete the final submission step directly with the institution when your package is ready.`
-              : `By proceeding, you authorize OppDate to prepare and submit this application on your behalf. OppDate will manage all documents, communication, and submission for ${title}.`
-            }
+            {catA ? (
+              <>
+                By proceeding, you authorize OppDate to prepare your complete application package under our{' '}
+                <a href="/legal/terms" target="_blank" rel="noopener noreferrer" style={{ color: AP.ginger, textDecoration: 'underline', textUnderlineOffset: 2 }}>Terms of Service</a>.
+                {' '}You will complete the final submission step directly with the institution when your package is ready.
+              </>
+            ) : (
+              <>
+                By proceeding, you authorize OppDate to prepare and submit this application on your behalf under our{' '}
+                <a href="/legal/terms" target="_blank" rel="noopener noreferrer" style={{ color: AP.ginger, textDecoration: 'underline', textUnderlineOffset: 2 }}>Terms of Service</a>.
+                {' '}OppDate will manage all documents, communication, and submission for {title}.
+              </>
+            )}
           </p>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 14 }}>
             <Info size={12} style={{ color: AP.helper, flexShrink: 0, marginTop: 1 }} />
             <p style={{ fontFamily: AP.sans, fontSize: 11, color: AP.helper, fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>
               OppDate does not store your Gmail password, create email accounts on your behalf, or access any personal accounts not explicitly shared with you.
+              {' '}See our{' '}
+              <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" style={{ color: AP.helper, textDecoration: 'underline', textUnderlineOffset: 2, fontStyle: 'italic' }}>Privacy Policy</a>
+              {' '}for details on how we handle your data.
             </p>
           </div>
           <div style={{ height: 1, background: AP.hairline, marginBottom: 14 }} />
@@ -1491,11 +1513,18 @@ function PaymentStepView({
             }}>
               {authChecked && <Check size={10} style={{ color: '#fff', strokeWidth: 3 }} />}
             </div>
-            <span style={{ fontFamily: AP.sans, fontSize: 13, color: AP.ink, lineHeight: 1.5 }}>
-              {catA
-                ? 'I authorize OppDate to prepare my application package. I understand I will complete the final submission step myself.'
-                : 'I authorize OppDate to act as my representative and submit this application on my behalf.'
-              }
+            <span style={{ fontFamily: AP.sans, fontSize: 13, color: AP.ink, lineHeight: 1.5 }} onClick={e => e.stopPropagation()}>
+              {catA ? (
+                <>
+                  I authorize OppDate to prepare my application package. I understand I will complete the final submission step myself and that this is governed by OppDate&apos;s{' '}
+                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" style={{ color: AP.ginger, textDecoration: 'underline', textUnderlineOffset: 2 }}>Terms of Service</a>.
+                </>
+              ) : (
+                <>
+                  I authorize OppDate to act as my representative and submit this application on my behalf, as outlined in OppDate&apos;s{' '}
+                  <a href="/legal/terms" target="_blank" rel="noopener noreferrer" style={{ color: AP.ginger, textDecoration: 'underline', textUnderlineOffset: 2 }}>Terms of Service</a>.
+                </>
+              )}
             </span>
           </div>
         </div>

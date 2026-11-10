@@ -182,7 +182,7 @@ function LoginView({ onNavigate }: { onNavigate: (v: View) => void }) {
         role: user.role,
         avatarUrl: user.avatarUrl ?? null,
       }))
-      window.location.href = redirect || '/admin/dashboard'
+      window.location.href = (redirect && redirect !== '/admin') ? redirect : '/admin/dashboard'
     } catch (err: unknown) {
       setLoading(false)
       const axiosErr = err as { response?: { status?: number; data?: { error?: string } } }

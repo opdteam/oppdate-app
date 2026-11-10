@@ -20,14 +20,6 @@ import type { OpportunityListItem } from '@/components/opportunities/types'
 import { api } from '@/lib/api'
 import { keys, fetchers, type ApiSavedSearch, type ApiSavedOpportunity, type ApiUser, type ApiRecommendation } from '@/lib/queries'
 
-// Eligibility check data (Chevening-specific)
-const QUESTIONS = [
-  { question: 'Are you a citizen of a Chevening-eligible country?', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }, { text: 'I am not sure', score: -30 }] },
-  { question: 'What is your current level of education?', options: [{ text: 'Undergraduate degree (in progress)', score: -30 }, { text: 'Undergraduate degree (completed)', score: 0 }, { text: 'Postgraduate degree', score: 0 }, { text: 'PhD', score: 0 }] },
-  { question: 'How many years of work or volunteer experience do you have?', options: [{ text: 'Less than 1 year', score: -100 }, { text: '1 to 2 years', score: -30 }, { text: '2 to 3 years', score: 0 }, { text: 'More than 3 years', score: 0 }] },
-  { question: 'Have you secured admission to a UK university?', options: [{ text: 'Yes, confirmed', score: 0 }, { text: 'Applied, awaiting decision', score: -30 }, { text: 'Not yet', score: -30 }] },
-  { question: 'Will you return to your home country for two years after the programme?', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }, { text: 'Undecided', score: -30 }] },
-]
 
 const COMPLIANCE_TIPS: Record<string, string> = {
   A: 'OppDate will prepare and submit this application on your behalf. You do not need to take any action after payment.',
@@ -425,7 +417,7 @@ function EligibilityModal({
   onOpenGuide?: () => void
 }) {
   const router = useRouter()
-  const questions = (criteria.length > 0 ? criteria : QUESTIONS).map(q => ({
+  const questions = criteria.map(q => ({
     ...q,
     options: q.options.map(o => typeof (o as unknown) === 'string' ? { text: o as unknown as string, score: 0 } : o),
   }))

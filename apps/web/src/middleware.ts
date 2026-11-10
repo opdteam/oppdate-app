@@ -30,6 +30,7 @@ const PUBLIC_ROUTES = [
   '/services/ebooks',
   '/services/apply',
   '/pricing',
+  '/legal',
   '/admin/login',
   '/admin/forgot-password',
   '/admin/reset-password',

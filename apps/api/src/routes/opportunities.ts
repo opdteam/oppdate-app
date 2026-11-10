@@ -4,6 +4,7 @@ import { db, schema } from '../db'
 import { eq, and, gte, lte, ilike, or, sql, desc, asc } from 'drizzle-orm'
 import { ok, created, notFound, badRequest } from '../utils/response'
 import { requireRole, requireAuth } from '../middleware/auth'
+import { triggerEligibilityGeneration } from './eligibility'
 
 
 const listQuerySchema = z.object({
@@ -255,6 +256,9 @@ export async function opportunityRoutes(server: FastifyInstance) {
         })
         .returning()
 
+      // Trigger AI eligibility question generation in background (non-blocking)
+      triggerEligibilityGeneration(opportunity.id).catch(() => {})
+
       return created(reply, opportunity, 'Opportunity created successfully.')
     }
   )
@@ -282,6 +286,9 @@ export async function opportunityRoutes(server: FastifyInstance) {
         .returning()
 
       if (!updated) return notFound(reply, 'Opportunity')
+
+      // Re-generate eligibility questions in background when listing content changes
+      triggerEligibilityGeneration(id).catch(() => {})
 
       return ok(reply, updated, 'Opportunity updated.')
     }

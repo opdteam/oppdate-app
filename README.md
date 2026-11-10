@@ -10,7 +10,7 @@ AI-powered global opportunity application platform.
 | Backend | Node.js + Fastify |
 | Database | PostgreSQL (Docker locally, Neon in production) + Drizzle ORM |
 | Real-time | WebSocket via @fastify/websocket (singleton hook with exponential backoff reconnect) |
-| AI | Anthropic Claude (claude-haiku-4-5 for eligibility assessment, claude-opus-4-6 for Guide chat) |
+| AI | Anthropic Claude (claude-sonnet-4-6 for eligibility generation, claude-opus-4-6 for Guide chat) |
 | Payments | Stripe + Flutterwave + Paystack |
 | File Storage | Cloudflare R2 |
 | Email | Resend |
@@ -32,7 +32,7 @@ oppdate/
 ## Build Status
 
 <!-- oppdate:build-status:start -->
-_Last updated: 2026-10-30_
+_Last updated: 2026-11-10_
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -256,6 +256,120 @@ All changes in this section were applied on 2026-10-30.
 
 ---
 
+## Eligibility System
+
+All changes in this section were applied on 2026-11-10 across `apps/api`, `apps/web`, and `packages/types`.
+
+### How it works
+
+Each listing stores eligibility criteria in `opportunities.eligibility_criteria` (JSONB). Each criterion is a question with 2-5 options. Each option carries an integer score (0 or negative). When a user runs the eligibility check, their answers are scored and summed. The total determines their tier.
+
+| Score | Tier |
+|---|---|
+| >= 0 | eligible |
+| -1 to -49 | borderline |
+| <= -50 | ineligible |
+
+Option score conventions:
+
+| Score | Meaning |
+|---|---|
+| 0 | Neutral - no impact |
+| -20 to -30 | Soft penalty - stacks with others |
+| -100 | Hard disqualifier alone |
+
+### AI generation
+
+When a listing is saved with no existing criteria, `triggerEligibilityGeneration` fires in the background. It calls `claude-sonnet-4-6` with the listing's title, description, whoItsFor, eligibilityLevel, fieldOfStudy, and country, and writes 4-8 scored questions back to `eligibility_criteria`.
+
+Admins can also regenerate manually using the "Generate with AI" button in the listing edit form. Individual questions can be pinned before regeneration; pinned questions are preserved and merged first, then fresh AI output fills the rest.
+
+The `ANTHROPIC_WORKSPACE_ID` env var is passed as the `anthropic-workspace-id` request header when set - required for unscoped API keys.
+
+### Database
+
+**Migration 0023_eligibility_tables.sql** adds:
+
+```sql
+CREATE TABLE eligibility_checks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  listing_id uuid NOT NULL REFERENCES opportunities(id) ON DELETE CASCADE,
+  answers jsonb NOT NULL DEFAULT '[]',
+  score integer NOT NULL DEFAULT 0,
+  tier text NOT NULL CHECK (tier IN ('eligible', 'borderline', 'ineligible')),
+  checked_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, listing_id)
+);
+```
+
+### New API endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | /opportunities/:id/generate-eligibility | admin | Generate or regenerate criteria via AI. Body: `{ keepQuestions: string[] }`. Returns merged criteria. |
+| POST | /opportunities/:id/eligibility-check | user | Submit answers, compute score, upsert result. Returns `{ score, tier }`. |
+| GET | /opportunities/:id/eligibility-check | user/admin | Fetch check result. Admins pass `?userId=` to fetch any user's result. |
+
+### Admin UI changes
+
+- Listing edit form: "Generate with AI" button in the eligibility section header (only shown when editing an existing listing).
+- Pin/Unpin per question: pinned questions are kept on "Regenerate unchecked".
+- `weightRationale` shown in italic below each question text.
+- Inline error display if generation fails (shows the actual API error rather than a generic message).
+- Score badge on each option cycles 0 -> -30 -> -100 -> 0 on click.
+- "Add option" and "Add question" links for manual editing.
+
+### Apply flow changes
+
+- `EligibilityModal` now reads from `listing.eligibilityCriteria` exclusively. The hardcoded Chevening fallback questions have been removed.
+- Borderline and ineligible results trigger the AI gap analysis card (unchanged).
+
+### Application review panel
+
+- Eligibility card appears between the Opportunity card and Compliance card in the application detail sidebar.
+- Shows tier badge, numeric score, and each answered question with its score.
+- Hidden if the applicant has not run the check.
+- Fetches via `GET /opportunities/:id/eligibility-check?userId=<applicantId>`.
+
+---
+
+## Document Creatable Modes
+
+Before this change, each required document on a listing had a single `creatable: boolean` toggle ("OppDate can create this"). This was replaced with two distinct modes that drive different UX in the apply flow readiness screen.
+
+### Modes
+
+| Mode | Meaning | Apply flow third card |
+|---|---|---|
+| `'writes'` | OppDate drafts this document (personal statement, CV, cover letter, SOP, essay) | "I need help creating this" |
+| `'guides'` | OppDate guides the client to obtain this from a third party (transcript, reference letter, passport, certificate) | "I need help obtaining this" |
+| `false` | No OppDate assistance | Third card is hidden; only "Ready to upload" and "Needs refinement" shown |
+
+### Admin form
+
+Two independent toggles per document row replace the single toggle:
+- "OppDate writes this"
+- "OppDate guides client to obtain this"
+
+Turning one on while the other is on turns the other off (mutually exclusive by click - toggling the active one turns it off). The `creatable` field is included in the `requiredDocuments` JSONB saved to the listing.
+
+### Apply flow
+
+`RequiredDoc` interface now includes `creatable?: 'writes' | 'guides'`. `R2DocCard` builds its option list dynamically: two options if `creatable` is unset, three options with the appropriate label if set.
+
+---
+
+## Legal Pages
+
+Added `/legal/terms` and `/legal/privacy` as Next.js App Router pages.
+
+- Both pages are publicly accessible (no auth required).
+- The apply flow authorization block links to both pages inline within the checkbox label and disclaimer text.
+- `onClick={e => e.stopPropagation()}` on link elements inside the checkbox label prevents link clicks from toggling the checkbox.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -366,6 +480,9 @@ All endpoints are prefixed with `/api/v1`
 | POST | /payments/webhook/flutterwave | Flutterwave webhook handler |
 | POST | /payments/webhook/lemonsqueezy | Lemon Squeezy webhook handler |
 | POST | /support | Submit support contact form |
+| POST | /opportunities/:id/generate-eligibility | Generate or regenerate eligibility criteria via AI (admin) |
+| POST | /opportunities/:id/eligibility-check | Submit eligibility answers and get score + tier |
+| GET | /opportunities/:id/eligibility-check | Fetch eligibility check result (admin: pass ?userId=) |
 | GET | /ai/eligibility-criteria | Get eligibility criteria for an opportunity |
 | POST | /ai/eligibility-assessment | AI-scored eligibility assessment |
 | GET | /ai/recommendations | Personalised opportunity recommendations (Premium) |
@@ -413,4 +530,3 @@ yarn db:studio
 yarn workspace @oppdate/api db:seed-admin
 yarn workspace @oppdate/api db:seed-mentorship-programmes
 ```
-# oppdate-app

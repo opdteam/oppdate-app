@@ -172,6 +172,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <span className="nav-icon"><LogOut size={18} /></span>
             <span className="nav-label">Log out</span>
           </button>
+          <div style={{ display: 'flex', gap: 14, padding: '10px 16px 4px', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 4 }}>
+            <Link href="/legal/terms" onClick={onClose} style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 140ms' }} onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}>Terms</Link>
+            <Link href="/legal/privacy" onClick={onClose} style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 140ms' }} onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}>Privacy</Link>
+          </div>
         </div>
       </aside>
     </>

@@ -47,7 +47,7 @@ interface DocRow {
   type: string
   required: boolean
   formats: string[]
-  creatable: boolean
+  creatable: 'writes' | 'guides' | false
 }
 
 interface KeyDate {
@@ -58,6 +58,7 @@ interface KeyDate {
 interface EligCriterion {
   question: string
   options: { text: string; score: number }[]
+  weightRationale?: string
 }
 
 interface FormData {
@@ -89,7 +90,6 @@ interface FormData {
 
 const TYPES = ['Scholarship', 'Internship', 'Job', 'Fellowship', 'Training', 'Research Grant']
 const FUND_OPTIONS = ['Fully funded', 'Partially funded', 'Stipend', 'Travel included', 'Accommodation', 'Health insurance']
-const CREATABLE_DOCS = ['Personal Statement', 'Statement of Purpose', 'CV / Resume', 'Cover Letter', 'Essays']
 const FORMAT_OPTIONS = ['PDF', 'DOCX', 'JPG', 'PNG']
 const TZ_OPTIONS = ['GMT', 'EST', 'WAT', 'CET', 'CST', 'PST', 'SAST', 'WET']
 const STATUS_LABEL: Record<OppStatus, string> = { published: 'Published', draft: 'Draft', archived: 'Archived', expired: 'Expired' }
@@ -214,11 +214,12 @@ function apiToFormData(o: ApiOpportunity): FormData {
     volunteering: 'Volunteering', competition: 'Competition', relocation: 'Relocation',
   }
   const rawCriteria = Array.isArray(o.eligibilityCriteria)
-    ? (o.eligibilityCriteria as { question: string; options: (string | { text: string; score: number })[] }[]).map(c => ({
+    ? (o.eligibilityCriteria as { question: string; options: (string | { text: string; score: number })[]; weightRationale?: string }[]).map(c => ({
         question: c.question,
         options: c.options.map(opt =>
           typeof opt === 'string' ? { text: opt, score: 0 } : opt
         ),
+        weightRationale: c.weightRationale,
       }))
     : []
   const rawDocs = Array.isArray(o.requiredDocuments) ? o.requiredDocuments : []
@@ -243,9 +244,9 @@ function apiToFormData(o: ApiOpportunity): FormData {
     criteria: rawCriteria.length > 0 ? rawCriteria : [{ question: '', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }] }],
     docs: rawDocs.length > 0
       ? rawDocs.map(d => typeof d === 'string'
-          ? { type: d, required: true, formats: ['PDF'], creatable: CREATABLE_DOCS.includes(d) }
-          : { type: (d as any).type ?? '', required: (d as any).required ?? true, formats: (d as any).formats || ['PDF'], creatable: CREATABLE_DOCS.includes((d as any).type ?? '') })
-      : [{ type: '', required: true, formats: ['PDF'], creatable: false }],
+          ? { type: d, required: true, formats: ['PDF'], creatable: false as const }
+          : { type: (d as any).type ?? '', required: (d as any).required ?? true, formats: (d as any).formats || ['PDF'], creatable: ((d as any).creatable ?? false) as 'writes' | 'guides' | false })
+      : [{ type: '', required: true, formats: ['PDF'], creatable: false as const }],
     dates: [],
     funding: Array.isArray(o.tags) ? o.tags.filter(t => FUND_OPTIONS.includes(t)) : [],
     aiQuestions: [],
@@ -1744,7 +1745,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
   const initial: FormData = editApiOpp ? apiToFormData(editApiOpp) : {
     editing: false, title: '', inst: '', country: '', type: '', summary: '', about: '', whoItIsFor: '', benefit: '',
     cat: '', code: '', oppFee: '', instFee: '0.00', vip: false, applyDisabledNote: '', status: 'draft', featured: false,
-    criteria: [{ question: '', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }] }], docs: [{ type: '', required: true, formats: ['PDF'], creatable: false }],
+    criteria: [{ question: '', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }] }], docs: [{ type: '', required: true, formats: ['PDF'], creatable: false as const }],
     dates: [], funding: [], aiQuestions: [], internalNote: '', institutionLogoUrl: '',
   }
 
@@ -1768,6 +1769,9 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
   const [previewSheetOpen, setPreviewSheetOpen] = useState(false)
   const [feesAdvancedOpen, setFeesAdvancedOpen] = useState(false)
   const [docOptionsOpen, setDocOptionsOpen] = useState<Record<number, boolean>>({})
+  const [aiGenLoading, setAiGenLoading] = useState(false)
+  const [aiGenError, setAiGenError] = useState<string | null>(null)
+  const [keptQuestions, setKeptQuestions] = useState<Set<string>>(new Set())
   const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const toggleSection = (n: number) => {
@@ -1812,6 +1816,25 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
   const [deadlineTz, setDeadlineTz] = useState(editApiOpp ? 'GMT' : '')
 
   const update = <K extends keyof FormData>(key: K, val: FormData[K]) => setForm(prev => ({ ...prev, [key]: val }))
+
+  const handleGenerateEligibility = async () => {
+    setAiGenLoading(true)
+    setAiGenError(null)
+    try {
+      const res = await api.post<{ data: { criteria: { question: string; options: { text: string; score: number }[]; weightRationale?: string }[]; generated: number; kept: number } }>(
+        `/api/v1/opportunities/${editId}/generate-eligibility`,
+        { keepQuestions: Array.from(keptQuestions) },
+      )
+      const { criteria } = res.data.data
+      update('criteria', criteria)
+      setKeptQuestions(new Set())
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Generation failed. Try again.'
+      setAiGenError(msg)
+    } finally {
+      setAiGenLoading(false)
+    }
+  }
 
   const oppN = parseFloat(form.oppFee) || 0
   const instN = parseFloat(form.instFee) || 0
@@ -1929,10 +1952,30 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
               <RichEditor value={form.whoItIsFor} onChange={v => update('whoItIsFor', v)} placeholder="Who is this opportunity open to?" />
             </div>
             <div className="adm-field">
-              <label className="adm-field-label">Eligibility screening questions</label>
-              <div className="adm-field-help" style={{ marginBottom: 10 }}>
-                These are shown to users in Step 1 of the OppDate Apply flow. Each question needs a set of answer options.
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label className="adm-field-label" style={{ margin: 0 }}>Eligibility screening questions</label>
+                {editId && (
+                  <button
+                    className="adm-btn adm-btn-ghost adm-btn-sm"
+                    onClick={handleGenerateEligibility}
+                    disabled={aiGenLoading}
+                    style={{ gap: 6 }}
+                  >
+                    <Sparkles size={13} />
+                    {aiGenLoading ? 'Generating...' : keptQuestions.size > 0 ? 'Regenerate unchecked' : 'Generate with AI'}
+                  </button>
+                )}
               </div>
+              <div className="adm-field-help" style={{ marginBottom: 10 }}>
+                {editId
+                  ? 'AI generates questions from the listing content. Check any question to keep it when regenerating. Edit options and scores freely.'
+                  : 'Save the listing first, then use "Generate with AI" to auto-fill questions from the listing content.'}
+              </div>
+              {aiGenError && (
+                <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(220,38,38,0.08)', color: '#DC2626', fontSize: 13, fontFamily: 'var(--adm-font-sans)' }}>
+                  {aiGenError}
+                </div>
+              )}
               <div className="adm-repeat" style={{ gap: 14 }}>
                 {form.criteria.map((c, i) => (
                   <div key={i} className="adm-elig-q-block">
@@ -1948,8 +1991,38 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
                           update('criteria', n)
                         }}
                       />
-                      <button className="adm-rm" onClick={() => update('criteria', form.criteria.filter((_, j) => j !== i))}><X /></button>
+                      {editId && c.question.trim() && (
+                        <button
+                          title={keptQuestions.has(c.question) ? 'Unpin - will be replaced on next regeneration' : 'Pin - keep this question on next regeneration'}
+                          onClick={() => {
+                            const next = new Set(keptQuestions)
+                            if (next.has(c.question)) next.delete(c.question)
+                            else next.add(c.question)
+                            setKeptQuestions(next)
+                          }}
+                          style={{
+                            flexShrink: 0, border: 'none', cursor: 'pointer', borderRadius: 6,
+                            padding: '4px 8px', fontSize: 10, fontWeight: 600,
+                            fontFamily: 'var(--adm-font-sans)',
+                            background: keptQuestions.has(c.question) ? 'rgba(5,150,105,0.12)' : 'rgba(160,120,88,0.1)',
+                            color: keptQuestions.has(c.question) ? '#059669' : 'var(--adm-t-low)',
+                          }}
+                        >
+                          {keptQuestions.has(c.question) ? 'Pinned' : 'Pin'}
+                        </button>
+                      )}
+                      <button className="adm-rm" onClick={() => {
+                        const next = new Set(keptQuestions)
+                        next.delete(c.question)
+                        setKeptQuestions(next)
+                        update('criteria', form.criteria.filter((_, j) => j !== i))
+                      }}><X /></button>
                     </div>
+                    {(c as { weightRationale?: string }).weightRationale && (
+                      <div style={{ paddingLeft: 28, marginBottom: 8, fontSize: 11, color: 'var(--adm-t-low)', fontFamily: 'var(--adm-font-sans)', fontStyle: 'italic' }}>
+                        {(c as { weightRationale?: string }).weightRationale}
+                      </div>
+                    )}
                     <div style={{ paddingLeft: 28 }}>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                         {c.options.map((opt, oi) => (
@@ -2012,7 +2085,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
                         ><Plus size={11} /> Add option</button>
                       </div>
                       <span style={{ fontSize: 10.5, color: 'var(--adm-t-low)', fontFamily: 'var(--adm-font-sans)' }}>
-                        Click score to mark as warning (-30) or disqualifying (-100)
+                        Click score to cycle: 0 (neutral) - 30 (warning) - 100 (disqualifying)
                       </span>
                     </div>
                   </div>
@@ -2182,22 +2255,36 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
                       </div>
                       {isMobile ? (
                         docOptionsOpen[i] ? (
-                          <label className="adm-docrow-opt">
-                            <Toggle on={doc.creatable}
-                              onToggle={() => { const n = [...form.docs]; n[i] = { ...n[i], creatable: !n[i].creatable }; update('docs', n) }} />
-                            OppDate can create this
-                          </label>
+                          <>
+                            <label className="adm-docrow-opt">
+                              <Toggle on={doc.creatable === 'writes'}
+                                onToggle={() => { const n = [...form.docs]; n[i] = { ...n[i], creatable: doc.creatable === 'writes' ? false : 'writes' }; update('docs', n) }} />
+                              OppDate writes this
+                            </label>
+                            <label className="adm-docrow-opt">
+                              <Toggle on={doc.creatable === 'guides'}
+                                onToggle={() => { const n = [...form.docs]; n[i] = { ...n[i], creatable: doc.creatable === 'guides' ? false : 'guides' }; update('docs', n) }} />
+                              OppDate guides client to obtain this
+                            </label>
+                          </>
                         ) : (
                           <button className="adm-mob-doc-options-btn" onClick={() => setDocOptionsOpen(prev => ({ ...prev, [i]: true }))}>
                             Options
                           </button>
                         )
                       ) : (
-                        <label className="adm-docrow-opt">
-                          <Toggle on={doc.creatable}
-                            onToggle={() => { const n = [...form.docs]; n[i] = { ...n[i], creatable: !n[i].creatable }; update('docs', n) }} />
-                          OppDate can create this
-                        </label>
+                        <>
+                          <label className="adm-docrow-opt">
+                            <Toggle on={doc.creatable === 'writes'}
+                              onToggle={() => { const n = [...form.docs]; n[i] = { ...n[i], creatable: doc.creatable === 'writes' ? false : 'writes' }; update('docs', n) }} />
+                            OppDate writes this
+                          </label>
+                          <label className="adm-docrow-opt">
+                            <Toggle on={doc.creatable === 'guides'}
+                              onToggle={() => { const n = [...form.docs]; n[i] = { ...n[i], creatable: doc.creatable === 'guides' ? false : 'guides' }; update('docs', n) }} />
+                            OppDate guides client to obtain this
+                          </label>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2205,11 +2292,11 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
               })}
             </div>
             {isMobile ? (
-              <button className="adm-mob-add-doc-btn" onClick={() => update('docs', [...form.docs, { type: '', required: true, formats: ['PDF'], creatable: false }])}>
+              <button className="adm-mob-add-doc-btn" onClick={() => update('docs', [...form.docs, { type: '', required: true, formats: ['PDF'], creatable: false as const }])}>
                 <Plus /> Add document
               </button>
             ) : (
-              <span className="adm-add-link" onClick={() => update('docs', [...form.docs, { type: '', required: true, formats: ['PDF'], creatable: false }])}>
+              <span className="adm-add-link" onClick={() => update('docs', [...form.docs, { type: '', required: true, formats: ['PDF'], creatable: false as const }])}>
                 <Plus /> Add document
               </span>
             )}
@@ -2816,8 +2903,9 @@ export function AdminOpportunitiesPage() {
         .map(c => ({
           question: c.question,
           options: c.options.filter(o => o.text.trim()),
+          ...(c.weightRationale ? { weightRationale: c.weightRationale } : {}),
         })),
-      requiredDocuments: formData.docs.map(d => ({ type: d.type, required: d.required, formats: d.formats })),
+      requiredDocuments: formData.docs.map(d => ({ type: d.type, required: d.required, formats: d.formats, creatable: d.creatable || undefined })),
       deadline: deadlineIso,
       oppdateServiceFeeUsd: Math.round(parseFloat(formData.oppFee || '0') * 100),
       institutionFeeUsd: Math.round(parseFloat(formData.instFee || '0') * 100),

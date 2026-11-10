@@ -220,6 +220,8 @@ function apiAppToApp(a: ApiAdminApplication): App {
     serviceFee: a.oppServiceFeeUsd ?? 0,
     instFee: a.oppInstitutionFeeUsd ?? 0,
     adminNotes: a.adminNotes,
+    userId: a.userId,
+    opportunityId: a.opportunityId,
   }
 }
 
@@ -283,6 +285,8 @@ type App = {
   serviceFee: number
   instFee: number
   adminNotes: string | null
+  userId: string
+  opportunityId: string
 }
 
 const APP_SORT_OPTIONS = [
@@ -742,6 +746,7 @@ export function AdminApplicationsPage() {
   const [modal, setModal] = useState<'advance' | 'withdraw' | null>(null)
   const [modalApp, setModalApp] = useState<App | null>(null)
   const [docs, setDocs] = useState<Doc[]>([])
+  const [eligCheck, setEligCheck] = useState<{ score: number; tier: string; answers: { question: string; answer: string; score: number }[] } | null>(null)
   const [messages, setMessages] = useState<ThreadMessage[]>([])
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const [msgInput, setMsgInput] = useState('')
@@ -1012,6 +1017,7 @@ export function AdminApplicationsPage() {
   const openDetail = useCallback((app: App) => {
     setSelectedApp(app)
     setDocs(docSet(app.stage))
+    setEligCheck(null)
     setMessages(threadFor(app))
     setActiveThreadId(null)
     setNotes(app.adminNotes || '')
@@ -1058,6 +1064,11 @@ export function AdminApplicationsPage() {
         time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       })))
     }).catch(() => { /* keep static fallback */ })
+
+    // Fetch eligibility check result for this applicant + listing
+    api.get(`/api/v1/opportunities/${app.opportunityId}/eligibility-check`, { params: { userId: app.userId } })
+      .then(res => { if (res.data?.data) setEligCheck(res.data.data) })
+      .catch(() => {})
   }, [])
 
   const backToList = useCallback(() => {
@@ -2343,6 +2354,43 @@ export function AdminApplicationsPage() {
             </div>
           </div>
 
+          {/* Eligibility check result */}
+          {eligCheck && (
+            <div className="adm-card">
+              <div className="adm-card-h">
+                <CheckCircle size={14} /> Eligibility screening
+                <span style={{
+                  marginLeft: 'auto', fontSize: 11, fontWeight: 700, borderRadius: 999, padding: '2px 10px',
+                  ...(eligCheck.tier === 'eligible'
+                    ? { background: 'rgba(5,150,105,0.1)', color: '#059669' }
+                    : eligCheck.tier === 'borderline'
+                    ? { background: 'rgba(212,132,58,0.12)', color: '#D4843A' }
+                    : { background: 'rgba(190,60,48,0.1)', color: 'var(--adm-danger-tx)' }),
+                }}>
+                  {eligCheck.tier === 'eligible' ? 'Eligible' : eligCheck.tier === 'borderline' ? 'Borderline' : 'Not eligible'}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--adm-t-low)', fontFamily: '"DM Mono", monospace', marginLeft: 6 }}>
+                  score {eligCheck.score}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                {eligCheck.answers.map((a, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontSize: 12, fontFamily: 'var(--adm-font-sans)' }}>
+                    <span style={{ color: 'var(--adm-t-low)', flex: 1 }}>{a.question}</span>
+                    <span style={{ flexShrink: 0, fontWeight: 500, color: a.score < 0 ? (a.score <= -100 ? 'var(--adm-danger-tx)' : '#D4843A') : 'var(--adm-t-hi)' }}>
+                      {a.answer}
+                    </span>
+                    {a.score !== 0 && (
+                      <span style={{ flexShrink: 0, fontFamily: '"DM Mono", monospace', fontSize: 10, color: a.score <= -100 ? 'var(--adm-danger-tx)' : '#D4843A' }}>
+                        {a.score}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Compliance & Auth */}
           <div className="adm-card">
             <div className="adm-card-h"><Shield /> Compliance & Authorization</div>
@@ -2776,14 +2824,14 @@ function DocRow({ doc, idx, onApprove, onRequestRefinement, refineOpen, refineNo
             </div>
           )}
         </div>
+        {doc.fileUrl && (
+          <div className="adm-doc-acts">
+            <button className="adm-iconbtn" title="Preview" onClick={() => window.open(doc.fileUrl!, '_blank')}><Eye /></button>
+            <button className="adm-iconbtn" title="Download" onClick={() => { const a = document.createElement('a'); a.href = doc.fileUrl!; a.download = doc.file || 'document'; a.click() }}><Download /></button>
+          </div>
+        )}
         {!readOnly && (
           <div className="adm-doc-acts">
-            {doc.file && (
-              <>
-                {doc.fileUrl && <button className="adm-iconbtn" title="Preview" onClick={() => window.open(doc.fileUrl!, '_blank')}><Eye /></button>}
-                {doc.fileUrl && <button className="adm-iconbtn" title="Download" onClick={() => { const a = document.createElement('a'); a.href = doc.fileUrl!; a.download = doc.file || 'document'; a.click() }}><Download /></button>}
-              </>
-            )}
             {doc.status === 'uploaded' && (
               <>
                 <button

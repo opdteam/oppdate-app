@@ -16,6 +16,7 @@ import { savedOpportunityRoutes } from './savedOpportunities'
 import { savedSearchRoutes } from './savedSearches'
 import { supportRoutes } from './support'
 import { guideSessionRoutes } from './guideSessions'
+import { eligibilityRoutes } from './eligibility'
 
 export async function registerRoutes(server: FastifyInstance) {
   const API_PREFIX = '/api/v1'
@@ -36,6 +37,7 @@ export async function registerRoutes(server: FastifyInstance) {
   await server.register(savedSearchRoutes,        { prefix: `${API_PREFIX}/saved-searches` })
   await server.register(supportRoutes,            { prefix: `${API_PREFIX}/support` })
   await server.register(guideSessionRoutes,       { prefix: `${API_PREFIX}/guide-sessions` })
+  await server.register(eligibilityRoutes,        { prefix: `${API_PREFIX}/opportunities` })
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {

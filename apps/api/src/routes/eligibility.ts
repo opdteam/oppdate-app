@@ -1,9 +1,10 @@
 import { FastifyInstance } from 'fastify'
 import { db, schema } from '../db'
 import { eq, and } from 'drizzle-orm'
-import { ok, created, notFound, badRequest } from '../utils/response'
+import { ok, notFound, badRequest } from '../utils/response'
 import { requireAuth, requireRole } from '../middleware/auth'
 import Anthropic from '@anthropic-ai/sdk'
+import { tavilySearch } from '../utils/search'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ async function generateCriteria(listing: {
   eligibilityLevel: string | null
   fieldOfStudy: string | null
   country: string
+  institution: string
 }): Promise<{ criteria: Criterion[]; error?: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return { criteria: [], error: 'ANTHROPIC_API_KEY is not set on the server.' }
@@ -46,11 +48,26 @@ async function generateCriteria(listing: {
       : undefined,
   })
 
+  // ── Web research: fetch current eligibility details from official sources ──
+  const searchQuery = `${listing.title} ${listing.institution} eligibility requirements ${new Date().getFullYear()}`
+  const webResults = await tavilySearch(searchQuery, 5)
+
+  const webContext = webResults.length > 0
+    ? `\n\nWeb research - current eligibility information from official and authoritative sources:\n` +
+      webResults.map((r, i) =>
+        `[${i + 1}] ${r.title} (${r.url})\n${r.content.slice(0, 600)}`
+      ).join('\n\n')
+    : ''
+
   const prompt = `You are an eligibility screening assistant for OppDate, an international opportunity platform.
 
-Based on the opportunity below, generate a set of self-assessment screening questions for applicants.
+Your task is to generate self-assessment screening questions for applicants to this opportunity.
+${webContext ? 'You have been given live web research below. Prioritise it over the listing description where they conflict, as it reflects current requirements.' : 'No web research was available; use the listing details and your knowledge of this programme type.'}
+${webContext}
 
-Opportunity: ${listing.title}
+Opportunity listing (admin-entered):
+Title: ${listing.title}
+Institution: ${listing.institution}
 Country: ${listing.country}
 Eligibility level: ${listing.eligibilityLevel ?? 'Not specified'}
 Field of study: ${listing.fieldOfStudy ?? 'Not specified'}
@@ -59,7 +76,8 @@ Description: ${listing.description}
 
 Rules:
 - Generate between 4 and 8 questions.
-- Each question maps to one eligibility criterion: nationality, age, degree level, GPA, field of study, work experience, language proficiency, funding eligibility, etc.
+- Each question maps to one eligibility criterion: nationality, citizenship, age, degree level, GPA, field of study, work experience, language proficiency, funding eligibility, etc.
+- Use the web research to identify the specific, current requirements for this exact programme - do not guess generically.
 - Options use a score system. Scores are 0 or negative integers only.
   - 0 = neutral, does not affect eligibility.
   - -30 = soft weakness, stacks with other negatives but not fatal alone.
@@ -133,6 +151,7 @@ export async function eligibilityRoutes(server: FastifyInstance) {
         .select({
           id: schema.opportunities.id,
           title: schema.opportunities.title,
+          institution: schema.opportunities.institution,
           description: schema.opportunities.description,
           whoItsFor: schema.opportunities.whoItsFor,
           eligibilityCriteria: schema.opportunities.eligibilityCriteria,
@@ -267,6 +286,7 @@ export async function triggerEligibilityGeneration(listingId: string): Promise<v
     .select({
       id: schema.opportunities.id,
       title: schema.opportunities.title,
+      institution: schema.opportunities.institution,
       description: schema.opportunities.description,
       whoItsFor: schema.opportunities.whoItsFor,
       eligibilityCriteria: schema.opportunities.eligibilityCriteria,

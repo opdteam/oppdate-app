@@ -12,11 +12,6 @@ const FOOTER_COLS = window.OM && window.OM.FOOTER_COLS || [
 
 /* Hero trust badges — three plain-language commitments that frame the legal content
    as protection for the user, not fine-print to fear. */
-const TRUST_ITEMS = [
-  ['shield-check',   'Plain language, no jargon'],
-  ['lock',           'Your data never sold'],
-  ['refresh-cw',     'Updated as the platform evolves'],
-];
 
 function LegalHero({ pageType, title, accentWord, subtitle, effectiveDate, lastUpdated, companionLabel, companionHref }) {
   /* pageType: 'terms' | 'privacy' — drives the hero headline variant */
@@ -44,19 +39,6 @@ function LegalHero({ pageType, title, accentWord, subtitle, effectiveDate, lastU
           </div>
         </div>
 
-        {/* Trust badges row */}
-        <div className="legal-trust" style={{ marginTop: 56, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: '14px 28px', borderTop: '1px solid var(--line-on-dark)', paddingTop: 36 }}>
-          {TRUST_ITEMS.map(function ([icon, label]) {
-            return (
-              <div key={label} data-reveal style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-                <span style={{ flex: 'none', width: 34, height: 34, borderRadius: 'var(--radius-pill)', background: 'var(--action)', color: 'var(--color-text-inverse)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {React.createElement(Icon, { name: icon, size: 17 })}
-                </span>
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 500, color: 'var(--text-on-dark)', textWrap: 'pretty' }}>{label}</span>
-              </div>
-            );
-          })}
-        </div>
 
         {/* Meta strip */}
         <div style={{ marginTop: 40, display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center', borderTop: '1px solid var(--line-on-dark)', paddingTop: 24 }}>
@@ -114,8 +96,7 @@ function LegalPage({ pageType, title, accentWord, subtitle, effectiveDate, lastU
       <style>{`
         .legal-hero-head { display: grid; grid-template-columns: minmax(0,1fr); gap: 32px; align-items: end; }
         @media (min-width: 768px) { .legal-hero-head { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 56px; } }
-        @media (max-width: 600px) { .legal-trust { grid-template-columns: 1fr !important; } }
-        .legal-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 0; }
+.legal-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 0; }
         @media (min-width: 768px) { .legal-grid { grid-template-columns: 220px 1fr; gap: 56px; align-items: start; } }
         .legal-toc-aside { display: none; }
         @media (min-width: 768px) { .legal-toc-aside { display: block; align-self: start; position: sticky; top: 88px; max-height: calc(100vh - 108px); overflow-y: auto; } }

@@ -7,10 +7,27 @@ const SECTIONS = [
     id: 'introduction',
     title: 'Introduction',
     content: e('div', null,
-      e('p', null, 'OppDate ("we", "our", "us") is committed to protecting your privacy. This Privacy Policy explains what personal information we collect when you use the OppDate platform, how we use it, who we share it with, and the rights you have over your data.'),
+      e('p', null, 'OppDate LLC ("OppDate," "we," "our," "us") is committed to protecting your privacy. This Privacy Policy explains what personal information we collect when you use the OppDate platform, how we use it, who we share it with, and the rights you have over your data.'),
       e('p', null, 'This Policy applies to all users of the OppDate website and platform, including free and paid subscribers, applicants using OppDate Apply, and visitors who have not created an account.'),
       e('div', { className: 'notice' },
         e('p', null, e('strong', null, 'Summary:'), ' We collect only what we need to run our services. We do not sell your personal data. We use industry-standard security practices to protect it.')
+      )
+    ),
+  },
+  {
+    id: 'definitions',
+    title: 'Definitions',
+    content: e('div', null,
+      e('p', null, 'In this Policy, the following terms refer to:'),
+      e('ul', null,
+        e('li', null, e('strong', null, '"OppDate," "OppDate LLC," "OPPDATE," "we," "us," and "our"'), ' refer to OppDate LLC, a limited liability company organized under the laws of the State.'),
+        e('li', null, e('strong', null, '"You" and "User"'), ' refer to the individual who uses the Platform, whether as a free user, paid subscriber, applicant, or visitor.'),
+        e('li', null, e('strong', null, '"Platform"'), ' refers to the OppDate website, mobile experience, OppDate Guide, and all associated services operated by OppDate LLC.'),
+        e('li', null, e('strong', null, '"OppDate Apply"'), ' refers to the application assistance service offered by OppDate LLC, available as Done-For-You Submissions and Guided Submissions as described in our Terms.'),
+        e('li', null, e('strong', null, '"OppDate Guide"'), ' refers to the AI-powered assistant available to Premium subscribers.'),
+        e('li', null, e('strong', null, '"Personal Data"'), ' refers to any information that identifies you or can be used to identify you, including your name, email address, and application materials.'),
+        e('li', null, e('strong', null, '"State"'), ' refers to Ohio.'),
+        e('li', null, e('strong', null, '"Country"'), ' refers to the United States.')
       )
     ),
   },
@@ -69,7 +86,7 @@ const SECTIONS = [
         e('li', null, 'Sensitive document fields in the database are encrypted at rest using AES-256 encryption.')
       ),
       e('div', { className: 'notice' },
-        e('p', null, e('strong', null, 'Important:'), ' Always change any passwords or credentials you share with us immediately after your application has been submitted. OppDate will never ask for banking credentials, national ID PINs, or any credential that is not directly related to your application portal.')
+        e('p', null, e('strong', null, 'Important:'), ' Once your submission is complete, we will remind you to change any passwords or credentials you shared with us. OppDate will never ask for banking credentials, national ID PINs, or any credential that is not directly related to your application portal.')
       )
     ),
   },
@@ -91,7 +108,8 @@ const SECTIONS = [
     title: 'AI Processing and OppDate Guide',
     content: e('div', null,
       e('p', null, 'OppDate Guide is powered by third-party AI services. Messages you send and relevant context from your session are processed externally to generate responses. This is necessary for the Guide to function.'),
-      e('p', null, 'Your Guide conversations are stored on OppDate\'s servers and may be reviewed by the OppDate team for quality assurance and safety monitoring. We do not use your conversations to train external AI models.')
+      e('p', null, 'Your Guide conversations are stored on OppDate\'s servers and may be reviewed by the OppDate team for quality assurance and safety monitoring. OppDate does not use your conversations to train AI models.'),
+      e('p', null, 'OppDate does not control and is not liable for how third-party AI service providers independently process, retain, or use data once it is sent to them to generate a response, as such processing is governed by those providers\' own policies.')
     ),
   },
   {
@@ -140,7 +158,7 @@ const SECTIONS = [
         e('li', null, e('strong', null, 'Withdrawal of consent'), ' - where we process data based on your consent, you may withdraw that consent at any time without affecting the lawfulness of prior processing.'),
         e('li', null, e('strong', null, 'Restriction'), ' - request that we restrict processing of your data in certain circumstances.')
       ),
-      e('p', null, 'To exercise any of these rights, contact us at ', e('strong', null, 'privacy@oppdate.com'), '. We will respond within 30 days. We may need to verify your identity before processing your request.'),
+      e('p', null, 'To exercise any of these rights, contact us at ', e('strong', null, 'support@oppdate.app'), '. We will respond within 30 days. We may need to verify your identity before processing your request.'),
       e('div', { className: 'notice' },
         e('p', null, 'You can delete your account directly from your profile settings at any time. This initiates our data deletion process without needing to contact us.')
       )
@@ -163,22 +181,22 @@ const SECTIONS = [
     id: 'children',
     title: "Children's Privacy",
     content: e('div', null,
-      e('p', null, 'OppDate is not directed at children under the age of 16. We do not knowingly collect personal data from anyone under 16 without verifiable parental consent. If you believe we have collected data from a child under 16 without appropriate consent, please contact us at ', e('strong', null, 'privacy@oppdate.com'), ' and we will delete it promptly.')
+      e('p', null, 'OppDate is not directed at children under the age of 16. Users under 18 must have parental consent as described in our Terms. We do not knowingly collect personal data from anyone under 16 without verifiable parental consent. If you believe we have collected data from a child under 16 without appropriate consent, please contact us at ', e('strong', null, 'support@oppdate.app'), ' and we will delete it promptly.')
     ),
   },
   {
     id: 'international',
     title: 'International Data Transfers',
     content: e('div', null,
-      e('p', null, 'OppDate operates globally and your data may be transferred to and processed in countries other than your own, including the United States, where our infrastructure providers are based. These countries may have different data protection laws than your jurisdiction.'),
-      e('p', null, 'Where we transfer data internationally, we ensure appropriate safeguards are in place, such as standard contractual clauses or reliance on providers that participate in recognised frameworks.')
+      e('p', null, 'OppDate operates globally, which means your information may be transferred to, stored, or processed in countries outside your country of residence, including the Country. These countries may have different data protection laws than those in your jurisdiction.'),
+      e('p', null, 'When we transfer personal information internationally, we take reasonable steps to ensure it is protected and handled in accordance with applicable laws and this Privacy Policy.')
     ),
   },
   {
     id: 'changes',
     title: 'Changes to This Policy',
     content: e('div', null,
-      e('p', null, 'We may update this Privacy Policy from time to time. When we make material changes, we will notify you by email or by displaying a prominent notice on the platform. The "last updated" date at the top of this page will always reflect the most recent revision.'),
+      e('p', null, 'We may update this Privacy Policy from time to time. When we make material changes, we will notify you by email or by displaying a prominent notice on the platform.'),
       e('p', null, 'Your continued use of OppDate after a policy change constitutes your acceptance of the revised policy.')
     ),
   },
@@ -188,9 +206,9 @@ const SECTIONS = [
     content: e('div', null,
       e('p', null, 'For any privacy-related questions, data access requests, or concerns, contact us:'),
       e('ul', null,
-        e('li', null, 'Email: ', e('strong', null, 'privacy@oppdate.com')),
-        e('li', null, 'General support: ', e('strong', null, 'support@oppdate.com')),
-        e('li', null, 'Platform: Use the Help section within your OppDate account')
+        e('li', null, 'Email: ', e('strong', null, 'support@oppdate.app')),
+        e('li', null, 'Platform: Use the Help section within your OppDate account'),
+        e('li', null, 'Address: 6545 Market Ave. North, STE 100, Canton, OH, 44721, USA')
       ),
       e('p', null, 'We aim to respond to all data-related requests within 30 days. For account deletion, you can also proceed directly from your profile settings without contacting us.'),
       e('div', { className: 'notice' },
@@ -207,7 +225,7 @@ function PrivacyPageApp() {
     accentWord: 'rights',
     subtitle: 'We collect only what we need, never sell what we have, and give you full control over what stays. This is how we handle your data.',
     effectiveDate: '1 November 2026',
-    lastUpdated: '7 November 2026',
+    lastUpdated: '13 November 2026',
     companionLabel: 'Terms of Service',
     companionHref: '/legal/terms',
     sections: SECTIONS,

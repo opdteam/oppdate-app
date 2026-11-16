@@ -1020,7 +1020,7 @@
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, opacity: 0.028, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundSize: '200px', pointerEvents: 'none', zIndex: 0 }} />
         <div className="wrap" style={{ padding: '80px var(--container-pad)', position: 'relative', zIndex: 1 }}>
           <div className="co-inquiry-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 40%) minmax(0, 60%)', gap: 56, alignItems: 'start' }}>
-            <div style={{ position: 'relative' }}>
+            <div className="co-inquiry-sticky">
               <div aria-hidden="true" className="co-inquiry-accent" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: 2, background: 'linear-gradient(180deg, var(--action) 0%, var(--decor-numeral) 100%)', opacity: 0.6 }} />
               <div className="co-inquiry-left" style={{ paddingLeft: 24 }}>
                 <Eyebrow style={{ marginBottom: 16 }}>Get in touch</Eyebrow>
@@ -1030,19 +1030,7 @@
                 <p style={{ fontFamily: 'var(--font-sans)', fontSize: 16, lineHeight: 1.55, color: 'var(--text-body)', maxWidth: '36ch', marginTop: 18 }}>
                   Choose a category, tell us about yourself, and we will route your inquiry to the right person on our team.
                 </p>
-                <div style={{ display: 'grid', gap: 16, marginTop: 32 }}>
-                  {[['mail', 'Quick response', 'You will hear back within 24-48 hours'], ['shield-check', 'Secure and private', 'Your data is handled securely'], ['paperclip', 'Attachments welcome', 'Attach a CV or supporting document']].map(([icon, title, desc]) => (
-                    <div key={icon} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                      <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--action-wash)', color: 'var(--action)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Icon name={icon} size={16} />
-                      </span>
-                      <div>
-                        <span style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--color-text-ink)' }}>{title}</span>
-                        <span style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-quiet)', marginTop: 2 }}>{desc}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+
               </div>
             </div>
 
@@ -1144,27 +1132,5 @@
     );
   }
 
-  /* ================================================================
-     CLOSING CTA — with constellation backdrop
-     ================================================================ */
-  function CompanyClosingCta() {
-    return (
-      <section className="om-tex om-tex-ink om-glow" style={{ background: 'var(--surface-dark)' }}>
-        <div className="wrap" style={{ padding: '112px var(--container-pad)', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'var(--type-h2-size, 48px)', fontWeight: 700, lineHeight: 1.05, color: 'var(--text-on-dark)', maxWidth: '22ch', margin: '0 auto' }}>
-            Your next opportunity is waiting.
-          </h2>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-large-size, 18px)', lineHeight: 1.6, color: 'rgba(255,249,244,0.72)', maxWidth: '48ch', margin: '18px auto 0' }}>
-            Browse thousands of verified scholarships, internships, jobs, and funded programmes from around the world.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
-            <Button as="a" href="/auth/register" size="lg">Get started</Button>
-            <Button as="a" href="/opportunities" variant="secondary-on-ink" size="lg">Browse opportunities</Button>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  window.OMCO = { CompanyHero, MissionSection, GlobalReachMap, WorkWithUsSection, InquirySection, CompanyClosingCta, ROLE_TO_CATEGORY };
+  window.OMCO = { CompanyHero, MissionSection, GlobalReachMap, WorkWithUsSection, InquirySection, ROLE_TO_CATEGORY };
 })();

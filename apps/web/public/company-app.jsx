@@ -84,7 +84,6 @@
         <S.GlobalReachMap />
         <S.WorkWithUsSection onInquire={handleInquire} />
         <S.InquirySection selectedCategory={selectedCategory} />
-        <S.CompanyClosingCta />
         <div style={{ position: 'relative', background: 'var(--surface-dark)', isolation: 'isolate' }}>
           <B.FooterWatermark />
           <Footer
@@ -105,7 +104,6 @@
     'GlobalReachMap',
     'WorkWithUsSection',
     'InquirySection',
-    'CompanyClosingCta',
   ];
   let __companyRoot = null;
 

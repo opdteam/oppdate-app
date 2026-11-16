@@ -25,10 +25,29 @@
   }
 
   const MOBILE_SECTIONS = [
-    { title: 'Company', links: [['Our Mission', '/company#mission'], ['Careers', '/company#careers'], ['Get Featured', '/company#get-featured'], ['Partner With Us', '/company#partner'], ['Become a Consultant', '/company#consultant'], ['Become a Mentor', '/company#mentor'], ['List Your eBook', '/company#list-ebook']] },
+    { title: 'Company', links: [['Our Mission', '/company#mission'], ['Work With Us', '/company#work-with-us', null, [['Careers', '/company#careers'], ['Get Featured', '/company#get-featured'], ['Partner With Us', '/company#partner'], ['Become a Consultant', '/company#consultant'], ['Become a Mentor', '/company#mentor'], ['List Your eBook', '/company#list-ebook']]]] },
     { title: 'Services', links: [['Consultations', '/services/consultations'], ['Mentorship', '/services/mentorship'], ['eBooks', '/services/ebooks']] },
     { title: 'OppDate Apply', links: [['How it works', '/services/apply#flow'], ['Pricing', '/pricing'], ['Start an application', '/services/apply#start']] },
   ];
+
+  function MobileAccordionLink({ label, href, children, linkStyle, onClose }) {
+    const [open, setOpen] = React.useState(false);
+    return (
+      <div>
+        <div style={Object.assign({}, linkStyle, { display: 'flex', alignItems: 'center', cursor: 'pointer' })} onClick={() => setOpen(!open)}>
+          <span style={{ flex: 1 }}>{label}</span>
+          <NS.Icon name="chevron-down" size={16} style={{ color: 'rgba(255,249,244,0.45)', transition: 'transform 250ms var(--ease-out-soft)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+        </div>
+        <div style={{ overflow: 'hidden', maxHeight: open ? children.length * 52 + 8 : 0, opacity: open ? 1 : 0, transition: 'max-height 300ms var(--ease-out-soft), opacity 200ms var(--ease-out-soft)' }}>
+          <div style={{ paddingLeft: 16, borderLeft: '1px solid rgba(255,249,244,0.1)', marginLeft: 4, marginTop: 2, marginBottom: 4 }}>
+            {children.map(([cLabel, cHref]) => (
+              <a key={cLabel} href={cHref} onClick={onClose} style={Object.assign({}, linkStyle, { fontSize: 16, color: 'rgba(255,249,244,0.72)' })}>{cLabel}</a>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   /* Two-line burger that morphs into an X. The shipped control swaps a menu icon for an x
      with no transition, so it is replaced with two bars that rotate and converge. */
@@ -93,11 +112,13 @@
             {MOBILE_SECTIONS.map((s) => (
               <div key={s.title} style={{ marginBottom: 28 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--decor-numeral)', marginBottom: 6 }}>{s.title}</div>
-                {s.links.map(([label, href, tag]) => (
-                  <a key={label} href={href} onClick={closeAnimated} style={Object.assign({}, linkStyleM, tag ? { color: 'var(--text-on-dark-quiet)' } : null)}>
-                    {label}
-                    {tag && <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 'var(--radius-pill)', background: 'rgba(255,249,244,0.1)', color: 'var(--text-on-dark-quiet)' }}>{tag}</span>}
-                  </a>
+                {s.links.map(([label, href, tag, children]) => (
+                  children
+                    ? <MobileAccordionLink key={label} label={label} href={href} children={children} linkStyle={linkStyleM} onClose={closeAnimated} />
+                    : <a key={label} href={href} onClick={closeAnimated} style={Object.assign({}, linkStyleM, tag ? { color: 'var(--text-on-dark-quiet)' } : null)}>
+                        {label}
+                        {tag && <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 'var(--radius-pill)', background: 'rgba(255,249,244,0.1)', color: 'var(--text-on-dark-quiet)' }}>{tag}</span>}
+                      </a>
                 ))}
               </div>
             ))}

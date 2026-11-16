@@ -178,7 +178,7 @@
   margin: 0;
 }
 .auth-wordmark .opp  { color: var(--auth-ink); }
-.auth-wordmark .date { color: var(--auth-ginger); }
+.auth-wordmark .date { color: #C2410C; }
 
 .auth-heading {
   font-family: var(--font-serif, 'Fraunces', Georgia, serif);

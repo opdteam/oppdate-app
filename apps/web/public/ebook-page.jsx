@@ -1,8 +1,6 @@
 const { Button, Eyebrow, Icon, AccordionRow, IllustrationSlot, LinkArrow, Footer } = window.OppDateDesignSystem_4aa598;
 const EBOOK_MARK = (window.__resources && window.__resources.monogram) || 'assets/oppdate-monogram.png';
 
-/* White hero, on purpose: eBooks is a library you browse rather than a service delivered by a
-   person, so this page carries the lighter register while the closing zone stays ink. */
 function EbookHero() {
   const [inLoad, setInLoad] = React.useState(false);
   React.useEffect(() => {
@@ -17,8 +15,9 @@ function EbookHero() {
     }, style),
   });
   return (
-    <section id="ebook-top" className="om-tex om-tex-light" style={{ background: 'var(--surface-card)' }}>
-      <div data-no-reveal className="wrap split" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,54%) minmax(0,46%)', gap: 56, alignItems: 'center', padding: '64px var(--container-pad) 88px' }}>
+    <section id="ebook-top" style={{ position: 'relative', isolation: 'isolate', background: 'var(--surface-card)', overflow: 'hidden' }}>
+      {window.TopoContours && <window.TopoContours />}
+      <div data-no-reveal className="wrap split" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,54%) minmax(0,46%)', gap: 56, alignItems: 'center', padding: '64px var(--container-pad) 88px', position: 'relative', zIndex: 1 }}>
         <div>
           <div {...step(0, { marginBottom: 18 })}><Eyebrow>Written guides</Eyebrow></div>
           <h1 {...step(1, { maxWidth: '20ch', fontSize: 'clamp(36px, 4.2vw, 54px)' })}>The complete written guide to <span style={{ color: 'var(--decor-numeral)' }}>applications</span>.</h1>

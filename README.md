@@ -4,18 +4,18 @@ AI-powered global opportunity application platform.
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14 (App Router) + Tailwind CSS |
-| Backend | Node.js + Fastify |
-| Database | PostgreSQL (Docker locally, Neon in production) + Drizzle ORM |
-| Real-time | WebSocket via @fastify/websocket (singleton hook with exponential backoff reconnect) |
-| AI | Anthropic Claude (claude-sonnet-4-6 for eligibility generation, claude-opus-4-6 for Guide chat) |
-| Payments | Stripe + Flutterwave + Paystack |
-| File Storage | Cloudflare R2 |
-| Email | Resend |
-| Hosting | Render (API), Vercel (frontend) |
-| Monitoring | Sentry (error tracking), BullMQ (background jobs via Redis) |
+| Layer        | Technology                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| Frontend     | Next.js 14 (App Router) + Tailwind CSS                                                          |
+| Backend      | Node.js + Fastify                                                                               |
+| Database     | PostgreSQL (Docker locally, Neon in production) + Drizzle ORM                                   |
+| Real-time    | WebSocket via @fastify/websocket (singleton hook with exponential backoff reconnect)            |
+| AI           | Anthropic Claude (claude-sonnet-4-6 for eligibility generation, claude-opus-4-6 for Guide chat) |
+| Payments     | Stripe + Flutterwave + Paystack                                                                 |
+| File Storage | Cloudflare R2                                                                                   |
+| Email        | Resend                                                                                          |
+| Hosting      | Render (API), Vercel (frontend)                                                                 |
+| Monitoring   | Sentry (error tracking), BullMQ (background jobs via Redis)                                     |
 
 ## Project Structure
 
@@ -32,7 +32,7 @@ oppdate/
 ## Build Status
 
 <!-- oppdate:build-status:start -->
-_Last updated: 2026-11-10_
+_Last updated: 2026-11-16_
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -52,13 +52,13 @@ _Last updated: 2026-11-10_
 
 ## Phase 2 Features
 
-| Feature | Status | Notes |
-|---|---|---|
-| ebookReader | done | In-app PDF reader using react-pdf + pdfjs-dist. Page-by-page canvas rendering. Light/sepia/dark themes. Text size controls (small/medium/large/xl). Table of contents drawer (desktop sidebar, mobile bottom sheet). Reading progress sync via PATCH /api/v1/ebooks/:id/progress, debounced 2s + immediate on visibilitychange. Page turn via buttons, keyboard (arrows/space), and swipe gestures on mobile. Thumbnail strip with IntersectionObserver-based virtualisation. |
-| consultationsBooking | done | Booking flow wired to live admin-managed mentor profiles (GET /api/v1/mentorships/mentors). Consultant lookup by UUID or slug fallback. Session pricing tiers (30/60/90 min). Redirect-after-auth preserves booking flow state. |
-| mentorshipProgrammes | done | Admin panel creates/edits/deactivates programmes. Two core programmes seeded: 30-Day BSC ($250/mo) and 30-Day MSC ($350/mo). Seed script: yarn workspace @oppdate/api db:seed-mentorship-programmes. Admin mentorship stats use real data. |
-| supportEmail | done | POST /api/v1/support enqueues email via Resend (BullMQ) instead of console.log. SUPPORT_EMAIL env var configures recipient (defaults to support@oppdate.com). |
-| dynamicGuideQuiz | done | OppDate Guide eligibility quiz pulls questions from the current opportunity's eligibilityCriteria rather than hardcoded Chevening questions. Opportunity slug passed to GET /api/v1/ai/eligibility-criteria. |
+| Feature              | Status | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ebookReader          | done   | In-app PDF reader using react-pdf + pdfjs-dist. Page-by-page canvas rendering. Light/sepia/dark themes. Text size controls (small/medium/large/xl). Table of contents drawer (desktop sidebar, mobile bottom sheet). Reading progress sync via PATCH /api/v1/ebooks/:id/progress, debounced 2s + immediate on visibilitychange. Page turn via buttons, keyboard (arrows/space), and swipe gestures on mobile. Thumbnail strip with IntersectionObserver-based virtualisation. |
+| consultationsBooking | done   | Booking flow wired to live admin-managed mentor profiles (GET /api/v1/mentorships/mentors). Consultant lookup by UUID or slug fallback. Session pricing tiers (30/60/90 min). Redirect-after-auth preserves booking flow state.                                                                                                                                                                                                                                               |
+| mentorshipProgrammes | done   | Admin panel creates/edits/deactivates programmes. Two core programmes seeded: 30-Day BSC ($250/mo) and 30-Day MSC ($350/mo). Seed script: yarn workspace @oppdate/api db:seed-mentorship-programmes. Admin mentorship stats use real data.                                                                                                                                                                                                                                    |
+| supportEmail         | done   | POST /api/v1/support enqueues email via Resend (BullMQ) instead of console.log. SUPPORT_EMAIL env var configures recipient (defaults to support@oppdate.app).                                                                                                                                                                                                                                                                                                                 |
+| dynamicGuideQuiz     | done   | OppDate Guide eligibility quiz pulls questions from the current opportunity's eligibilityCriteria rather than hardcoded Chevening questions. Opportunity slug passed to GET /api/v1/ai/eligibility-criteria.                                                                                                                                                                                                                                                                  |
 
 ## Messaging System Enhancements
 
@@ -67,6 +67,7 @@ All changes in this section were applied on 2026-10-22 as a single batch across 
 ### Backend changes (`apps/api/src/routes/`)
 
 **messaging.ts**
+
 - Cursor-based pagination on `GET /threads/:id`: accepts `?before=<messageId>&limit=50`, returns `{ messages, hasMore }` instead of a hard 100-message cap.
 - Replaced single `typing` WebSocket event with `typing_start` and `typing_stop`. Server auto-expires typing state after 3 seconds if no `typing_stop` arrives.
 - New `PATCH /threads/:id/read` endpoint: updates `last_read_message_id` on the thread and resets `unreadByUser` to 0.
@@ -74,15 +75,18 @@ All changes in this section were applied on 2026-10-22 as a single batch across 
 - New `GET /threads/:threadId/document-requests`: returns all document requests and their items for a thread, including per-item upload status (`pending`, `uploaded`, `verified`).
 
 **documents.ts**
+
 - After any document upload, emits a `document_uploaded` WebSocket event to the thread owner and assigned admin: `{ type: 'document_uploaded', threadId, documentId, itemId }`.
 
 **admin.ts**
+
 - Admin thread list (`GET /admin/messages`) now returns `referenceId` on each thread, linking it to its application record.
 - Added `avgResponseTimeMs` to each thread row: computed as the average time between last user message and the next team reply per thread.
 
 ### Database migrations
 
 **0017_document_requests.sql**
+
 ```sql
 CREATE TABLE document_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,6 +106,7 @@ CREATE TABLE document_request_items (
 ```
 
 **0018_read_cursors.sql**
+
 ```sql
 ALTER TABLE message_threads ADD COLUMN last_read_message_id uuid REFERENCES messages(id);
 ```
@@ -109,10 +114,12 @@ ALTER TABLE message_threads ADD COLUMN last_read_message_id uuid REFERENCES mess
 ### Frontend changes (`apps/web/src/`)
 
 **hooks/useWebSocket.ts**
+
 - Added `typing_start`, `typing_stop`, `document_uploaded` to the `WsMessage` type union.
 - Added `documentId`, `itemId`, `status` fields to `WsMessage`.
 
 **components/messages/MessagesPage.tsx**
+
 - Per-thread typing state (`typingByThread`) with 4-second auto-dismiss timer on `typing_start` and immediate clear on `typing_stop`.
 - Per-thread `hasMore` flag and `handleLoadMore` function: fetches with `?before=<firstMessageId>`, prepends to message list, preserves scroll position.
 - `DocumentRequestCard` component uses React Query (`useQuery` with key `['doc-requests', threadId, requestId]`). On `document_uploaded` WS event, invalidates the matching query key so the card re-fetches item statuses without a page reload.
@@ -123,6 +130,7 @@ ALTER TABLE message_threads ADD COLUMN last_read_message_id uuid REFERENCES mess
 - Mobile: CSS transform-based push navigation (thread slides in from right, list slides back from left). Swipe gestures on thread rows (swipe right marks read via `PATCH /threads/:id/read`, swipe left mutes). `visualViewport` resize listener shifts the composer up when the iOS keyboard appears. `env(safe-area-inset-bottom)` on composer wrapper.
 
 **components/admin/AdminMessagesPage.tsx**
+
 - Wired to `useWebSocket`. On `new_message`: if the thread is open, appends to a live message buffer so the reply appears immediately without waiting for a query refetch. If the thread is not open, triggers a shimmer animation on the thread row and invalidates the thread list query for unread count.
 - Poll interval reduced from 30 seconds to 120 seconds; WebSocket handles real-time delivery for the active thread.
 - `DocRequestForm` component: admin types labelled document names, submits to `POST /threads/:threadId/document-requests`. On success, invalidates the thread detail query so the card appears in the thread.
@@ -130,6 +138,7 @@ ALTER TABLE message_threads ADD COLUMN last_read_message_id uuid REFERENCES mess
 - Mobile conversation view now fetches thread messages via `useQuery` (previously rendered an empty array from stale local state). Composer wired with `value`, `onChange`, `onKeyDown`, and `onClick` send - was previously uncontrolled and non-functional on mobile.
 
 **app/admin.css**
+
 - Fixed `.adm-tv-dategroup`: added `align-items: stretch` so `align-self: flex-end` on team bubbles takes effect. Without this, all bubbles rendered left-aligned regardless of sender.
 - Fixed `.adm-tv-turn.user .adm-tv-bubble`: improved contrast (background `rgba(255,255,255,0.07)`, border `rgba(255,255,255,0.13)`). User bubbles were nearly invisible against the dark background.
 - Fixed `.adm-tv-msgtime`: changed from `opacity: 0` (always hidden) to `opacity: 0.6` (always visible, brightens on hover).
@@ -138,19 +147,20 @@ ALTER TABLE message_threads ADD COLUMN last_read_message_id uuid REFERENCES mess
 - Added `button.adm-tv-docreqbtn` and `.adm-docreq-form` with all child styles: inline document request creation form in the thread header.
 
 **components/admin/AdminApplicationsPage.tsx**
+
 - Application detail sidebar now uses admin API endpoints (`GET /api/v1/admin/messages` to find the thread by `referenceId`, `POST /api/v1/admin/messages/:id/reply` to send). Previously used user-facing endpoints, causing messages sent from the sidebar to appear as user messages instead of team messages.
 - `referenceId` added to admin thread list select query in `admin.ts` to enable the application-to-thread lookup.
 - Fixed duplicate React key warning: three pipeline stages (`verified`, `preparing`, `submitted`) all map to `dbStatus: 'accepted'`. Deduplication filter added; `stageKey` used as React key instead of `dbStatus`.
 
 ### New API endpoints added
 
-| Method | Path | Description |
-|---|---|---|
-| GET | /messages/threads/:id | Now accepts `?before=<messageId>&limit=50` for cursor pagination |
-| PATCH | /messages/threads/:id/read | Update read cursor, reset unread count |
-| POST | /messages/threads/:id/document-requests | Admin creates a document request with labelled items |
-| GET | /messages/threads/:id/document-requests | Fetch all document requests and item statuses for a thread |
-| GET | /messages/ws-ticket | Issue a short-lived WebSocket auth ticket (already existed, documented here for completeness) |
+| Method | Path                                    | Description                                                                                   |
+| ------ | --------------------------------------- | --------------------------------------------------------------------------------------------- |
+| GET    | /messages/threads/:id                   | Now accepts `?before=<messageId>&limit=50` for cursor pagination                              |
+| PATCH  | /messages/threads/:id/read              | Update read cursor, reset unread count                                                        |
+| POST   | /messages/threads/:id/document-requests | Admin creates a document request with labelled items                                          |
+| GET    | /messages/threads/:id/document-requests | Fetch all document requests and item statuses for a thread                                    |
+| GET    | /messages/ws-ticket                     | Issue a short-lived WebSocket auth ticket (already existed, documented here for completeness) |
 
 ---
 
@@ -160,16 +170,16 @@ All changes in this section were applied on 2026-10-27. The session timeout audi
 
 ### Session model (post-fix)
 
-| Token / Cookie | Lifetime | Storage | Revocable on logout |
-|---|---|---|---|
-| User access token (JWT) | `JWT_EXPIRES_IN` (default 15m) | Signed JWT (stateless) | No - expires naturally |
-| User access token cookie | Matches `JWT_EXPIRES_IN` exactly | Browser cookie (httpOnly) | Yes - cleared |
-| User refresh token | `SESSION_IDLE_TIMEOUT` (default 1h) | PostgreSQL `refresh_tokens` table | Yes - deleted from DB |
-| User refresh token cookie | `SESSION_IDLE_TIMEOUT` | Browser cookie (httpOnly, path /api/v1/auth) | Yes - cleared |
-| Admin access token (JWT) | 8 hours (hardcoded) | Signed JWT (stateless) | No - expires naturally |
-| Admin access token cookie | 8 hours | Browser cookie (httpOnly) | Yes - cleared |
-| Password reset token | `PASSWORD_RESET_EXPIRES_IN` (default 15m) | Signed JWT (stateless) | No |
-| WebSocket ticket | 60 seconds | Signed JWT (stateless) | No |
+| Token / Cookie            | Lifetime                                  | Storage                                      | Revocable on logout    |
+| ------------------------- | ----------------------------------------- | -------------------------------------------- | ---------------------- |
+| User access token (JWT)   | `JWT_EXPIRES_IN` (default 15m)            | Signed JWT (stateless)                       | No - expires naturally |
+| User access token cookie  | Matches `JWT_EXPIRES_IN` exactly          | Browser cookie (httpOnly)                    | Yes - cleared          |
+| User refresh token        | `SESSION_IDLE_TIMEOUT` (default 1h)       | PostgreSQL `refresh_tokens` table            | Yes - deleted from DB  |
+| User refresh token cookie | `SESSION_IDLE_TIMEOUT`                    | Browser cookie (httpOnly, path /api/v1/auth) | Yes - cleared          |
+| Admin access token (JWT)  | 8 hours (hardcoded)                       | Signed JWT (stateless)                       | No - expires naturally |
+| Admin access token cookie | 8 hours                                   | Browser cookie (httpOnly)                    | Yes - cleared          |
+| Password reset token      | `PASSWORD_RESET_EXPIRES_IN` (default 15m) | Signed JWT (stateless)                       | No                     |
+| WebSocket ticket          | 60 seconds                                | Signed JWT (stateless)                       | No                     |
 
 ### Key concept: JWT_EXPIRES_IN vs SESSION_IDLE_TIMEOUT
 
@@ -200,18 +210,18 @@ All changes in this section were applied on 2026-10-27. The session timeout audi
 
 ### New and changed files
 
-| File | Change |
-|---|---|
-| `apps/api/.env` | Removed `JWT_REFRESH_EXPIRES_IN`, added `SESSION_IDLE_TIMEOUT=1h`, added `PASSWORD_RESET_EXPIRES_IN=15m` |
-| `apps/api/src/utils/time.ts` | NEW - `parseExpiryToMs()` and `parseExpiryToSeconds()` helpers for parsing strings like `'1h'`, `'15m'`, `'30d'` |
-| `apps/api/src/utils/cookies.ts` | `ACCESS_TOKEN_MAX_AGE` now derived from `JWT_EXPIRES_IN`; admin refresh cookie removed from set/clear |
-| `apps/api/src/routes/auth.ts` | `createRefreshToken()` reads `SESSION_IDLE_TIMEOUT`; password reset uses `PASSWORD_RESET_EXPIRES_IN` |
-| `apps/api/src/routes/admin.ts` | Admin refresh token generation removed; `setAdminAuthCookies(reply, accessToken)` only |
-| `apps/web/src/hooks/useInactivityLogout.ts` | DELETED |
-| `apps/web/src/hooks/useSessionKeepAlive.ts` | NEW - tab-visibility-aware keep-alive with 13-minute refresh interval |
-| `apps/web/src/lib/api.ts` | 401 interceptor replaced with refresh-and-retry; concurrent 401s queued |
-| `apps/web/src/lib/token.ts` | `COOKIE_MAX_AGE` reduced from 7 days to 2 hours |
-| `apps/web/src/components/app-shell/AppLayout.tsx` | `useInactivityLogout` replaced with `useSessionKeepAlive` |
+| File                                              | Change                                                                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `apps/api/.env`                                   | Removed `JWT_REFRESH_EXPIRES_IN`, added `SESSION_IDLE_TIMEOUT=1h`, added `PASSWORD_RESET_EXPIRES_IN=15m`         |
+| `apps/api/src/utils/time.ts`                      | NEW - `parseExpiryToMs()` and `parseExpiryToSeconds()` helpers for parsing strings like `'1h'`, `'15m'`, `'30d'` |
+| `apps/api/src/utils/cookies.ts`                   | `ACCESS_TOKEN_MAX_AGE` now derived from `JWT_EXPIRES_IN`; admin refresh cookie removed from set/clear            |
+| `apps/api/src/routes/auth.ts`                     | `createRefreshToken()` reads `SESSION_IDLE_TIMEOUT`; password reset uses `PASSWORD_RESET_EXPIRES_IN`             |
+| `apps/api/src/routes/admin.ts`                    | Admin refresh token generation removed; `setAdminAuthCookies(reply, accessToken)` only                           |
+| `apps/web/src/hooks/useInactivityLogout.ts`       | DELETED                                                                                                          |
+| `apps/web/src/hooks/useSessionKeepAlive.ts`       | NEW - tab-visibility-aware keep-alive with 13-minute refresh interval                                            |
+| `apps/web/src/lib/api.ts`                         | 401 interceptor replaced with refresh-and-retry; concurrent 401s queued                                          |
+| `apps/web/src/lib/token.ts`                       | `COOKIE_MAX_AGE` reduced from 7 days to 2 hours                                                                  |
+| `apps/web/src/components/app-shell/AppLayout.tsx` | `useInactivityLogout` replaced with `useSessionKeepAlive`                                                        |
 
 ---
 
@@ -243,16 +253,16 @@ All changes in this section were applied on 2026-10-30.
 
 ### Files changed
 
-| File | Change |
-|---|---|
-| `apps/api/src/routes/admin.ts` | Email after stage advance; payments join users + opportunities |
-| `apps/api/src/routes/applications.ts` | `GET /:id` selects `opportunityDeadline` and `assigneeName` via correlated subquery |
-| `apps/api/src/utils/email.ts` | `paymentConfirmationEmail` accepts `PaymentReceiptParams`; receipt table in email body |
-| `apps/api/src/routes/payments.ts` | Webhook handlers pass `gatewayPaymentId` and `gateway` to confirmation email |
+| File                                                      | Change                                                                                                    |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/routes/admin.ts`                            | Email after stage advance; payments join users + opportunities                                            |
+| `apps/api/src/routes/applications.ts`                     | `GET /:id` selects `opportunityDeadline` and `assigneeName` via correlated subquery                       |
+| `apps/api/src/utils/email.ts`                             | `paymentConfirmationEmail` accepts `PaymentReceiptParams`; receipt table in email body                    |
+| `apps/api/src/routes/payments.ts`                         | Webhook handlers pass `gatewayPaymentId` and `gateway` to confirmation email                              |
 | `apps/web/src/components/admin/AdminApplicationsPage.tsx` | Optimistic stage update; portal dropdown; `STAGE_TO_DB_STATUS` map; removed delete + view listing actions |
-| `apps/web/src/components/admin/AdminMessagesPage.tsx` | `selectedId` initialised from `?thread=` URL param |
-| `apps/web/src/components/admin/AdminPaymentsPage.tsx` | Joined payment data; avatar rendering; manual refund flow; `ReceiptPrintModal` component |
-| `apps/web/src/app/admin.css` | Source badge variants; gateway badge; refund divider; receipt modal styles |
+| `apps/web/src/components/admin/AdminMessagesPage.tsx`     | `selectedId` initialised from `?thread=` URL param                                                        |
+| `apps/web/src/components/admin/AdminPaymentsPage.tsx`     | Joined payment data; avatar rendering; manual refund flow; `ReceiptPrintModal` component                  |
+| `apps/web/src/app/admin.css`                              | Source badge variants; gateway badge; refund divider; receipt modal styles                                |
 
 ---
 
@@ -264,19 +274,19 @@ All changes in this section were applied on 2026-11-10 across `apps/api`, `apps/
 
 Each listing stores eligibility criteria in `opportunities.eligibility_criteria` (JSONB). Each criterion is a question with 2-5 options. Each option carries an integer score (0 or negative). When a user runs the eligibility check, their answers are scored and summed. The total determines their tier.
 
-| Score | Tier |
-|---|---|
-| >= 0 | eligible |
+| Score     | Tier       |
+| --------- | ---------- |
+| >= 0      | eligible   |
 | -1 to -49 | borderline |
-| <= -50 | ineligible |
+| <= -50    | ineligible |
 
 Option score conventions:
 
-| Score | Meaning |
-|---|---|
-| 0 | Neutral - no impact |
+| Score      | Meaning                           |
+| ---------- | --------------------------------- |
+| 0          | Neutral - no impact               |
 | -20 to -30 | Soft penalty - stacks with others |
-| -100 | Hard disqualifier alone |
+| -100       | Hard disqualifier alone           |
 
 ### AI generation
 
@@ -305,11 +315,11 @@ CREATE TABLE eligibility_checks (
 
 ### New API endpoints
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | /opportunities/:id/generate-eligibility | admin | Generate or regenerate criteria via AI. Body: `{ keepQuestions: string[] }`. Returns merged criteria. |
-| POST | /opportunities/:id/eligibility-check | user | Submit answers, compute score, upsert result. Returns `{ score, tier }`. |
-| GET | /opportunities/:id/eligibility-check | user/admin | Fetch check result. Admins pass `?userId=` to fetch any user's result. |
+| Method | Path                                    | Auth       | Description                                                                                           |
+| ------ | --------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| POST   | /opportunities/:id/generate-eligibility | admin      | Generate or regenerate criteria via AI. Body: `{ keepQuestions: string[] }`. Returns merged criteria. |
+| POST   | /opportunities/:id/eligibility-check    | user       | Submit answers, compute score, upsert result. Returns `{ score, tier }`.                              |
+| GET    | /opportunities/:id/eligibility-check    | user/admin | Fetch check result. Admins pass `?userId=` to fetch any user's result.                                |
 
 ### Admin UI changes
 
@@ -340,15 +350,16 @@ Before this change, each required document on a listing had a single `creatable:
 
 ### Modes
 
-| Mode | Meaning | Apply flow third card |
-|---|---|---|
-| `'writes'` | OppDate drafts this document (personal statement, CV, cover letter, SOP, essay) | "I need help creating this" |
-| `'guides'` | OppDate guides the client to obtain this from a third party (transcript, reference letter, passport, certificate) | "I need help obtaining this" |
-| `false` | No OppDate assistance | Third card is hidden; only "Ready to upload" and "Needs refinement" shown |
+| Mode       | Meaning                                                                                                           | Apply flow third card                                                     |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `'writes'` | OppDate drafts this document (personal statement, CV, cover letter, SOP, essay)                                   | "I need help creating this"                                               |
+| `'guides'` | OppDate guides the client to obtain this from a third party (transcript, reference letter, passport, certificate) | "I need help obtaining this"                                              |
+| `false`    | No OppDate assistance                                                                                             | Third card is hidden; only "Ready to upload" and "Needs refinement" shown |
 
 ### Admin form
 
 Two independent toggles per document row replace the single toggle:
+
 - "OppDate writes this"
 - "OppDate guides client to obtain this"
 
@@ -357,6 +368,29 @@ Turning one on while the other is on turns the other off (mutually exclusive by 
 ### Apply flow
 
 `RequiredDoc` interface now includes `creatable?: 'writes' | 'guides'`. `R2DocCard` builds its option list dynamically: two options if `creatable` is unset, three options with the appropriate label if set.
+
+---
+
+## Company Page
+
+Public page at `/company`. Static HTML + Babel JSX (same pattern as landing, pricing, and service pages). Files: `apps/web/public/company/index.html`, `apps/web/public/company-page.jsx`, `apps/web/public/company-app.jsx`. Served via `apps/web/src/app/company/route.ts` (readFileSync).
+
+### Sections
+
+| Section | Description |
+| --- | --- |
+| CompanyHero | Dark hero with serif heading and CTA buttons |
+| MissionSection | Mission statement with feature cards |
+| GlobalReachMap | SVG world map (1000x500 equirectangular projection) with 52 country dots across 5 regions, animated continent draw-in via stroke-dashoffset on scroll, region filter pills, connection arcs, and a 4-stat count-up strip |
+| WorkWithUsSection | 6 role cards (Careers, Get Featured, Partner With Us, Become a Consultant, Become a Mentor, List Your eBook) each with CTA that auto-selects the matching inquiry category |
+| InquirySection | Contact form with category pill buttons, file upload with drag-and-drop, elevated card layout with focus-within shadow lift. Submits to `POST /api/v1/inquiries` |
+| CompanyClosingCta | Dark CTA with dotted texture background and warm radial glow |
+
+Hash-based scroll: navigating to `/company#work-with-us` or `/company#mission` from another page scrolls to the section after React mounts.
+
+### Inquiry route
+
+`POST /api/v1/inquiries` - multipart form (category, name, email, message, optional file). Rate limited to 5/hour. File uploaded to R2 under `inquiries/`. Forwards to SUPPORT_EMAIL via Resend.
 
 ---
 
@@ -373,6 +407,7 @@ Added `/legal/terms` and `/legal/privacy` as Next.js App Router pages.
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js >= 20
 - Yarn >= 1.22
 - Docker (for local PostgreSQL via `docker-compose.yml`)
@@ -415,89 +450,90 @@ yarn dev:web
 
 All endpoints are prefixed with `/api/v1`
 
-| Method | Path | Description |
-|---|---|---|
-| POST | /auth/register | Register new user |
-| POST | /auth/login | Login |
-| POST | /auth/refresh | Refresh access token |
-| POST | /auth/logout | Logout |
-| GET | /auth/me | Get current user |
-| PATCH | /auth/me | Update profile and preferences |
-| POST | /auth/google | Google OAuth |
-| POST | /auth/forgot-password | Send reset email |
-| POST | /auth/reset-password | Complete password reset |
-| GET | /opportunities | List opportunities (with filters) |
-| GET | /opportunities/:slug | Get single opportunity |
-| POST | /opportunities | Create listing (admin) |
-| PATCH | /opportunities/:id | Update listing (admin) |
-| DELETE | /opportunities/:id | Delete listing (admin) |
-| GET | /saved-opportunities | List saved opportunities |
-| POST | /saved-opportunities/:opportunityId | Save an opportunity |
-| DELETE | /saved-opportunities/:opportunityId | Unsave an opportunity |
-| GET | /saved-searches | List saved searches |
-| POST | /saved-searches | Save a search |
-| PATCH | /saved-searches/:id | Update saved search |
-| DELETE | /saved-searches/:id | Delete saved search |
-| GET | /applications | List user's applications |
-| GET | /applications/:id | Get application detail |
-| POST | /applications/start | Start Apply For Me flow |
-| POST | /applications/:id/eligibility | Submit eligibility responses |
-| POST | /applications/:id/documents | Attach documents |
-| PATCH | /applications/:id/status | Update status (admin) |
-| GET | /documents | List credential library |
-| POST | /documents | Upload a document |
-| POST | /documents/:id/replace | Upload new version |
-| DELETE | /documents/:id | Delete a document |
-| GET | /documents/:id/download | Get signed download URL |
-| GET | /messages/threads | Get messaging threads |
-| GET | /messages/threads/:id | Get thread with messages (supports ?before=&limit= pagination) |
-| POST | /messages/threads/:id/messages | Send a message |
-| POST | /messages/threads | Create a thread |
-| PATCH | /messages/threads/:id/read | Update read cursor, reset unread count |
-| POST | /messages/threads/:id/document-requests | Create a document request (admin) |
-| GET | /messages/threads/:id/document-requests | Fetch document requests and item statuses |
-| PATCH | /messages/threads/:id/assign | Assign thread (admin) |
-| PATCH | /messages/threads/:id/status | Update thread status (admin) |
-| WS | /messages/ws?token=JWT | Real-time WebSocket connection |
-| GET | /consultations | List user's consultations |
-| POST | /consultations | Book a consultation |
-| PATCH | /consultations/:id/meeting | Set meeting link (admin) |
-| GET | /ebooks | List available ebooks |
-| GET | /ebooks/library | List purchased ebooks |
-| POST | /ebooks/:id/purchase | Initiate ebook purchase |
-| PATCH | /ebooks/:id/progress | Save reading progress |
-| POST | /ebooks/:id/download | Request download URL |
-| GET | /mentorships | List user's mentorship memberships |
-| GET | /mentorships/programmes | List mentorship programmes |
-| POST | /mentorships/enrol | Enrol in a programme |
-| GET | /mentorships/mentors | List mentor profiles (admin-managed) |
-| GET | /notifications | List notifications |
-| PATCH | /notifications/:id/read | Mark notification read |
-| PATCH | /notifications/read-all | Mark all notifications read |
-| DELETE | /notifications/:id | Delete a notification |
-| POST | /payments/webhook/stripe | Stripe webhook handler |
-| POST | /payments/webhook/paystack | Paystack webhook handler |
-| POST | /payments/webhook/flutterwave | Flutterwave webhook handler |
-| POST | /payments/webhook/lemonsqueezy | Lemon Squeezy webhook handler |
-| POST | /support | Submit support contact form |
-| POST | /opportunities/:id/generate-eligibility | Generate or regenerate eligibility criteria via AI (admin) |
-| POST | /opportunities/:id/eligibility-check | Submit eligibility answers and get score + tier |
-| GET | /opportunities/:id/eligibility-check | Fetch eligibility check result (admin: pass ?userId=) |
-| GET | /ai/eligibility-criteria | Get eligibility criteria for an opportunity |
-| POST | /ai/eligibility-assessment | AI-scored eligibility assessment |
-| GET | /ai/recommendations | Personalised opportunity recommendations (Premium) |
-| GET | /admin/stats | Platform-wide stats |
-| GET | /admin/users | List all users (admin) |
-| PATCH | /admin/users/:id/role | Change user role (admin) |
-| PATCH | /admin/users/:id/ban | Ban/unban user (admin) |
-| GET | /admin/messages | List all message threads (admin) - returns referenceId and avgResponseTimeMs |
-| GET | /admin/messages/:id | Get thread detail with messages (admin) |
-| POST | /admin/messages/:id/reply | Send a reply as team (admin) |
-| GET | /admin/ads/public | Get active ad placement for a zone |
-| GET | /admin/payments | List all payments with joined user and opportunity data |
-| POST | /admin/payments/:id/refund | Mark a payment as refunded |
-| GET | /admin/team-members | List team members for assignee picker |
-| PATCH | /admin/applications/:id/assign | Assign application to a team member |
+| Method | Path                                    | Description                                                                  |
+| ------ | --------------------------------------- | ---------------------------------------------------------------------------- |
+| POST   | /auth/register                          | Register new user                                                            |
+| POST   | /auth/login                             | Login                                                                        |
+| POST   | /auth/refresh                           | Refresh access token                                                         |
+| POST   | /auth/logout                            | Logout                                                                       |
+| GET    | /auth/me                                | Get current user                                                             |
+| PATCH  | /auth/me                                | Update profile and preferences                                               |
+| POST   | /auth/google                            | Google OAuth                                                                 |
+| POST   | /auth/forgot-password                   | Send reset email                                                             |
+| POST   | /auth/reset-password                    | Complete password reset                                                      |
+| GET    | /opportunities                          | List opportunities (with filters)                                            |
+| GET    | /opportunities/:slug                    | Get single opportunity                                                       |
+| POST   | /opportunities                          | Create listing (admin)                                                       |
+| PATCH  | /opportunities/:id                      | Update listing (admin)                                                       |
+| DELETE | /opportunities/:id                      | Delete listing (admin)                                                       |
+| GET    | /saved-opportunities                    | List saved opportunities                                                     |
+| POST   | /saved-opportunities/:opportunityId     | Save an opportunity                                                          |
+| DELETE | /saved-opportunities/:opportunityId     | Unsave an opportunity                                                        |
+| GET    | /saved-searches                         | List saved searches                                                          |
+| POST   | /saved-searches                         | Save a search                                                                |
+| PATCH  | /saved-searches/:id                     | Update saved search                                                          |
+| DELETE | /saved-searches/:id                     | Delete saved search                                                          |
+| GET    | /applications                           | List user's applications                                                     |
+| GET    | /applications/:id                       | Get application detail                                                       |
+| POST   | /applications/start                     | Start Apply For Me flow                                                      |
+| POST   | /applications/:id/eligibility           | Submit eligibility responses                                                 |
+| POST   | /applications/:id/documents             | Attach documents                                                             |
+| PATCH  | /applications/:id/status                | Update status (admin)                                                        |
+| GET    | /documents                              | List credential library                                                      |
+| POST   | /documents                              | Upload a document                                                            |
+| POST   | /documents/:id/replace                  | Upload new version                                                           |
+| DELETE | /documents/:id                          | Delete a document                                                            |
+| GET    | /documents/:id/download                 | Get signed download URL                                                      |
+| GET    | /messages/threads                       | Get messaging threads                                                        |
+| GET    | /messages/threads/:id                   | Get thread with messages (supports ?before=&limit= pagination)               |
+| POST   | /messages/threads/:id/messages          | Send a message                                                               |
+| POST   | /messages/threads                       | Create a thread                                                              |
+| PATCH  | /messages/threads/:id/read              | Update read cursor, reset unread count                                       |
+| POST   | /messages/threads/:id/document-requests | Create a document request (admin)                                            |
+| GET    | /messages/threads/:id/document-requests | Fetch document requests and item statuses                                    |
+| PATCH  | /messages/threads/:id/assign            | Assign thread (admin)                                                        |
+| PATCH  | /messages/threads/:id/status            | Update thread status (admin)                                                 |
+| WS     | /messages/ws?token=JWT                  | Real-time WebSocket connection                                               |
+| GET    | /consultations                          | List user's consultations                                                    |
+| POST   | /consultations                          | Book a consultation                                                          |
+| PATCH  | /consultations/:id/meeting              | Set meeting link (admin)                                                     |
+| GET    | /ebooks                                 | List available ebooks                                                        |
+| GET    | /ebooks/library                         | List purchased ebooks                                                        |
+| POST   | /ebooks/:id/purchase                    | Initiate ebook purchase                                                      |
+| PATCH  | /ebooks/:id/progress                    | Save reading progress                                                        |
+| POST   | /ebooks/:id/download                    | Request download URL                                                         |
+| GET    | /mentorships                            | List user's mentorship memberships                                           |
+| GET    | /mentorships/programmes                 | List mentorship programmes                                                   |
+| POST   | /mentorships/enrol                      | Enrol in a programme                                                         |
+| GET    | /mentorships/mentors                    | List mentor profiles (admin-managed)                                         |
+| GET    | /notifications                          | List notifications                                                           |
+| PATCH  | /notifications/:id/read                 | Mark notification read                                                       |
+| PATCH  | /notifications/read-all                 | Mark all notifications read                                                  |
+| DELETE | /notifications/:id                      | Delete a notification                                                        |
+| POST   | /payments/webhook/stripe                | Stripe webhook handler                                                       |
+| POST   | /payments/webhook/paystack              | Paystack webhook handler                                                     |
+| POST   | /payments/webhook/flutterwave           | Flutterwave webhook handler                                                  |
+| POST   | /payments/webhook/lemonsqueezy          | Lemon Squeezy webhook handler                                                |
+| POST   | /support                                | Submit support contact form                                                  |
+| POST   | /inquiries                              | Submit company inquiry (multipart, rate limited 5/hr, forwards via email)    |
+| POST   | /opportunities/:id/generate-eligibility | Generate or regenerate eligibility criteria via AI (admin)                   |
+| POST   | /opportunities/:id/eligibility-check    | Submit eligibility answers and get score + tier                              |
+| GET    | /opportunities/:id/eligibility-check    | Fetch eligibility check result (admin: pass ?userId=)                        |
+| GET    | /ai/eligibility-criteria                | Get eligibility criteria for an opportunity                                  |
+| POST   | /ai/eligibility-assessment              | AI-scored eligibility assessment                                             |
+| GET    | /ai/recommendations                     | Personalised opportunity recommendations (Premium)                           |
+| GET    | /admin/stats                            | Platform-wide stats                                                          |
+| GET    | /admin/users                            | List all users (admin)                                                       |
+| PATCH  | /admin/users/:id/role                   | Change user role (admin)                                                     |
+| PATCH  | /admin/users/:id/ban                    | Ban/unban user (admin)                                                       |
+| GET    | /admin/messages                         | List all message threads (admin) - returns referenceId and avgResponseTimeMs |
+| GET    | /admin/messages/:id                     | Get thread detail with messages (admin)                                      |
+| POST   | /admin/messages/:id/reply               | Send a reply as team (admin)                                                 |
+| GET    | /admin/ads/public                       | Get active ad placement for a zone                                           |
+| GET    | /admin/payments                         | List all payments with joined user and opportunity data                      |
+| POST   | /admin/payments/:id/refund              | Mark a payment as refunded                                                   |
+| GET    | /admin/team-members                     | List team members for assignee picker                                        |
+| PATCH  | /admin/applications/:id/assign          | Assign application to a team member                                          |
 
 ## Environment Variables
 
@@ -505,12 +541,12 @@ See `apps/api/.env.example` for all required variables.
 
 ### Session-related env vars
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `JWT_EXPIRES_IN` | `15m` | Access token cryptographic lifetime. Controls silent refresh frequency. Users never feel this. |
-| `JWT_SECRET` | required | HMAC secret for signing access tokens (min 32 chars). |
-| `SESSION_IDLE_TIMEOUT` | `1h` | How long a session survives after the tab closes. Sets `refresh_tokens.expiresAt`. |
-| `PASSWORD_RESET_EXPIRES_IN` | `15m` | Password reset link lifetime. Email copy is generated from this value. |
+| Variable                    | Default  | Purpose                                                                                        |
+| --------------------------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `JWT_EXPIRES_IN`            | `15m`    | Access token cryptographic lifetime. Controls silent refresh frequency. Users never feel this. |
+| `JWT_SECRET`                | required | HMAC secret for signing access tokens (min 32 chars).                                          |
+| `SESSION_IDLE_TIMEOUT`      | `1h`     | How long a session survives after the tab closes. Sets `refresh_tokens.expiresAt`.             |
+| `PASSWORD_RESET_EXPIRES_IN` | `15m`    | Password reset link lifetime. Email copy is generated from this value.                         |
 
 ## Database
 

@@ -17,19 +17,46 @@
   /* Distinct type so the interception below does not re-enter itself. */
   const Plain = (props) => Base(props);
 
-  function ButtonWithBadge({ size = 'xl', variant = 'primary', children, style, ...rest }) {
+  function ButtonWithBadge({
+    size = "xl",
+    variant = "primary",
+    children,
+    style,
+    ...rest
+  }) {
     const dia = DIA[size];
-    if (!dia) return <Plain size={size} variant={variant} style={style} {...rest}>{children}</Plain>;
+    if (!dia)
+      return (
+        <Plain size={size} variant={variant} style={style} {...rest}>
+          {children}
+        </Plain>
+      );
     return (
       <Plain
         size={size}
         variant={variant}
-        style={{ position: 'relative', paddingRight: dia + 16, ...style }}
+        style={{ position: "relative", paddingRight: dia + 16, ...style }}
         {...rest}
       >
         {children}
-        <span className="om-btn-badge" style={{ width: dia, height: dia, background: variant === 'primary' ? 'var(--color-text-inverse)' : 'var(--action)', color: variant === 'primary' ? 'var(--action)' : 'var(--color-text-inverse)' }}>
-          <span className="om-btn-arrow"><Icon name="arrow-up-right" size={ARROW[size]} /></span>
+        <span
+          className="om-btn-badge"
+          style={{
+            width: dia,
+            height: dia,
+            background:
+              variant === "primary"
+                ? "var(--color-text-inverse)"
+                : "var(--action)",
+            color:
+              variant === "primary"
+                ? "var(--action)"
+                : "var(--color-text-inverse)",
+          }}
+        >
+          <span className="om-btn-arrow">
+            <Icon name="arrow-up-right" size={ARROW[size]} />
+          </span>
         </span>
       </Plain>
     );
@@ -37,18 +64,34 @@
 
   const BaseNewsletter = NS.NewsletterForm;
 
-  function NewsletterFormBadged({ placeholder = 'Your email address', ctaLabel = 'Stay updated', onSubmit, style, className, ...rest }) {
+  function NewsletterFormBadged({
+    placeholder = "Your email address",
+    ctaLabel = "Stay OppDated",
+    onSubmit,
+    style,
+    className,
+    ...rest
+  }) {
     const [focus, setFocus] = React.useState(false);
     return (
       <form
-        className={'om-newsletter' + (className ? ' ' + className : '')}
-        onSubmit={(e) => { e.preventDefault(); if (onSubmit) onSubmit(e); }}
+        className={"om-newsletter" + (className ? " " + className : "")}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (onSubmit) onSubmit(e);
+        }}
         style={{
-          display: 'flex', alignItems: 'stretch', minWidth: 380, maxWidth: '100%',
-          borderRadius: 'var(--radius-pill)', padding: '4px 4px 4px 20px',
-          background: 'rgba(255,249,244,0.08)',
-          border: '1px solid ' + (focus ? 'rgba(232,168,77,0.60)' : 'rgba(255,249,244,0.20)'),
-          transition: 'border-color var(--duration-fast) var(--ease-out-soft)',
+          display: "flex",
+          alignItems: "stretch",
+          minWidth: 380,
+          maxWidth: "100%",
+          borderRadius: "var(--radius-pill)",
+          padding: "4px 4px 4px 20px",
+          background: "rgba(255,249,244,0.08)",
+          border:
+            "1px solid " +
+            (focus ? "rgba(232,168,77,0.60)" : "rgba(255,249,244,0.20)"),
+          transition: "border-color var(--duration-fast) var(--ease-out-soft)",
           ...style,
         }}
         {...rest}
@@ -59,9 +102,20 @@
           placeholder={placeholder}
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
-          style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-on-dark)', fontFamily: 'var(--font-sans)', fontSize: 14 }}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            color: "var(--text-on-dark)",
+            fontFamily: "var(--font-sans)",
+            fontSize: 14,
+          }}
         />
-        <ButtonWithBadge type="submit" size="sm">{ctaLabel}</ButtonWithBadge>
+        <ButtonWithBadge type="submit" size="sm">
+          {ctaLabel}
+        </ButtonWithBadge>
       </form>
     );
   }
@@ -69,7 +123,12 @@
   const create = React.createElement;
   React.createElement = function (type, props) {
     const args = Array.prototype.slice.call(arguments, 1);
-    const swap = type === Base ? ButtonWithBadge : type === BaseNewsletter ? NewsletterFormBadged : type;
+    const swap =
+      type === Base
+        ? ButtonWithBadge
+        : type === BaseNewsletter
+          ? NewsletterFormBadged
+          : type;
     return create.apply(React, [swap].concat(args));
   };
 

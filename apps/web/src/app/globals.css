@@ -126,7 +126,7 @@ html { scrollbar-color: rgba(122,45,5,0.18) transparent; scrollbar-width: thin; 
 
   /* Wordmark: "Opp" in ink, "Date" in ginger — never break this rule */
   .wordmark-opp  { color: var(--opp-ink); }
-  .wordmark-date { color: var(--opp-ginger-dark); }
+  .wordmark-date { color: #C2410C; }
 }
 
 /* ============================================================

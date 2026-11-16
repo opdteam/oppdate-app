@@ -242,7 +242,7 @@ const GW_ORDER: { key: string; label: string }[] = [
 ]
 
 function flashCopied(text: string, el: HTMLElement) {
-  navigator.clipboard.writeText(text).catch(() => {})
+  navigator.clipboard.writeText(text).catch(() => { })
   const tip = document.createElement('span')
   tip.className = 'adm-pay-copied show'
   tip.textContent = 'Copied!'
@@ -444,10 +444,10 @@ function ReceiptPrintModal({ txn, onClose }: { txn: Txn; onClose: () => void }) 
   const statusColor = txn.status === 'succeeded'
     ? { bg: '#d1fae5', tx: '#065f46' }
     : txn.status === 'refunded'
-    ? { bg: '#fef3c7', tx: '#92400e' }
-    : txn.status === 'pending' || txn.status === 'processing'
-    ? { bg: '#fef3c7', tx: '#b45309' }
-    : { bg: '#fee2e2', tx: '#991b1b' }
+      ? { bg: '#fef3c7', tx: '#92400e' }
+      : txn.status === 'pending' || txn.status === 'processing'
+        ? { bg: '#fef3c7', tx: '#b45309' }
+        : { bg: '#fee2e2', tx: '#991b1b' }
 
   return createPortal(
     <>
@@ -490,7 +490,7 @@ function ReceiptPrintModal({ txn, onClose }: { txn: Txn; onClose: () => void }) 
             </table>
             <div className="rc-footer">
               OppDate. This is an official payment receipt.<br />
-              For queries, contact support@oppdate.com
+              For queries, contact support@oppdate.app
             </div>
           </div>
         </div>
@@ -1054,7 +1054,7 @@ export function AdminPaymentsPage() {
           </>,
           document.body
         )}
-      {receiptTxnId && (() => { const rt = txns.find(x => x.id === receiptTxnId); return rt ? <ReceiptPrintModal txn={rt} onClose={() => setReceiptTxnId(null)} /> : null })()}
+        {receiptTxnId && (() => { const rt = txns.find(x => x.id === receiptTxnId); return rt ? <ReceiptPrintModal txn={rt} onClose={() => setReceiptTxnId(null)} /> : null })()}
       </div>
     )
   }
@@ -1068,7 +1068,7 @@ export function AdminPaymentsPage() {
             <h1>Payments</h1>
             <span className="adm-pay-headsub">All transactions</span>
           </div>
-          <button className="adm-mob-pay-menubtn" onClick={() => {}}><Download size={18} /></button>
+          <button className="adm-mob-pay-menubtn" onClick={() => { }}><Download size={18} /></button>
         </div>
 
         {/* Gateway horizontal scroll */}

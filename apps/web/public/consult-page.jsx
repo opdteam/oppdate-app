@@ -1,12 +1,11 @@
 const { Button, Eyebrow, Icon, Card, AccordionRow, IllustrationSlot, LinkArrow, Footer, Badge } = window.OppDateDesignSystem_4aa598;
 const CONSULT_MARK = (window.__resources && window.__resources.monogram) || 'assets/oppdate-monogram.png';
 
-/* Hero: white zone, centred, light dot texture masked out below the fold line. The one to one
-   promise carries the page, so the hero holds copy and the two actions only. */
 function ConsultHero() {
   return (
-    <section id="consult-top" className="om-tex om-tex-light" style={{ background: 'var(--surface-card)' }}>
-      <div className="wrap" style={{ padding: '64px var(--container-pad) 88px', textAlign: 'center' }}>
+    <section id="consult-top" style={{ position: 'relative', isolation: 'isolate', background: 'var(--surface-card)', overflow: 'hidden' }}>
+      {window.TopoContours && <window.TopoContours />}
+      <div className="wrap" style={{ padding: '64px var(--container-pad) 88px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
         <Eyebrow style={{ marginBottom: 18 }}>Consultations</Eyebrow>
         <h1 style={{ margin: '0 auto', maxWidth: '20ch', fontSize: 'clamp(36px, 4.2vw, 58px)' }}>Private one-to-one sessions <span style={{ color: 'var(--decor-numeral)' }}>tailored to you</span>.</h1>
         <p style={{ margin: '22px auto 0', maxWidth: '52ch', fontSize: 'var(--type-body-large-size)', lineHeight: 'var(--type-body-large-leading)', color: 'var(--text-body)' }}>

@@ -25,7 +25,7 @@
   }
 
   const MOBILE_SECTIONS = [
-    { title: 'Opportunities', links: [['Browse all', '/opportunities'], ['Scholarships', '/opportunities?type=scholarship'], ['Admissions', '/opportunities?type=admission'], ['Jobs', '/opportunities?type=job'], ['Fellowships', '/opportunities?type=fellowship'], ['Grants', '/opportunities?type=grant'], ['Volunteering', '/opportunities?type=volunteering'], ['Programs', '/opportunities?type=program'], ['Internships', '/opportunities?type=internship']] },
+    { title: 'Company', links: [['Our Mission', '/company#mission'], ['Careers', '/company#careers'], ['Get Featured', '/company#get-featured'], ['Partner With Us', '/company#partner'], ['Become a Consultant', '/company#consultant'], ['Become a Mentor', '/company#mentor'], ['List Your eBook', '/company#list-ebook']] },
     { title: 'Services', links: [['Consultations', '/services/consultations'], ['Mentorship', '/services/mentorship'], ['eBooks', '/services/ebooks']] },
     { title: 'OppDate Apply', links: [['How it works', '/services/apply#flow'], ['Pricing', '/pricing'], ['Start an application', '/services/apply#start']] },
   ];

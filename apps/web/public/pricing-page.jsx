@@ -3,8 +3,9 @@ const PRICING_MARK = (window.__resources && window.__resources.monogram) || 'ass
 
 function PricingHero() {
   return (
-    <section id="pricing-top" className="om-tex om-tex-light" style={{ background: 'var(--surface-card)' }}>
-      <div className="wrap" style={{ padding: '64px var(--container-pad) 80px', textAlign: 'center' }}>
+    <section id="pricing-top" style={{ position: 'relative', isolation: 'isolate', background: 'var(--surface-card)', overflow: 'hidden' }}>
+      {window.TopoContours && <window.TopoContours />}
+      <div className="wrap" style={{ padding: '64px var(--container-pad) 80px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
         <Eyebrow style={{ marginBottom: 18 }}>Pricing</Eyebrow>
         <h1 style={{ margin: '0 auto', maxWidth: '18ch', fontSize: 'clamp(36px, 4.2vw, 58px)' }}>Clear pricing,<br /><span style={{ color: 'var(--decor-numeral)' }}>no surprises</span>.</h1>
         <p style={{ margin: '22px auto 0', maxWidth: '54ch', fontSize: 'var(--type-body-large-size)', lineHeight: 'var(--type-body-large-leading)', color: 'var(--text-body)' }}>

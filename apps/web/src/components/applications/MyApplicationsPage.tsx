@@ -79,7 +79,7 @@ interface ApiApplication {
 
 interface ApiThread {
   id: string
-  referenceId: string
+  referenceId: string | null
   lastMessageAt: string | null
   unreadByUser: number
 }

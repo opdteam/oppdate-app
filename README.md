@@ -32,7 +32,7 @@ oppdate/
 ## Build Status
 
 <!-- oppdate:build-status:start -->
-_Last updated: 2026-11-16_
+_Last updated: 2026-11-19_
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -380,17 +380,55 @@ Public page at `/company`. Static HTML + Babel JSX (same pattern as landing, pri
 | Section | Description |
 | --- | --- |
 | CompanyHero | Dark hero with serif heading and CTA buttons |
-| MissionSection | Mission statement with feature cards |
+| AboutUsSection | About Us statement with feature cards (renamed from MissionSection; section id `#about`) |
 | GlobalReachMap | SVG world map (1000x500 equirectangular projection) with 52 country dots across 5 regions, animated continent draw-in via stroke-dashoffset on scroll, region filter pills, connection arcs, and a 4-stat count-up strip |
-| WorkWithUsSection | 6 role cards (Careers, Get Featured, Partner With Us, Become a Consultant, Become a Mentor, List Your eBook) each with CTA that auto-selects the matching inquiry category |
-| InquirySection | Contact form with category pill buttons, file upload with drag-and-drop, elevated card layout with focus-within shadow lift. Submits to `POST /api/v1/inquiries` |
-| CompanyClosingCta | Dark CTA with dotted texture background and warm radial glow |
+| WorkWithUsSection | 6 role cards (Careers, Get Featured, Partner With Us, Become a Consultant, Become a Mentor, List Your eBook) each with CTA that navigates to `/contact?category=X` |
 
-Hash-based scroll: navigating to `/company#work-with-us` or `/company#mission` from another page scrolls to the section after React mounts.
+Hash-based scroll: navigating to `/company#work-with-us` or `/company#about` from another page scrolls to the section after React mounts.
+
+---
+
+## Contact Page
+
+Public page at `/contact`. Extracted from the company page's InquirySection into a standalone page. Same static HTML + Babel JSX pattern. Files: `apps/web/public/contact/index.html`, `apps/web/public/contact-page.jsx`, `apps/web/public/contact-app.jsx`. Served via `apps/web/src/app/contact/route.ts` (readFileSync). Uses `window.OMCQ` namespace (separate from company page's `window.OMCO`).
+
+Reads `?category=` from URL params for pre-selection when linked from company page role cards. Contact form with category pill buttons, file upload with drag-and-drop. Submits to `POST /api/v1/inquiries`.
 
 ### Inquiry route
 
 `POST /api/v1/inquiries` - multipart form (category, name, email, message, optional file). Rate limited to 5/hour. File uploaded to R2 under `inquiries/`. Forwards to SUPPORT_EMAIL via Resend.
+
+---
+
+## OppDate Guide Thread
+
+The AI Guide has been moved from a standalone panel overlay on the listings page into the messaging system as a persistent thread. Each user has exactly one guide thread (enforced by a unique index). The guide thread is pinned to the top of the thread list.
+
+### How it works
+
+1. A guide thread is auto-created on user registration (`auth.ts` insert after signup) or on first access (`getOrCreateGuideThread` helper).
+2. User sends a message via `POST /api/v1/messages/guide/messages`. The endpoint saves the user message, calls `runGuideChat()` (extracted from `ai.ts`), and saves the AI response as a `system` message with JSON content containing `{ type: 'guide_response', reply, cards, sources }`.
+3. The frontend parses guide response messages and renders them with structured cards (opportunity recommendations with slug, title, institution, deadline, funding) and source links.
+4. Opportunity context is passed via `opportunitySlug` in the request body. When a user clicks "Ask OppDate Guide" from an opportunity detail page, they navigate to `/messages?guide=1&slug=<slug>` which auto-selects the guide thread and passes the slug to the AI for context-aware answers.
+
+### Database
+
+**Migration 0024_guide_thread_type.sql**: Adds `'guide'` to `thread_type` enum.
+
+**Migration 0025_guide_thread_schema.sql**: Makes `reference_id` nullable (guide threads have no reference entity), adds `metadata` JSONB column, creates unique index `threads_guide_unique_idx` on `(user_id) WHERE type = 'guide'`.
+
+### Frontend
+
+- `MessagesPage.tsx`: Guide thread rendering with branded avatar (sparkle icon), suggested prompt chips on empty state, `GuideTypingIndicator` with animated bouncing dots in a chat bubble, `GuideMessageInput` component with dedicated send flow.
+- `OpportunityDetail.tsx`: "Ask OppDate Guide" button navigates to `/messages?guide=1&slug=<slug>`.
+- `ListingsPage.tsx`: Old `GuidePanel` overlay removed; guide CTA buttons now navigate to `/messages?guide=1`.
+
+### New API endpoints
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| GET | /messages/guide | user | Get or create the user's guide thread |
+| POST | /messages/guide/messages | premium | Send a message to Guide; returns user message, AI response with cards and sources |
 
 ---
 
@@ -491,6 +529,8 @@ All endpoints are prefixed with `/api/v1`
 | PATCH  | /messages/threads/:id/read              | Update read cursor, reset unread count                                       |
 | POST   | /messages/threads/:id/document-requests | Create a document request (admin)                                            |
 | GET    | /messages/threads/:id/document-requests | Fetch document requests and item statuses                                    |
+| GET    | /messages/guide                         | Get or create the user's guide thread                                        |
+| POST   | /messages/guide/messages                | Send a message to Guide; returns AI response with cards and sources          |
 | PATCH  | /messages/threads/:id/assign            | Assign thread (admin)                                                        |
 | PATCH  | /messages/threads/:id/status            | Update thread status (admin)                                                 |
 | WS     | /messages/ws?token=JWT                  | Real-time WebSocket connection                                               |

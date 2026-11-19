@@ -69,14 +69,24 @@ async function applyPg(client: import('pg').PoolClient, files: string[]) {
 
     const sql = readSql(file)
     console.log(`  apply ${file}`)
-    await client.query('BEGIN')
-    try {
+
+    // ALTER TYPE ... ADD VALUE cannot run inside a transaction in PostgreSQL.
+    // Detect and run those statements outside BEGIN/COMMIT.
+    const hasEnumAdd = /ALTER\s+TYPE\s+\w+\s+ADD\s+VALUE/i.test(sql)
+
+    if (hasEnumAdd) {
       await client.query(sql)
       await client.query('INSERT INTO _migrations (name) VALUES ($1)', [file])
-      await client.query('COMMIT')
-    } catch (err) {
-      await client.query('ROLLBACK')
-      throw err
+    } else {
+      await client.query('BEGIN')
+      try {
+        await client.query(sql)
+        await client.query('INSERT INTO _migrations (name) VALUES ($1)', [file])
+        await client.query('COMMIT')
+      } catch (err) {
+        await client.query('ROLLBACK')
+        throw err
+      }
     }
   }
 }

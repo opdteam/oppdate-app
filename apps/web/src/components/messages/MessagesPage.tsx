@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
 import Image from 'next/image'
-import { Search, Send, Paperclip, FileText, MessageCircle, ArrowLeft, CheckCircle, ChevronRight, ChevronDown, CheckCheck, CheckSquare, Square, Clock, AlertCircle, X } from 'lucide-react'
+import { Search, Send, Paperclip, FileText, MessageCircle, ArrowLeft, CheckCircle, ChevronRight, ChevronDown, ChevronUp, CheckCheck, CheckSquare, Square, Clock, AlertCircle, X, Globe, ExternalLink, Sparkles } from 'lucide-react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { keys, fetchers, ApiThread } from '@/lib/queries'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -57,6 +57,28 @@ interface Attachment {
   size: string
 }
 
+interface GuideOppCard {
+  slug: string
+  title: string
+  institution: string
+  country: string
+  type: string
+  deadline: string | null
+  fundingLabel: string | null
+  oppDateApply: boolean
+}
+
+interface GuideSource {
+  title: string
+  url: string
+}
+
+interface GuideData {
+  reply: string
+  cards: GuideOppCard[]
+  sources: GuideSource[]
+}
+
 interface Message {
   from: MessageFrom
   name?: string
@@ -64,6 +86,7 @@ interface Message {
   day: string
   time: string
   attachment?: Attachment
+  guideData?: GuideData
 }
 
 interface Thread {
@@ -78,6 +101,8 @@ interface Thread {
   messages: Message[]
   opportunityCountry?: string | null
   referenceId?: string
+  isGuide?: boolean
+  metadata?: Record<string, unknown> | null
 }
 
 const STATUS_CONFIG: Record<string, { label: string; tone: 'green' | 'amber' | 'muted' }> = {
@@ -94,27 +119,40 @@ const TONE_COLORS: Record<string, string> = {
 }
 
 function apiThreadToUiThread(t: ApiThread): Thread {
-  const typeLabel = t.type === 'oppdate_apply' ? 'OppDate Apply' : t.type === 'application' ? 'OppDate Apply' : t.type === 'mentorship' ? 'Mentorship' : 'Support'
-  const title = t.opportunityTitle ?? (typeLabel + ' thread')
+  const isGuide = t.type === 'guide'
+  const typeLabel = isGuide
+    ? 'AI Guide'
+    : t.type === 'oppdate_apply' ? 'OppDate Apply' : t.type === 'application' ? 'OppDate Apply' : t.type === 'mentorship' ? 'Mentorship' : 'Support'
+  const title = isGuide ? 'OppDate Guide' : (t.opportunityTitle ?? (typeLabel + ' thread'))
   const lastTime = t.lastMessageAt ? new Date(t.lastMessageAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''
+
+  let lastPreview = ''
+  if (t.lastMessagePreview) {
+    if (t.lastMessagePreview.startsWith('{"type":"guide_response"') || t.lastMessagePreview.startsWith('{"type":"document_request"')) {
+      lastPreview = t.lastMessagePreview.startsWith('{"type":"guide_response"')
+        ? (() => { try { return JSON.parse(t.lastMessagePreview).reply?.slice(0, 80) || 'Guide response' } catch { return 'Guide response' } })()
+        : 'Requested documents from you'
+    } else if (t.lastMessagePreview.includes('{"type":"attachment"')) {
+      lastPreview = 'Sent an attachment'
+    } else {
+      lastPreview = t.lastMessagePreview.replace(/\n+/g, ' ').trim()
+    }
+  }
+
   return {
     id: t.id,
     service: typeLabel,
     title,
-    sub: '',
-    status: (t.status === 'awaiting_team' ? 'awaiting' : t.status === 'awaiting_user' ? 'active' : t.status as Thread['status']) || 'active',
+    sub: isGuide ? 'Your AI-powered scholarship advisor' : '',
+    status: isGuide ? 'active' : ((t.status === 'awaiting_team' ? 'awaiting' : t.status === 'awaiting_user' ? 'active' : t.status as Thread['status']) || 'active'),
     unread: t.unreadByUser,
     lastTime,
-    lastPreview: t.lastMessagePreview
-      ? (t.lastMessagePreview.startsWith('{"type":"document_request"')
-          ? 'Requested documents from you'
-          : t.lastMessagePreview.includes('{"type":"attachment"')
-            ? 'Sent an attachment'
-            : t.lastMessagePreview.replace(/\n+/g, ' ').trim())
-      : '',
+    lastPreview,
     messages: [],
     opportunityCountry: t.opportunityCountry ?? null,
-    referenceId: t.referenceId,
+    referenceId: t.referenceId ?? undefined,
+    isGuide,
+    metadata: t.metadata,
   }
 }
 
@@ -264,6 +302,164 @@ function AttachedDocCard({ fileName, fileUrl, mimeType, mine, compact }: {
       </div>
     </a>
   )
+}
+
+// -- Guide-specific sub-components --
+
+function getDomain(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
+}
+
+function GuideSourcesRow({ sources, compact }: { sources: GuideSource[]; compact?: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  const LIMIT = 2
+  const visible = expanded ? sources : sources.slice(0, LIMIT)
+  const hasMore = sources.length > LIMIT
+
+  return (
+    <div style={{ marginTop: compact ? 6 : 8, animation: 'msgRise 300ms var(--ease-out-soft) 160ms both' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: compact ? 5 : 6 }}>
+        <Globe size={compact ? 10 : 11} style={{ color: '#A07040', flexShrink: 0 }} />
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: compact ? 10 : 11, color: '#A07040', fontWeight: 500 }}>Web sources</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 5 : 6 }}>
+        {visible.map((s, i) => (
+          <a key={i} href={s.url} target="_blank" rel="noopener noreferrer" title={s.title}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: compact ? 4 : 5,
+              fontFamily: 'var(--font-sans)', fontSize: compact ? 10.5 : 11.5,
+              color: '#5A3A18', textDecoration: 'none',
+              background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(212,132,58,0.28)',
+              borderRadius: 999, padding: compact ? '3px 8px 3px 6px' : '4px 10px 4px 8px',
+              maxWidth: compact ? 140 : 180, overflow: 'hidden',
+            }}>
+            <img src={`https://www.google.com/s2/favicons?domain=${getDomain(s.url)}&sz=16`} alt=""
+              width={compact ? 11 : 12} height={compact ? 11 : 12}
+              style={{ borderRadius: 2, flexShrink: 0 }}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{getDomain(s.url)}</span>
+            <ExternalLink size={compact ? 8 : 9} style={{ color: '#A07040', flexShrink: 0 }} />
+          </a>
+        ))}
+        {hasMore && (
+          <button onClick={() => setExpanded(e => !e)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              fontFamily: 'var(--font-sans)', fontSize: compact ? 10.5 : 11.5,
+              color: '#7A2D05', background: 'none', border: 'none', cursor: 'pointer',
+              padding: compact ? '3px 2px' : '4px 2px', fontWeight: 500,
+            }}>
+            {expanded
+              ? <><ChevronUp size={compact ? 10 : 11} /> less</>
+              : <><ChevronDown size={compact ? 10 : 11} /> +{sources.length - LIMIT} more</>}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GuideInlineOppCard({ card, compact }: { card: GuideOppCard; compact?: boolean }) {
+  const deadlineDate = card.deadline ? new Date(card.deadline) : null
+  const daysLeft = deadlineDate ? Math.ceil((deadlineDate.getTime() - Date.now()) / 86400000) : null
+  const deadlineUrgent = daysLeft !== null && daysLeft <= 7
+
+  return (
+    <a href={`/opportunities/${card.slug}`}
+      style={{
+        display: 'block', textDecoration: 'none',
+        background: 'rgba(255,255,255,0.78)', border: '1px solid rgba(212,132,58,0.22)',
+        borderRadius: compact ? 12 : 14, padding: compact ? '10px 12px' : '12px 15px',
+        animation: 'msgRise 300ms var(--ease-out-soft) both',
+        boxShadow: '0 2px 8px rgba(73,42,12,0.06)',
+      }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+        <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: compact ? 12.5 : 13.5, color: '#1C0B02', lineHeight: 1.3, flex: 1 }}>
+          {card.title}
+        </span>
+        {card.oppDateApply && (
+          <span style={{
+            flexShrink: 0, fontFamily: 'var(--font-sans)', fontSize: compact ? 9.5 : 10.5,
+            fontWeight: 600, color: '#7A2D05', background: 'rgba(122,45,5,0.08)',
+            border: '1px solid rgba(122,45,5,0.2)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap',
+          }}>OppDate Apply</span>
+        )}
+      </div>
+      <div style={{ fontFamily: 'var(--font-sans)', fontSize: compact ? 11 : 12, color: '#6B6660', lineHeight: 1.4 }}>
+        {card.institution} &middot; {card.country}
+        {card.fundingLabel && <> &middot; <span style={{ color: '#059669', fontWeight: 500 }}>{card.fundingLabel}</span></>}
+      </div>
+      {daysLeft !== null && (
+        <div style={{
+          marginTop: 6, fontFamily: 'var(--font-sans)', fontSize: compact ? 10.5 : 11,
+          fontWeight: 500, color: deadlineUrgent ? '#DC2626' : '#A07040',
+        }}>
+          {daysLeft < 0 ? 'Deadline passed' : daysLeft === 0 ? 'Closes today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+        </div>
+      )}
+    </a>
+  )
+}
+
+function GuideChips({ onPick, compact }: { onPick: (msg: string) => void; compact?: boolean }) {
+  const chips = [
+    'Am I eligible for this?',
+    'What documents do I need?',
+    'What\'s the deadline?',
+    'How does OppDate Apply work for this one?',
+  ]
+  return (
+    <div style={{
+      display: 'flex', flexWrap: 'wrap', gap: compact ? 6 : 7,
+      paddingLeft: compact ? 30 : 34, marginTop: compact ? 4 : 6,
+      animation: 'chipIn 300ms var(--ease-out-soft) 200ms both',
+    }}>
+      {chips.map((c, i) => (
+        <button key={i} onClick={() => onPick(c)}
+          style={{
+            fontFamily: 'var(--font-sans)', fontSize: compact ? 11.5 : 12.5,
+            fontWeight: 500, color: '#7A2D05',
+            padding: compact ? '5px 10px' : '6px 13px',
+            borderRadius: 999, cursor: 'pointer', border: 'none',
+            background: 'rgba(122,45,5,0.07)',
+            outline: '1px solid rgba(122,45,5,0.22)',
+          }}>
+          {c}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function detectGuideCtaChips(aiText: string): { label: string; message: string }[] {
+  const t = aiText.toLowerCase()
+  const chips: { label: string; message: string }[] = []
+
+  const isYesNo = (t.endsWith('?') || t.includes('are you') || t.includes('do you') || t.includes('have you')) &&
+    (t.includes('are you a') || t.includes('do you have') || t.includes('have you') || t.includes('citizen') || t.includes('currently'))
+  if (isYesNo) {
+    chips.push({ label: 'Yes', message: 'Yes' })
+    chips.push({ label: 'No', message: 'No' })
+  }
+
+  if (t.includes('oppdate apply') && (t.includes('prepare') || t.includes('submit') || t.includes('behalf'))) {
+    chips.push({ label: 'Start my application', message: 'Let\'s begin the application' })
+  }
+
+  if (!isYesNo && (t.includes('check') && t.includes('eligib') || t.includes('qualify'))) {
+    chips.push({ label: 'Check my eligibility', message: 'Am I eligible for this?' })
+  }
+
+  if ((t.includes('document') || t.includes('cv')) && t.includes('need')) {
+    chips.push({ label: 'What documents do I need?', message: 'What documents do I need for this?' })
+  }
+
+  if (t.includes('similar') || t.includes('alternative') || t.includes('other opportunit')) {
+    chips.push({ label: 'Show similar opportunities', message: 'Are there similar opportunities I can apply to?' })
+  }
+
+  const seen = new Set<string>()
+  return chips.filter(c => { if (seen.has(c.label)) return false; seen.add(c.label); return true }).slice(0, 3)
 }
 
 function DocItemUpload({ item, threadId, requestId, compact }: {
@@ -478,6 +674,94 @@ function MessageBubble({ msg, showAvatar, showTail, index, compact, threadId }: 
     )
   }
 
+  // Guide AI response bubble
+  if (msg.guideData) {
+    const { reply, cards, sources } = msg.guideData
+    const avatarSize = compact ? 24 : 26
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: compact ? 6 : 8,
+        animation: `msgIn 220ms var(--ease-out-soft) ${delay}ms both`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: compact ? 6 : 8 }}>
+          {showAvatar
+            ? <span style={{
+                width: avatarSize, height: avatarSize, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, #D4843A 0%, #7A2D05 100%)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden', boxShadow: '0 2px 8px rgba(122,45,5,0.25)',
+              }}>
+                <img src="/assets/oppdate-monogram.png" alt="Guide"
+                  style={{ width: '60%', height: '60%', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+              </span>
+            : <span style={{ width: avatarSize, flexShrink: 0 }} />
+          }
+          <div style={{ maxWidth: compact ? '82%' : '78%' }}>
+            {showAvatar && (
+              <div style={{
+                fontFamily: 'var(--font-sans)', fontSize: compact ? 10.5 : 11.5, fontWeight: 600,
+                color: 'var(--app-ginger)', marginBottom: compact ? 3 : 4, marginLeft: 2,
+                display: 'flex', alignItems: 'center', gap: 4,
+              }}>
+                <Sparkles size={compact ? 10 : 11} />
+                OppDate Guide
+              </div>
+            )}
+            <div style={{
+              position: 'relative',
+              filter: 'drop-shadow(0 2px 8px rgba(122,45,5,0.12))',
+              marginBottom: compact ? 4 : 6,
+            }}>
+              <div style={{
+                padding: compact ? '8px 12px' : '14px 18px',
+                borderRadius: showTail ? '18px 18px 18px 4px' : 18,
+                background: 'rgba(255,255,255,0.94)',
+                backdropFilter: 'blur(16px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(16px) saturate(140%)',
+                border: '1px solid rgba(216,204,196,0.5)',
+                color: 'var(--app-ink)',
+                fontFamily: 'var(--font-sans)', fontSize: compact ? 13 : 14, lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+              }}>
+                {reply}
+                {showTail && (
+                  <span style={{
+                    position: 'absolute', bottom: -5, left: 0, width: 0, height: 0,
+                    borderStyle: 'solid', borderWidth: '10px 14px 0 0',
+                    borderColor: 'rgba(255,255,255,0.94) transparent transparent transparent',
+                  }} />
+                )}
+              </div>
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-sans)', fontSize: compact ? 9.5 : 10.5,
+              color: 'var(--app-text-sec)', marginTop: compact ? 3 : 4, padding: '0 4px',
+            }}>
+              {msg.time}
+            </div>
+          </div>
+        </div>
+
+        {/* Opportunity cards */}
+        {cards.length > 0 && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: compact ? 6 : 8,
+            paddingLeft: compact ? 30 : 34,
+          }}>
+            {cards.map((c, i) => <GuideInlineOppCard key={i} card={c} compact={compact} />)}
+          </div>
+        )}
+
+        {/* Sources */}
+        {sources.length > 0 && (
+          <div style={{ paddingLeft: compact ? 30 : 34 }}>
+            <GuideSourcesRow sources={sources} compact={compact} />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // Check if this is a document request message
   const isDocRequest = msg.text.startsWith('{"type":"document_request"')
   let docRequestId: string | null = null
@@ -682,7 +966,9 @@ function DayDivider({ label, compact }: { label: string; compact?: boolean }) {
   )
 }
 
-function ThreadMessages({ messages, compact, threadId }: { messages: Message[]; compact?: boolean; threadId?: string }) {
+function ThreadMessages({ messages, compact, threadId, isGuide, onGuideChipPick }: {
+  messages: Message[]; compact?: boolean; threadId?: string; isGuide?: boolean; onGuideChipPick?: (msg: string) => void
+}) {
   const rows: React.ReactNode[] = []
   let lastDay: string | null = null
   let lastFrom: string | null = null
@@ -698,8 +984,72 @@ function ThreadMessages({ messages, compact, threadId }: { messages: Message[]; 
     const showAvatar = m.from === 'team' && isLastInRun
     const showTail = isLastInRun
     rows.push(<MessageBubble key={i} msg={m} showAvatar={showAvatar} showTail={showTail} index={i} compact={compact} threadId={threadId} />)
+
+    // After the last AI guide message, show contextual CTA chips
+    if (isGuide && m.guideData && i === messages.length - 1 && onGuideChipPick) {
+      const ctaChips = detectGuideCtaChips(m.guideData.reply)
+      if (ctaChips.length > 0) {
+        rows.push(
+          <div key={`cta-${i}`} style={{
+            display: 'flex', flexWrap: 'wrap', gap: compact ? 6 : 7,
+            paddingLeft: compact ? 30 : 34, marginTop: compact ? 2 : 4,
+            animation: 'chipIn 300ms var(--ease-out-soft) 300ms both',
+          }}>
+            {ctaChips.map((c, ci) => (
+              <button key={ci} onClick={() => onGuideChipPick(c.message)}
+                style={{
+                  fontFamily: 'var(--font-sans)', fontSize: compact ? 11.5 : 12.5,
+                  fontWeight: 500, color: '#7A2D05',
+                  padding: compact ? '5px 10px' : '6px 13px',
+                  borderRadius: 999, cursor: 'pointer', border: 'none',
+                  background: 'rgba(122,45,5,0.07)',
+                  outline: '1px solid rgba(122,45,5,0.22)',
+                }}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )
+      }
+    }
     lastFrom = m.from
   })
+
+  // If guide thread has no messages yet, show suggested chips
+  if (isGuide && messages.length === 0 && onGuideChipPick) {
+    rows.push(
+      <div key="welcome" style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: compact ? '20px 16px' : '32px 20px', textAlign: 'center',
+        animation: 'msgFadeIn 420ms ease both',
+      }}>
+        <div style={{
+          width: compact ? 42 : 52, height: compact ? 42 : 52, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #D4843A 0%, #7A2D05 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: compact ? 10 : 14,
+          boxShadow: '0 4px 16px rgba(122,45,5,0.25)',
+        }}>
+          <Sparkles size={compact ? 20 : 24} style={{ color: '#fff' }} />
+        </div>
+        <div style={{
+          fontFamily: 'var(--font-serif)', fontWeight: 700,
+          fontSize: compact ? 16 : 18, color: 'var(--app-ink)',
+          marginBottom: compact ? 4 : 6,
+        }}>
+          OppDate Guide
+        </div>
+        <div style={{
+          fontFamily: 'var(--font-sans)', fontSize: compact ? 12 : 13,
+          color: 'var(--app-text-sec)', lineHeight: 1.5,
+          maxWidth: 280, marginBottom: compact ? 14 : 18,
+        }}>
+          Your AI scholarship advisor. Ask about opportunities, eligibility, documents, and more.
+        </div>
+        <GuideChips onPick={onGuideChipPick} compact={compact} />
+      </div>
+    )
+  }
 
   return <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 8 : 12 }}>{rows}</div>
 }
@@ -718,6 +1068,42 @@ function TypingIndicator() {
         color: '#fff', boxShadow: '0 2px 8px rgba(122,45,5,0.25)',
       }}>
         OD
+      </span>
+      <div style={{
+        padding: '10px 16px', borderRadius: '16px 16px 16px 4px',
+        background: 'rgba(255,255,255,0.82)',
+        backdropFilter: 'blur(12px) saturate(120%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(120%)',
+        border: '1px solid rgba(255,255,255,0.7)',
+        boxShadow: '0 1px 6px rgba(122,45,5,0.06)',
+        display: 'flex', alignItems: 'center', gap: 4,
+      }}>
+        {[0, 1, 2].map(i => (
+          <span key={i} style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: 'var(--app-ginger)',
+            opacity: 0.6,
+            animation: `msgTypingDot 1.2s ease-in-out ${i * 160}ms infinite`,
+          }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function GuideTypingIndicator() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-end', gap: 6,
+      animation: 'msgIn 220ms var(--ease-out-soft) both',
+    }}>
+      <span style={{
+        width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+        background: 'linear-gradient(135deg, #D4843A 0%, #7A2D05 100%)',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 2px 8px rgba(122,45,5,0.25)',
+      }}>
+        <Sparkles size={12} style={{ color: '#fff' }} />
       </span>
       <div style={{
         padding: '10px 16px', borderRadius: '16px 16px 16px 4px',
@@ -1102,6 +1488,113 @@ function MessageInput({
   )
 }
 
+function GuideMessageInput({
+  compact, threadId, onSent, onSendText, onThinkingChange,
+}: {
+  compact?: boolean; threadId: string
+  onSent: (userMsg: ApiMessage, aiMsg: ApiMessage) => void
+  onSendText?: string | null
+  onThinkingChange?: (thinking: boolean) => void
+}) {
+  const [value, setValue] = useState('')
+  const [sendState, setSendState] = useState<'idle' | 'sending'>('idle')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Handle external send trigger (from chips)
+  useEffect(() => {
+    if (onSendText && sendState === 'idle') {
+      setValue(onSendText)
+      setTimeout(() => doSend(onSendText), 50)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onSendText])
+
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, compact ? 80 : 120) + 'px'
+  }, [value, compact])
+
+  const doSend = useCallback(async (text?: string) => {
+    const msg = (text ?? value).trim()
+    if (!msg || sendState === 'sending') return
+    setSendState('sending')
+    onThinkingChange?.(true)
+    if (navigator.vibrate) navigator.vibrate(10)
+    try {
+      const res = await api.post('/api/v1/messages/guide/messages', { content: msg })
+      const data = res.data?.data
+      if (data?.userMessage && data?.guideMessage) {
+        onSent(data.userMessage, data.guideMessage)
+      }
+      setValue('')
+    } catch {
+      // If error, keep value so user can retry
+    } finally {
+      setSendState('idle')
+      onThinkingChange?.(false)
+    }
+  }, [value, sendState, onSent, onThinkingChange])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      doSend()
+    }
+  }, [doSend])
+
+  return (
+    <div style={{
+      padding: compact ? '10px 12px' : '16px 22px',
+      borderTop: compact ? 'none' : '1px solid var(--app-hairline)',
+      background: compact ? 'rgba(26,13,5,0.92)' : 'rgba(255,255,255,0.55)',
+      backdropFilter: compact ? 'blur(20px) saturate(150%)' : undefined,
+      WebkitBackdropFilter: compact ? 'blur(20px) saturate(150%)' : undefined,
+      boxShadow: compact ? '0 -4px 20px rgba(0,0,0,0.3)' : undefined,
+      paddingBottom: compact ? 'calc(10px + env(safe-area-inset-bottom, 0px))' : undefined,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: compact ? 8 : 10 }}>
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask the OppDate Guide..."
+          disabled={sendState === 'sending'}
+          style={{
+            flex: 1, minHeight: compact ? 38 : 44, padding: compact ? '9px 14px' : '11px 16px',
+            borderRadius: compact ? 19 : 22,
+            background: compact ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)',
+            border: compact ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(122,45,5,0.2)',
+            boxShadow: compact ? 'inset 0 1px 3px rgba(0,0,0,0.2)' : undefined,
+            fontFamily: 'var(--font-sans)', fontSize: compact ? 13 : 14,
+            color: compact ? '#F0E8E0' : 'var(--app-ink)', outline: 'none', resize: 'none', overflow: 'hidden',
+            lineHeight: 1.5,
+          }}
+        />
+        <button
+          onClick={() => doSend()}
+          disabled={!value.trim() || sendState === 'sending'}
+          style={{
+            width: compact ? 38 : 44, height: compact ? 38 : 44, borderRadius: '50%', flexShrink: 0,
+            background: compact ? 'linear-gradient(135deg, #B5530A 0%, #7A2D05 100%)' : 'var(--app-ginger)',
+            border: 'none', cursor: !value.trim() || sendState === 'sending' ? 'default' : 'pointer',
+            opacity: sendState === 'sending' ? 0.7 : !value.trim() ? 0.45 : 1,
+            color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: compact ? '0 3px 12px rgba(122,45,5,0.3)' : undefined,
+            transition: 'opacity 140ms ease, transform 120ms ease',
+            transform: sendState === 'sending' ? 'scale(0.92)' : 'scale(1)',
+          }}
+        >
+          <Send size={compact ? 16 : 19} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ThreadHeader({ thread, messages, onBack, compact }: { thread: Thread; messages: Message[]; onBack?: () => void; compact?: boolean }) {
   const lastTeamMsg = compact ? [...messages].reverse().find(m => m.from === 'team') : null
 
@@ -1136,8 +1629,20 @@ function ThreadHeader({ thread, messages, onBack, compact }: { thread: Thread; m
         </button>
       )}
 
+      {/* Guide avatar in header */}
+      {compact && thread.isGuide && (
+        <span style={{
+          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+          background: 'linear-gradient(135deg, #D4843A 0%, #7A2D05 100%)',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 2px 8px rgba(122,45,5,0.2)',
+        }}>
+          <Sparkles size={15} style={{ color: '#fff' }} />
+        </span>
+      )}
+
       {/* Team avatar in header for mobile */}
-      {compact && lastTeamMsg?.name && (
+      {compact && !thread.isGuide && lastTeamMsg?.name && (
         <span style={{
           position: 'relative',
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
@@ -1338,8 +1843,10 @@ function ThreadContextRibbon({ thread }: { thread: Thread }) {
   )
 }
 
+
 function ThreadView({
   thread, messages, onBack, compact, onSent, sendEvent, isTyping, hasMore, onLoadMore,
+  onGuideAppend,
 }: {
   thread: Thread
   messages: Message[]
@@ -1350,12 +1857,15 @@ function ThreadView({
   isTyping: boolean
   hasMore: boolean
   onLoadMore: () => void
+  onGuideAppend?: (userMsg: ApiMessage, aiMsg: ApiMessage) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [newMsgPill, setNewMsgPill] = useState(false)
   const prevMsgCount = useRef(messages.length)
   const isAtBottom = useRef(true)
+  const [guideChipText, setGuideChipText] = useState<string | null>(null)
+  const [guideThinking, setGuideThinking] = useState(false)
 
   // Scroll to bottom on initial thread open
   useEffect(() => {
@@ -1397,6 +1907,16 @@ function ThreadView({
     setNewMsgPill(false)
   }, [])
 
+  useEffect(() => {
+    if (guideThinking && isAtBottom.current) scrollToBottom()
+  }, [guideThinking, scrollToBottom])
+
+  const handleGuideChipPick = useCallback((msg: string) => {
+    setGuideChipText(msg)
+    // Reset so the same chip can be clicked again
+    setTimeout(() => setGuideChipText(null), 100)
+  }, [])
+
   const disabled = thread.status === 'resolved'
     ? ('resolved' as const)
     : thread.status === 'closed'
@@ -1412,7 +1932,7 @@ function ThreadView({
       animation: compact ? undefined : 'msgSlideIn 220ms var(--ease-out-soft) both',
     }}>
       <ThreadHeader thread={thread} messages={messages} onBack={onBack} compact={compact} />
-      {!compact && thread.referenceId && <ThreadContextRibbon thread={thread} />}
+      {!compact && !thread.isGuide && thread.referenceId && <ThreadContextRibbon thread={thread} />}
       <div
         ref={scrollRef}
         style={{
@@ -1437,10 +1957,13 @@ function ThreadView({
             </button>
           </div>
         )}
-        <ThreadMessages messages={messages} compact={compact} threadId={thread.id} />
-        {isTyping && (
+        <ThreadMessages
+          messages={messages} compact={compact} threadId={thread.id}
+          isGuide={thread.isGuide} onGuideChipPick={thread.isGuide ? handleGuideChipPick : undefined}
+        />
+        {(isTyping || guideThinking) && (
           <div style={{ marginTop: 8 }}>
-            <TypingIndicator />
+            {thread.isGuide ? <GuideTypingIndicator /> : <TypingIndicator />}
           </div>
         )}
       </div>
@@ -1462,7 +1985,11 @@ function ThreadView({
           )}
         </div>
       )}
-      <MessageInput disabled={disabled} compact={compact} threadId={thread.id} onSent={onSent} sendEvent={sendEvent} />
+      {thread.isGuide && onGuideAppend
+        ? <GuideMessageInput compact={compact} threadId={thread.id}
+            onSent={onGuideAppend} onSendText={guideChipText} onThinkingChange={setGuideThinking} />
+        : <MessageInput disabled={disabled} compact={compact} threadId={thread.id} onSent={onSent} sendEvent={sendEvent} />
+      }
     </div>
   )
 }
@@ -1474,15 +2001,26 @@ function ThreadRow({
 }) {
   const unread = thread.unread > 0
   const awaiting = thread.status === 'awaiting'
+  const isGuide = thread.isGuide
 
   return (
     <button onClick={onClick} className="msg-threadrow" style={{
       display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
       position: 'relative', padding: '14px 16px', borderRadius: 14, border: 'none',
-      marginBottom: 4, background: selected ? 'rgba(122,45,5,0.09)' : 'transparent',
+      marginBottom: isGuide ? 8 : 4,
+      background: selected
+        ? 'rgba(122,45,5,0.09)'
+        : isGuide ? 'linear-gradient(135deg, rgba(212,132,58,0.06) 0%, rgba(122,45,5,0.03) 100%)' : 'transparent',
+      borderBottom: isGuide ? '1px solid rgba(122,45,5,0.08)' : undefined,
       animation: `msgRowIn 360ms var(--ease-out-soft) ${index * 50}ms both`,
     }}>
-      {awaiting && (
+      {isGuide && (
+        <span style={{
+          position: 'absolute', left: 0, top: 8, bottom: 8, width: 3,
+          borderRadius: 999, background: 'var(--app-ginger)',
+        }} />
+      )}
+      {awaiting && !isGuide && (
         <span style={{
           position: 'absolute', left: 0, top: 8, bottom: 8, width: 3,
           borderRadius: 999, background: 'var(--app-amber)',
@@ -1491,8 +2029,11 @@ function ThreadRow({
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <ServicePill service={thread.service} />
+        {isGuide && (
+          <Sparkles size={12} style={{ color: 'var(--app-ginger)', opacity: 0.7 }} />
+        )}
         <span style={{ flex: 1 }} />
-        <StatusChip status={thread.status} small />
+        {!isGuide && <StatusChip status={thread.status} small />}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {unread && (
@@ -1524,7 +2065,7 @@ function ThreadRow({
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
           minWidth: 0,
         }}>
-          {thread.lastPreview}
+          {thread.lastPreview || (isGuide ? 'Your AI-powered scholarship advisor' : '')}
         </span>
         {thread.unread > 1 && (
           <span style={{
@@ -1646,29 +2187,45 @@ function MobileThreadRow({
           userSelect: 'none',
         }}
       >
-        {/* Accent bar for awaiting */}
-        {awaiting && (
+        {/* Accent bar for guide or awaiting */}
+        {thread.isGuide ? (
+          <span style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+            background: 'var(--app-ginger)',
+          }} />
+        ) : awaiting ? (
           <span style={{
             position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
             background: 'var(--app-amber)',
           }} />
-        )}
+        ) : null}
 
         {/* Avatar */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 56, flexShrink: 0, paddingLeft: awaiting ? 6 : 0,
+          width: 56, flexShrink: 0, paddingLeft: (awaiting || thread.isGuide) ? 6 : 0,
         }}>
-          <span style={{
-            width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-            background: unread ? 'var(--app-ginger)' : 'rgba(122,45,5,0.08)',
-            color: unread ? '#fff' : 'var(--app-ginger)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
-            letterSpacing: '0.02em',
-          }}>
-            {initials}
-          </span>
+          {thread.isGuide ? (
+            <span style={{
+              width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+              background: 'linear-gradient(135deg, #D4843A 0%, #7A2D05 100%)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(122,45,5,0.2)',
+            }}>
+              <Sparkles size={16} style={{ color: '#fff' }} />
+            </span>
+          ) : (
+            <span style={{
+              width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+              background: unread ? 'var(--app-ginger)' : 'rgba(122,45,5,0.08)',
+              color: unread ? '#fff' : 'var(--app-ginger)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
+              letterSpacing: '0.02em',
+            }}>
+              {initials}
+            </span>
+          )}
         </div>
 
         {/* Content */}
@@ -1676,8 +2233,9 @@ function MobileThreadRow({
           {/* Top row: service + status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
             <ServicePill service={thread.service} compact />
+            {thread.isGuide && <Sparkles size={10} style={{ color: 'var(--app-ginger)', opacity: 0.7 }} />}
             <span style={{ flex: 1 }} />
-            <StatusChip status={thread.status} compact />
+            {!thread.isGuide && <StatusChip status={thread.status} compact />}
           </div>
 
           {/* Title row */}
@@ -1711,7 +2269,7 @@ function MobileThreadRow({
               fontWeight: unread ? 500 : 400, lineHeight: 1.4,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1,
             }}>
-              {thread.lastPreview}
+              {thread.lastPreview || (thread.isGuide ? 'Your AI-powered scholarship advisor' : '')}
             </span>
             {thread.unread > 0 && (
               <span style={{
@@ -2020,10 +2578,11 @@ function SelectPlaceholder() {
 /*  Mobile thread view portal                         */
 /* -------------------------------------------------- */
 function MobileThreadPortalV2({
-  thread, messages, onBack, onSent, sendEvent, isTyping, hasMore, onLoadMore,
+  thread, messages, onBack, onSent, sendEvent, isTyping, hasMore, onLoadMore, onGuideAppend,
 }: {
   thread: Thread; messages: Message[]; onBack: () => void; onSent: (msg: ApiMessage) => void
   sendEvent: (e: object) => void; isTyping: boolean; hasMore: boolean; onLoadMore: () => void
+  onGuideAppend?: (userMsg: ApiMessage, aiMsg: ApiMessage) => void
 }) {
   const [entered, setEntered] = useState(false)
   const [vpOffset, setVpOffset] = useState(0)
@@ -2061,6 +2620,7 @@ function MobileThreadPortalV2({
       <ThreadView
         thread={thread} messages={messages} onBack={onBack} compact onSent={onSent}
         sendEvent={sendEvent} isTyping={isTyping} hasMore={hasMore} onLoadMore={onLoadMore}
+        onGuideAppend={onGuideAppend}
       />
     </div>
   )
@@ -2108,6 +2668,7 @@ function MessagesSkeleton({ mob }: { mob: boolean }) {
 
 export function MessagesPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<number | null>(null)
   const [mobileThread, setMobileThread] = useState(false)
@@ -2117,6 +2678,7 @@ export function MessagesPage() {
   const [typingByThread, setTypingByThread] = useState<Record<string, boolean>>({})
   const [hasMoreByThread, setHasMoreByThread] = useState<Record<string, boolean>>({})
   const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const guideAutoOpened = useRef(false)
   const mob = useIsMobile()
 
   const { data: apiThreads = [], isLoading: loading } = useQuery({
@@ -2167,6 +2729,16 @@ export function MessagesPage() {
     })
   }, [])
 
+  const appendGuideMessages = useCallback((threadId: string, userMsg: ApiMessage, aiMsg: ApiMessage) => {
+    setThreadMessages(prev => {
+      const existing = prev[threadId] ?? []
+      const ids = new Set(existing.map(m => m.id))
+      const toAdd = [userMsg, aiMsg].filter(m => !ids.has(m.id))
+      return toAdd.length ? { ...prev, [threadId]: [...existing, ...toAdd] } : prev
+    })
+    queryClient.invalidateQueries({ queryKey: keys.threads })
+  }, [queryClient])
+
   const loadThreadMessages = useCallback((threadId: string) => {
     if (threadMessages[threadId]) {
       sendEvent({ type: 'mark_read', threadId })
@@ -2208,6 +2780,51 @@ export function MessagesPage() {
     return true
   })
 
+  // Auto-open Guide thread when navigating with ?guide=1&slug=X
+  useEffect(() => {
+    if (guideAutoOpened.current || loading) return
+    const wantGuide = searchParams.get('guide') === '1'
+    if (!wantGuide) return
+
+    guideAutoOpened.current = true
+    const slug = searchParams.get('slug')
+
+    const openGuide = async () => {
+      // Ensure a guide thread exists (get-or-create)
+      try {
+        await api.get('/api/v1/messages/guide')
+      } catch { /* ignore — thread may already exist */ }
+
+      // Set opportunity context if slug param is present
+      if (slug) {
+        try {
+          await api.patch('/api/v1/messages/guide/context', { opportunitySlug: slug })
+        } catch {}
+      }
+
+      // Refetch threads so the guide thread appears in the list
+      await queryClient.invalidateQueries({ queryKey: keys.threads })
+
+      // Clean URL params immediately
+      router.replace('/messages', { scroll: false })
+    }
+
+    openGuide()
+  }, [loading, searchParams, router, queryClient])
+
+  // Once threads load and we came from a guide deeplink, auto-select the guide thread
+  const guideDeepLinked = useRef(false)
+  useEffect(() => {
+    if (guideDeepLinked.current || !guideAutoOpened.current) return
+    const guideIdx = filtered.findIndex(t => t.isGuide)
+    if (guideIdx === -1) return
+
+    guideDeepLinked.current = true
+    setSelected(guideIdx)
+    loadThreadMessages(filtered[guideIdx].id)
+    if (mob) setMobileThread(true)
+  }, [filtered, mob, loadThreadMessages])
+
   const activeThread = selected !== null ? filtered[selected] ?? null : null
   const unreadCount = apiThreads.filter(t => t.unreadByUser > 0).length
   const totalCount = apiThreads.length
@@ -2217,13 +2834,33 @@ export function MessagesPage() {
     return raw.map(m => {
       const st = m.senderType ?? m.sender_type ?? 'team'
       const ts = m.createdAt ?? m.created_at ?? new Date().toISOString()
+      const day = new Date(ts).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
+      const time = new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+
+      // Parse guide_response JSON for guide threads
+      if (thread.isGuide && st === 'system' && m.content.startsWith('{"type":"guide_response"')) {
+        try {
+          const parsed = JSON.parse(m.content)
+          return {
+            from: 'team' as MessageFrom,
+            name: 'OppDate Guide',
+            text: parsed.reply || '',
+            day, time,
+            guideData: {
+              reply: parsed.reply || '',
+              cards: parsed.cards || [],
+              sources: parsed.sources || [],
+            },
+          }
+        } catch { /* fall through to default */ }
+      }
+
       const from = (st === 'system' ? 'team' : st) as MessageFrom
       return {
         from,
         name: st === 'system' ? 'OppDate' : undefined,
         text: m.content,
-        day: new Date(ts).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' }),
-        time: new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        day, time,
       }
     })
   }
@@ -2365,6 +3002,9 @@ export function MessagesPage() {
             isTyping={typingByThread[activeThread.id] ?? false}
             hasMore={hasMoreByThread[activeThread.id] ?? false}
             onLoadMore={() => handleLoadMore(activeThread.id)}
+            onGuideAppend={activeThread.isGuide
+              ? (uMsg, aMsg) => appendGuideMessages(activeThread.id, uMsg, aMsg)
+              : undefined}
           />
         )}
       </div>
@@ -2484,6 +3124,9 @@ export function MessagesPage() {
               isTyping={typingByThread[activeThread.id] ?? false}
               hasMore={hasMoreByThread[activeThread.id] ?? false}
               onLoadMore={() => handleLoadMore(activeThread.id)}
+              onGuideAppend={activeThread.isGuide
+                ? (uMsg, aMsg) => appendGuideMessages(activeThread.id, uMsg, aMsg)
+                : undefined}
             />
           : <SelectPlaceholder />
         }

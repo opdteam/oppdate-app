@@ -5,7 +5,7 @@ const MARK_FOOT = (window.__resources && window.__resources.monogram) || 'assets
 const FOOTER_COLS = [
   { title: 'Opportunities', links: ['Browse all opportunities', 'By region', 'By type', 'Closing this week'] },
   { title: 'Services', links: [['Consultations', '/services/consultations'], ['Mentorship', '/services/mentorship'], ['eBooks', '/services/ebooks']] },
-  { title: 'Company', links: [['Our Mission', '/company#mission'], ['Work With Us', '/company#work-with-us'], ['Careers', '/company#careers'], ['Get Featured', '/company#get-featured'], ['Partner With Us', '/company#partner'], ['Become a Consultant', '/company#consultant'], ['Become a Mentor', '/company#mentor'], ['List Your eBook', '/company#list-ebook']] },
+  { title: 'Company', links: [['About Us', '/company#about'], ['Work With Us', '/company#work-with-us'], ['Careers', '/company#careers'], ['Get Featured', '/company#get-featured'], ['Partner With Us', '/company#partner'], ['Become a Consultant', '/company#consultant'], ['Become a Mentor', '/company#mentor'], ['List Your eBook', '/company#list-ebook'], ['Contact', '/contact']] },
   { title: 'OppDate Apply', links: [['How it works', '/services/apply#flow'], ['Pricing', '/pricing'], ['Start an application', '/services/apply#start']] },
 ];
 

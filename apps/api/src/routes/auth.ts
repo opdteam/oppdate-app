@@ -161,6 +161,20 @@ export async function authRoutes(server: FastifyInstance) {
 
     setAuthCookies(reply, accessToken, refreshToken);
 
+    // Auto-create Guide thread for the new user
+    try {
+      await db
+        .insert(schema.messageThreads)
+        .values({
+          userId: user.id,
+          type: 'guide',
+          referenceId: null,
+          status: 'active',
+        })
+    } catch {
+      // Silently ignore if thread already exists (unique index)
+    }
+
     return created(
       reply,
       { user, accessToken, refreshToken },

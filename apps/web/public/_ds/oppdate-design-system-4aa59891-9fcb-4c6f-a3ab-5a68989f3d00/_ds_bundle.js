@@ -2534,8 +2534,8 @@
       const COMPANY_ITEMS = [
         {
           icon: "compass",
-          label: "Our Mission",
-          href: "/company#mission",
+          label: "About Us",
+          href: "/company#about",
           sub: true,
         },
         {

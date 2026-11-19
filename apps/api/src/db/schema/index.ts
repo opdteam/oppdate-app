@@ -83,6 +83,7 @@ export const documentTypeEnum = pgEnum('document_type', [
 export const threadTypeEnum = pgEnum('thread_type', [
   'oppdate_apply',
   'mentorship',
+  'guide',
 ])
 
 export const threadStatusEnum = pgEnum('thread_status', [
@@ -378,12 +379,13 @@ export const messageThreads = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     type: threadTypeEnum('type').notNull(),
-    referenceId: uuid('reference_id').notNull(), // applicationId or mentorshipId
+    referenceId: uuid('reference_id'), // applicationId or mentorshipId; null for guide threads
     status: threadStatusEnum('status').notNull().default('active'),
     assignedTo: uuid('assigned_to').references(() => users.id),
     lastMessageAt: timestamp('last_message_at'),
     unreadByUser: integer('unread_by_user').notNull().default(0),
     unreadByTeam: integer('unread_by_team').notNull().default(0),
+    metadata: jsonb('metadata'), // stores opportunitySlug, etc. for guide threads
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },

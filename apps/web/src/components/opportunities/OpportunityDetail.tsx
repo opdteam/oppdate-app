@@ -1,6 +1,7 @@
 'use client'
 
-import { X, Bookmark, ExternalLink, Calendar, MapPin, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { X, Bookmark, ExternalLink, Calendar, MapPin, Sparkles, ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button, Tag, OrgMark } from '@/components/ui'
 import type { OpportunityListItem } from './types'
 
@@ -30,6 +31,8 @@ interface OpportunityDetailProps {
 }
 
 export function OpportunityDetail({ data, saved = false, onSave, onClose, onApply }: OpportunityDetailProps) {
+  const router = useRouter()
+
   return (
     <section className="flex h-full min-w-0 flex-1 flex-col overflow-y-auto border-l border-[var(--border)] bg-white">
       {/* Top actions */}
@@ -100,6 +103,21 @@ export function OpportunityDetail({ data, saved = false, onSave, onClose, onAppl
             </ul>
           </div>
         )}
+
+        {/* Ask the Guide */}
+        <button
+          onClick={() => router.push(`/messages?guide=1&slug=${data.slug}`)}
+          className="flex w-full items-center gap-3 rounded-lg border border-[color-mix(in_srgb,var(--ginger)_18%,transparent)] bg-[color-mix(in_srgb,var(--ginger)_4%,transparent)] px-5 py-3.5 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--ginger)_8%,transparent)]"
+        >
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--ginger)_10%,transparent)]">
+            <MessageCircle size={18} className="text-ginger" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-sans text-[13px] font-semibold text-ink">Ask OppDate Guide</div>
+            <div className="mt-0.5 text-xs text-muted">Get instant answers about eligibility, documents, and deadlines</div>
+          </div>
+          <ArrowRight size={16} className="shrink-0 text-ginger opacity-50" />
+        </button>
 
         {/* CTA bar */}
         <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-cream p-5">

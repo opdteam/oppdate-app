@@ -4,9 +4,11 @@ import { db, schema } from '../db'
 import { eq, and, desc, sql, inArray, lt } from 'drizzle-orm'
 import { ok, created, notFound, forbidden, badRequest } from '../utils/response'
 import { requireAuth, requireRole } from '../middleware/auth'
+import { requirePremium } from '../middleware/auth'
 import { WebSocket } from 'ws'
 import { enqueueEmail } from '../jobs/queue'
 import { newMessageEmail } from '../utils/email'
+import { runGuideChat } from './ai'
 
 // Active WebSocket connections: userId -> Set of WebSocket clients
 const activeConnections = new Map<string, Set<WebSocket>>()
@@ -269,7 +271,12 @@ export async function messagingRoutes(server: FastifyInstance) {
         : {}),
     }))
 
-    return ok(reply, enriched)
+    // Pin guide thread at the top
+    const guideThreads = enriched.filter(t => t.type === 'guide')
+    const otherThreads = enriched.filter(t => t.type !== 'guide')
+    const sorted = [...guideThreads, ...otherThreads]
+
+    return ok(reply, sorted)
   })
 
   // GET /api/v1/messages/threads/:threadId - get thread with paginated messages
@@ -608,4 +615,143 @@ export async function messagingRoutes(server: FastifyInstance) {
       return ok(reply, thread, `Thread marked as ${status}.`)
     }
   )
+
+  // ─── Guide thread endpoints ─────────────────────────────────────────────────
+
+  // GET /api/v1/messages/guide - get or create the user's guide thread
+  server.get('/guide', { preHandler: [requireAuth] }, async (request, reply) => {
+    const payload = request.user as { id: string }
+    const thread = await getOrCreateGuideThread(payload.id)
+    return ok(reply, thread)
+  })
+
+  // POST /api/v1/messages/guide/messages - send a message to Guide
+  server.post('/guide/messages', { preHandler: [requirePremium] }, async (request, reply) => {
+    const payload = request.user as { id: string }
+    const body = z.object({
+      content: z.string().min(1).max(2000),
+      opportunitySlug: z.string().optional(),
+    }).safeParse(request.body)
+    if (!body.success) return badRequest(reply, body.error.errors[0].message)
+
+    const thread = await getOrCreateGuideThread(payload.id)
+    const { content, opportunitySlug } = body.data
+
+    // Save user message
+    const [userMsg] = await db
+      .insert(schema.messages)
+      .values({
+        threadId: thread.id,
+        senderId: payload.id,
+        senderType: 'user',
+        content,
+      })
+      .returning()
+
+    // Update thread timestamp
+    await db
+      .update(schema.messageThreads)
+      .set({
+        lastMessageAt: new Date(),
+        updatedAt: new Date(),
+        ...(opportunitySlug ? { metadata: { opportunitySlug } } : {}),
+      })
+      .where(eq(schema.messageThreads.id, thread.id))
+
+    // Broadcast user message immediately so UI can show it
+    broadcastToUser(payload.id, { type: 'new_message', threadId: thread.id, message: userMsg })
+
+    // Build history from recent messages in this thread (last 20)
+    const recentMsgs = await db
+      .select({ senderType: schema.messages.senderType, content: schema.messages.content })
+      .from(schema.messages)
+      .where(eq(schema.messages.threadId, thread.id))
+      .orderBy(desc(schema.messages.createdAt))
+      .limit(21)
+
+    // Exclude the message we just inserted (it's the first one due to DESC) and reverse
+    const historyRows = recentMsgs.slice(1).reverse()
+    const history = historyRows.map(m => ({
+      role: m.senderType === 'user' ? 'user' : 'assistant',
+      content: m.content,
+    }))
+
+    // Determine opportunity context: use explicit slug, or fall back to thread metadata
+    const slug = opportunitySlug
+      || (thread.metadata as Record<string, string> | null)?.opportunitySlug
+      || undefined
+
+    // Call AI
+    const aiResult = await runGuideChat(payload.id, content, history, slug)
+
+    // Build the guide response content as JSON (includes reply text, cards, sources)
+    const guideContent = JSON.stringify({
+      type: 'guide_response',
+      reply: aiResult.reply,
+      cards: aiResult.cards,
+      sources: aiResult.sources,
+    })
+
+    // Save Guide response
+    const [guideMsg] = await db
+      .insert(schema.messages)
+      .values({
+        threadId: thread.id,
+        senderId: payload.id, // senderId is the user but senderType is 'system'
+        senderType: 'system',
+        content: guideContent,
+      })
+      .returning()
+
+    // Update thread with Guide's response
+    await db
+      .update(schema.messageThreads)
+      .set({
+        lastMessageAt: new Date(),
+        unreadByUser: sql`${schema.messageThreads.unreadByUser} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.messageThreads.id, thread.id))
+
+    // Broadcast Guide response
+    broadcastToUser(payload.id, { type: 'new_message', threadId: thread.id, message: guideMsg })
+
+    return ok(reply, {
+      userMessage: userMsg,
+      guideMessage: guideMsg,
+      reply: aiResult.reply,
+      cards: aiResult.cards,
+      sources: aiResult.sources,
+    })
+  })
+
+}
+
+// ─── Guide thread helper ────────────────────────────────────────────────────
+
+async function getOrCreateGuideThread(userId: string) {
+  // Find existing guide thread
+  const [existing] = await db
+    .select()
+    .from(schema.messageThreads)
+    .where(and(
+      eq(schema.messageThreads.userId, userId),
+      eq(schema.messageThreads.type, 'guide'),
+    ))
+    .limit(1)
+
+  if (existing) return existing
+
+  // Create new guide thread
+  const [thread] = await db
+    .insert(schema.messageThreads)
+    .values({
+      userId,
+      type: 'guide',
+      referenceId: null,
+      status: 'active',
+    })
+    .returning()
+
+  return thread
 }

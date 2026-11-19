@@ -70,7 +70,7 @@ export interface ApiNotification {
 export interface ApiThread {
   id: string
   type: string
-  referenceId: string
+  referenceId: string | null
   lastMessageAt: string | null
   unreadByUser: number
   status: string
@@ -78,6 +78,7 @@ export interface ApiThread {
   opportunityTitle?: string | null
   opportunityCountry?: string | null
   lastMessagePreview?: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 export interface ApiSavedSearch {

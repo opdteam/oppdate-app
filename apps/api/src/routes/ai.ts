@@ -179,83 +179,77 @@ const chatSchema = z.object({
   opportunitySlug: z.string().optional(),
 })
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// ─── Core chat function (shared between /ai/chat route and guide thread pipeline) ─
 
-export async function aiRoutes(server: FastifyInstance) {
-  server.post(
-    "/chat",
-    { preHandler: [requirePremium] },
-    async (request, reply) => {
-      const user = request.user as { id: string }
-      const body = chatSchema.safeParse(request.body)
-      if (!body.success) return badRequest(reply, body.error.errors[0].message)
+export interface GuideChatResult {
+  reply: string
+  cards: OppCard[]
+  sources: { title: string; url: string }[]
+}
 
-      const { message, history, opportunitySlug } = body.data
+export async function runGuideChat(
+  userId: string,
+  message: string,
+  history: { role: string; content: string }[],
+  opportunitySlug?: string
+): Promise<GuideChatResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    return { reply: 'AI Guide is not configured. Please check the API key settings.', cards: [], sources: [] }
+  }
 
-      const apiKey = process.env.ANTHROPIC_API_KEY
-      if (!apiKey) {
-        return ok(reply, {
-          reply: "AI Guide is not configured. Please check the API key settings.",
-          cards: [],
-        })
-      }
+  const [userRow] = await db
+    .select({ name: schema.users.name, preferences: schema.users.preferences })
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .limit(1)
 
-      // ── Fetch user profile + preferences ──────────────────────────────────
-      const [userRow] = await db
-        .select({ name: schema.users.name, preferences: schema.users.preferences })
-        .from(schema.users)
-        .where(eq(schema.users.id, user.id))
-        .limit(1)
+  const recentApps = await db
+    .select({
+      status: schema.applications.status,
+      referenceId: schema.applications.referenceId,
+      updatedAt: schema.applications.updatedAt,
+      title: schema.opportunities.title,
+    })
+    .from(schema.applications)
+    .leftJoin(schema.opportunities, eq(schema.applications.opportunityId, schema.opportunities.id))
+    .where(eq(schema.applications.userId, userId))
+    .orderBy(desc(schema.applications.updatedAt))
+    .limit(5)
 
-      // ── Fetch active applications with titles and statuses (richer context) ─
-      const recentApps = await db
-        .select({
-          status: schema.applications.status,
-          referenceId: schema.applications.referenceId,
-          updatedAt: schema.applications.updatedAt,
-          title: schema.opportunities.title,
-        })
-        .from(schema.applications)
-        .leftJoin(schema.opportunities, eq(schema.applications.opportunityId, schema.opportunities.id))
-        .where(eq(schema.applications.userId, user.id))
-        .orderBy(desc(schema.applications.updatedAt))
-        .limit(5)
+  const credSummary = await db
+    .select({ type: schema.documents.type, name: schema.documents.name })
+    .from(schema.documents)
+    .where(eq(schema.documents.userId, userId))
+    .orderBy(desc(schema.documents.timesReused))
+    .limit(8)
 
-      // ── Fetch credential library summary ──────────────────────────────────
-      const credSummary = await db
-        .select({ type: schema.documents.type, name: schema.documents.name })
-        .from(schema.documents)
-        .where(eq(schema.documents.userId, user.id))
-        .orderBy(desc(schema.documents.timesReused))
-        .limit(8)
+  let opportunityContext = ''
+  if (opportunitySlug) {
+    const [opp] = await db
+      .select({
+        title: schema.opportunities.title,
+        institution: schema.opportunities.institution,
+        country: schema.opportunities.country,
+        type: schema.opportunities.type,
+        summary: schema.opportunities.summary,
+        whoItsFor: schema.opportunities.whoItsFor,
+        eligibilityCriteria: schema.opportunities.eligibilityCriteria,
+        deadline: schema.opportunities.deadline,
+        awardValueUsd: schema.opportunities.awardValueUsd,
+        requiredDocuments: schema.opportunities.requiredDocuments,
+        oppdateServiceFeeUsd: schema.opportunities.oppdateServiceFeeUsd,
+        institutionFeeUsd: schema.opportunities.institutionFeeUsd,
+        oppDateApply: schema.opportunities.oppDateApply,
+        complianceCategory: schema.opportunities.complianceCategory,
+      })
+      .from(schema.opportunities)
+      .where(eq(schema.opportunities.slug, opportunitySlug))
+      .limit(1)
 
-      // ── Fetch opportunity context if slug provided ─────────────────────────
-      let opportunityContext = ""
-      if (opportunitySlug) {
-        const [opp] = await db
-          .select({
-            title: schema.opportunities.title,
-            institution: schema.opportunities.institution,
-            country: schema.opportunities.country,
-            type: schema.opportunities.type,
-            summary: schema.opportunities.summary,
-            whoItsFor: schema.opportunities.whoItsFor,
-            eligibilityCriteria: schema.opportunities.eligibilityCriteria,
-            deadline: schema.opportunities.deadline,
-            awardValueUsd: schema.opportunities.awardValueUsd,
-            requiredDocuments: schema.opportunities.requiredDocuments,
-            oppdateServiceFeeUsd: schema.opportunities.oppdateServiceFeeUsd,
-            institutionFeeUsd: schema.opportunities.institutionFeeUsd,
-            oppDateApply: schema.opportunities.oppDateApply,
-            complianceCategory: schema.opportunities.complianceCategory,
-          })
-          .from(schema.opportunities)
-          .where(eq(schema.opportunities.slug, opportunitySlug))
-          .limit(1)
-
-        if (opp) {
-          const totalFeeUsd = ((opp.oppdateServiceFeeUsd ?? 0) + (opp.institutionFeeUsd ?? 0)) / 100
-          opportunityContext = `
+    if (opp) {
+      const totalFeeUsd = ((opp.oppdateServiceFeeUsd ?? 0) + (opp.institutionFeeUsd ?? 0)) / 100
+      opportunityContext = `
 The user is currently viewing this opportunity on OppDate:
 - Title: ${opp.title}
 - Institution: ${opp.institution}
@@ -272,24 +266,23 @@ The user is currently viewing this opportunity on OppDate:
 - Eligibility criteria: ${JSON.stringify(opp.eligibilityCriteria)}
 
 Note: The listing above is what was entered by the OppDate admin. For the most current and complete information about this opportunity (interviews, additional requirements, recent updates), use the search_web tool.`
-        }
-      }
+    }
+  }
 
-      // ── Build application context string ──────────────────────────────────
-      const appContextStr = recentApps.length > 0
-        ? recentApps.map(a =>
-            `  - ${a.title ?? 'Unknown'}: ${a.status.replace(/_/g, ' ')}${a.referenceId ? ` (ref: ${a.referenceId})` : ''}`
-          ).join('\n')
-        : '  None yet'
+  const appContextStr = recentApps.length > 0
+    ? recentApps.map(a =>
+        `  - ${a.title ?? 'Unknown'}: ${a.status.replace(/_/g, ' ')}${a.referenceId ? ` (ref: ${a.referenceId})` : ''}`
+      ).join('\n')
+    : '  None yet'
 
-      const credContextStr = credSummary.length > 0
-        ? credSummary.map(d => `  - ${d.name} (${d.type.replace(/_/g, ' ')})`).join('\n')
-        : '  None uploaded yet'
+  const credContextStr = credSummary.length > 0
+    ? credSummary.map(d => `  - ${d.name} (${d.type.replace(/_/g, ' ')})`).join('\n')
+    : '  None uploaded yet'
 
-      const prefs = (userRow?.preferences as Record<string, unknown>) ?? {}
-      const userName = userRow?.name || null
+  const prefs = (userRow?.preferences as Record<string, unknown>) ?? {}
+  const userName = userRow?.name || null
 
-      const systemPrompt = `You are the OppDate Guide, an expert in international scholarships, fellowships, internships, and opportunities. You help users find and apply for opportunities that match their background.
+  const systemPrompt = `You are the OppDate Guide, an expert in international scholarships, fellowships, internships, and opportunities. You help users find and apply for opportunities that match their background.
 
 User profile:
 - Name: ${userName || 'not provided'}
@@ -337,140 +330,142 @@ Writing rules (follow strictly):
 - Write short, direct sentences. Active voice. Address the user as "you".
 - When listing items in a sentence, use commas and "and" rather than formatting.`
 
-      const anthropic = makeAnthropicClient(apiKey)
+  const anthropic = makeAnthropicClient(apiKey)
 
-      // ── Agentic tool-use loop ──────────────────────────────────────────────
-      const messages: Anthropic.MessageParam[] = [
-        ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
-        { role: 'user' as const, content: message },
-      ]
+  const msgs: Anthropic.MessageParam[] = [
+    ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
+    { role: 'user' as const, content: message },
+  ]
 
-      interface WebSource { title: string; url: string }
-      let collectedCards: OppCard[] = []
-      let collectedSources: WebSource[] = []
-      let finalText = ''
-      const MAX_TOOL_ROUNDS = 4 // prevent runaway loops
+  interface WebSource { title: string; url: string }
+  let collectedCards: OppCard[] = []
+  let collectedSources: WebSource[] = []
+  let finalText = ''
+  const MAX_TOOL_ROUNDS = 4
 
-      // Detect if the user's message is clearly a lookup/search/find intent
-      const lowerMsg = message.toLowerCase()
-      const isSearchIntent = /\b(lookup|look up|find|search|check|tell me about|what is|who is|show me|get me|fetch)\b/.test(lowerMsg)
+  const lowerMsg = message.toLowerCase()
+  const isSearchIntent = /\b(lookup|look up|find|search|check|tell me about|what is|who is|show me|get me|fetch)\b/.test(lowerMsg)
 
-      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-        // Force a tool call on round 0 when user clearly wants a search
-        const toolChoice: Anthropic.Messages.ToolChoiceAuto | Anthropic.Messages.ToolChoiceAny =
-          round === 0 && isSearchIntent
-            ? { type: 'any' }
-            : { type: 'auto' }
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const toolChoice: Anthropic.Messages.ToolChoiceAuto | Anthropic.Messages.ToolChoiceAny =
+      round === 0 && isSearchIntent
+        ? { type: 'any' }
+        : { type: 'auto' }
 
-        const response = await anthropic.messages.create({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
-          system: systemPrompt,
-          tools: TOOLS,
-          tool_choice: toolChoice,
-          messages,
-        })
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: systemPrompt,
+      tools: TOOLS,
+      tool_choice: toolChoice,
+      messages: msgs,
+    })
 
-        // If Claude returned a final text response, we're done
-        if (response.stop_reason === 'end_turn') {
-          const textBlock = response.content.find(b => b.type === 'text')
-          finalText = textBlock?.type === 'text' ? textBlock.text : ''
-          break
-        }
+    if (response.stop_reason === 'end_turn') {
+      const textBlock = response.content.find(b => b.type === 'text')
+      finalText = textBlock?.type === 'text' ? textBlock.text : ''
+      break
+    }
 
-        // If Claude wants to use tools, execute them all in parallel
-        if (response.stop_reason === 'tool_use') {
-          const toolUseBlocks = response.content.filter(b => b.type === 'tool_use') as Anthropic.ToolUseBlock[]
+    if (response.stop_reason === 'tool_use') {
+      const toolUseBlocks = response.content.filter(b => b.type === 'tool_use') as Anthropic.ToolUseBlock[]
+      msgs.push({ role: 'assistant', content: response.content })
 
-          // Add Claude's response (with tool use requests) to message history
-          messages.push({ role: 'assistant', content: response.content })
-
-          // Execute all requested tools in parallel
-          const toolResults = await Promise.all(
-            toolUseBlocks.map(async (block): Promise<Anthropic.ToolResultBlockParam> => {
-              try {
-                if (block.name === 'search_web') {
-                  const input = block.input as { query: string }
-                  const results = await tavilySearch(input.query)
-                  if (results.length === 0) {
-                    return { type: 'tool_result', tool_use_id: block.id, content: 'No results found.' }
-                  }
-                  // Collect sources for frontend attribution
-                  collectedSources.push(...results.map(r => ({ title: r.title, url: r.url })))
-                  const formatted = results.map(r =>
-                    `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content}`
-                  ).join('\n\n---\n\n')
-                  return { type: 'tool_result', tool_use_id: block.id, content: formatted }
-                }
-
-                if (block.name === 'search_opportunities') {
-                  const input = block.input as { query: string }
-                  const opps = await searchOppDateOpportunities(input.query, user.id)
-                  if (opps.length === 0) {
-                    return { type: 'tool_result', tool_use_id: block.id, content: 'No matching opportunities found on OppDate right now.' }
-                  }
-                  // Collect cards to return to frontend
-                  collectedCards = opps
-                  const formatted = opps.map(o =>
-                    `${o.title} at ${o.institution} (${o.country}) — ${o.type} — closes ${o.deadline ? new Date(o.deadline).toDateString() : 'TBD'}${o.fundingLabel ? ` — ${o.fundingLabel}` : ''}${o.oppDateApply ? ' — OppDate Apply available' : ''}`
-                  ).join('\n')
-                  return { type: 'tool_result', tool_use_id: block.id, content: formatted }
-                }
-
-                if (block.name === 'get_application_context') {
-                  const ctx = await getUserApplicationContext(user.id)
-                  const appsStr = ctx.applications.length > 0
-                    ? ctx.applications.map(a =>
-                        `${a.title}: ${a.status.replace(/_/g, ' ')}${a.referenceId ? ` (ref: ${a.referenceId})` : ''}, last updated ${new Date(a.updatedAt).toDateString()}`
-                      ).join('\n')
-                    : 'No active applications.'
-                  const credsStr = ctx.credentials.length > 0
-                    ? ctx.credentials.map(d => `${d.name} (${d.type.replace(/_/g, ' ')})`).join(', ')
-                    : 'No documents uploaded yet.'
-                  return {
-                    type: 'tool_result',
-                    tool_use_id: block.id,
-                    content: `Applications:\n${appsStr}\n\nCredential library:\n${credsStr}`,
-                  }
-                }
-
-                return { type: 'tool_result', tool_use_id: block.id, content: 'Unknown tool.' }
-              } catch {
-                return { type: 'tool_result', tool_use_id: block.id, content: 'Tool execution failed. Proceed without this information.' }
+      const toolResults = await Promise.all(
+        toolUseBlocks.map(async (block): Promise<Anthropic.ToolResultBlockParam> => {
+          try {
+            if (block.name === 'search_web') {
+              const input = block.input as { query: string }
+              const results = await tavilySearch(input.query)
+              if (results.length === 0) {
+                return { type: 'tool_result', tool_use_id: block.id, content: 'No results found.' }
               }
-            })
-          )
+              collectedSources.push(...results.map(r => ({ title: r.title, url: r.url })))
+              const formatted = results.map(r =>
+                `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.content}`
+              ).join('\n\n---\n\n')
+              return { type: 'tool_result', tool_use_id: block.id, content: formatted }
+            }
 
-          // Add tool results to message history and loop
-          messages.push({ role: 'user', content: toolResults })
-          continue
-        }
+            if (block.name === 'search_opportunities') {
+              const input = block.input as { query: string }
+              const opps = await searchOppDateOpportunities(input.query, userId)
+              if (opps.length === 0) {
+                return { type: 'tool_result', tool_use_id: block.id, content: 'No matching opportunities found on OppDate right now.' }
+              }
+              collectedCards = opps
+              const formatted = opps.map(o =>
+                `${o.title} at ${o.institution} (${o.country}) — ${o.type} — closes ${o.deadline ? new Date(o.deadline).toDateString() : 'TBD'}${o.fundingLabel ? ` — ${o.fundingLabel}` : ''}${o.oppDateApply ? ' — OppDate Apply available' : ''}`
+              ).join('\n')
+              return { type: 'tool_result', tool_use_id: block.id, content: formatted }
+            }
 
-        // Any other stop reason (max_tokens, etc.) — extract whatever text exists
-        const textBlock = response.content.find(b => b.type === 'text')
-        finalText = textBlock?.type === 'text' ? textBlock.text : ''
-        break
-      }
+            if (block.name === 'get_application_context') {
+              const ctx = await getUserApplicationContext(userId)
+              const appsStr = ctx.applications.length > 0
+                ? ctx.applications.map(a =>
+                    `${a.title}: ${a.status.replace(/_/g, ' ')}${a.referenceId ? ` (ref: ${a.referenceId})` : ''}, last updated ${new Date(a.updatedAt).toDateString()}`
+                  ).join('\n')
+                : 'No active applications.'
+              const credsStr = ctx.credentials.length > 0
+                ? ctx.credentials.map(d => `${d.name} (${d.type.replace(/_/g, ' ')})`).join(', ')
+                : 'No documents uploaded yet.'
+              return {
+                type: 'tool_result',
+                tool_use_id: block.id,
+                content: `Applications:\n${appsStr}\n\nCredential library:\n${credsStr}`,
+              }
+            }
 
-      if (!finalText) {
-        finalText = 'I could not generate a response. Please try again.'
-      }
+            return { type: 'tool_result', tool_use_id: block.id, content: 'Unknown tool.' }
+          } catch {
+            return { type: 'tool_result', tool_use_id: block.id, content: 'Tool execution failed. Proceed without this information.' }
+          }
+        })
+      )
 
-      // Strip em/en dashes the model occasionally still produces despite instructions
-      const aiReply = finalText
-        .replace(/\u2014/g, ',')
-        .replace(/\u2013/g, '-')
-        .replace(/--/g, '-')
+      msgs.push({ role: 'user', content: toolResults })
+      continue
+    }
 
-      // Deduplicate sources by URL
-      const seenUrls = new Set<string>()
-      const dedupedSources = collectedSources.filter(s => {
-        if (seenUrls.has(s.url)) return false
-        seenUrls.add(s.url)
-        return true
-      })
+    const textBlock = response.content.find(b => b.type === 'text')
+    finalText = textBlock?.type === 'text' ? textBlock.text : ''
+    break
+  }
 
-      return ok(reply, { reply: aiReply, cards: collectedCards, sources: dedupedSources })
+  if (!finalText) {
+    finalText = 'I could not generate a response. Please try again.'
+  }
+
+  const aiReply = finalText
+    .replace(/\u2014/g, ',')
+    .replace(/\u2013/g, '-')
+    .replace(/--/g, '-')
+
+  const seenUrls = new Set<string>()
+  const dedupedSources = collectedSources.filter(s => {
+    if (seenUrls.has(s.url)) return false
+    seenUrls.add(s.url)
+    return true
+  })
+
+  return { reply: aiReply, cards: collectedCards, sources: dedupedSources }
+}
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
+export async function aiRoutes(server: FastifyInstance) {
+  server.post(
+    "/chat",
+    { preHandler: [requirePremium] },
+    async (request, reply) => {
+      const user = request.user as { id: string }
+      const body = chatSchema.safeParse(request.body)
+      if (!body.success) return badRequest(reply, body.error.errors[0].message)
+
+      const { message, history, opportunitySlug } = body.data
+      const result = await runGuideChat(user.id, message, history, opportunitySlug)
+      return ok(reply, result)
     },
   )
 

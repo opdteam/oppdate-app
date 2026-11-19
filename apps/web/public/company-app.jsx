@@ -67,13 +67,9 @@
     const S = companySections();
     const B = companyBottom();
 
-    const [selectedCategory, setSelectedCategory] = React.useState('');
-
     const handleInquire = (roleId, roleTitle) => {
       const mapped = S.ROLE_TO_CATEGORY[roleId] || 'general';
-      setSelectedCategory(mapped);
-      const el = document.getElementById('inquiry');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.location.href = '/contact?category=' + encodeURIComponent(mapped);
     };
 
     return (
@@ -83,7 +79,6 @@
         <S.MissionSection />
         <S.GlobalReachMap />
         <S.WorkWithUsSection onInquire={handleInquire} />
-        <S.InquirySection selectedCategory={selectedCategory} />
         <div style={{ position: 'relative', background: 'var(--surface-dark)', isolation: 'isolate' }}>
           <B.FooterWatermark />
           <Footer
@@ -103,7 +98,6 @@
     'MissionSection',
     'GlobalReachMap',
     'WorkWithUsSection',
-    'InquirySection',
   ];
   let __companyRoot = null;
 

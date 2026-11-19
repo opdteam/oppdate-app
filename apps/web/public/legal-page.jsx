@@ -6,7 +6,7 @@ const MARK_FOOT = (window.__resources && window.__resources.monogram) || 'assets
 const FOOTER_COLS = window.OM && window.OM.FOOTER_COLS || [
   { title: 'Opportunities', links: ['Browse all opportunities', 'By region', 'By type', 'Closing this week'] },
   { title: 'Services', links: [['Consultations', '/services/consultations'], ['Mentorship', '/services/mentorship'], ['eBooks', '/services/ebooks']] },
-  { title: 'Company', links: ['Our Mission', 'Work With Us', 'Careers', 'Get Featured', 'Partner With Us', 'Become a Consultant', 'Become a Mentor', 'List Your eBook'] },
+  { title: 'Company', links: ['About Us', 'Work With Us', 'Careers', 'Get Featured', 'Partner With Us', 'Become a Consultant', 'Become a Mentor', 'List Your eBook', 'Contact'] },
   { title: 'OppDate Apply', links: [['How it works', '/services/apply#flow'], ['Pricing', '/pricing'], ['Start an application', '/services/apply#start']] },
 ];
 

@@ -13,7 +13,7 @@ import {
   AlertTriangle, XCircle, Sparkles, ChevronRight, ChevronLeft,
   BellRing, BellOff,
 } from 'lucide-react'
-import { GuidePanel } from '@/components/guide/GuidePanel'
+// GuidePanel removed — Guide now lives in /messages as a persistent thread
 import { UpgradeModal } from '@/components/premium/UpgradeModal'
 import { useInfiniteListings, type ListingFilters, type SortOption } from '@/hooks/useInfiniteListings'
 import type { OpportunityListItem } from '@/components/opportunities/types'
@@ -1734,7 +1734,6 @@ export function ListingsPage() {
     return !!new URLSearchParams(window.location.search).get('slug')
   })
   const [eligOpen, setEligOpen] = useState(false)
-  const [guideOpen, setGuideOpen] = useState(false)
   const [gateOpen, setGateOpen] = useState(false)
   const [saveSearchOpen, setSaveSearchOpen] = useState(false)
   const [savedSearchesOpen, setSavedSearchesOpen] = useState(false)
@@ -1747,7 +1746,6 @@ export function ListingsPage() {
   const [sortOpen, setSortOpen] = useState(false)
   const [showExpired, setShowExpired] = useState(false)
   const isMobile = useIsMobile()
-  const [guideGreeting, setGuideGreeting] = useState<string | undefined>(undefined)
   const queryClient = useQueryClient()
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const saveDropdownRef = useRef<HTMLDivElement | null>(null)
@@ -1873,14 +1871,13 @@ export function ListingsPage() {
   }, [selectedSlug, isPremium, meLoading])
 
   const openGuideFromBanner = useCallback(() => {
-    setGuideGreeting('Hi, I\'m here to help you find the right opportunity. Tell me about your background or what you\'re looking for, and I can help you narrow things down.')
-    setGuideOpen(true)
-  }, [])
+    router.push('/messages?guide=1')
+  }, [router])
 
   const openGuideFromDetail = useCallback(() => {
-    setGuideGreeting(undefined)
-    setGuideOpen(true)
-  }, [])
+    const slug = selectedSlug ?? ''
+    router.push(slug ? `/messages?guide=1&slug=${slug}` : '/messages?guide=1')
+  }, [router, selectedSlug])
 
   // Seed saved state from API data
   useEffect(() => {
@@ -2632,27 +2629,6 @@ export function ListingsPage() {
           opportunityType={selectedData?.type}
           onOpenGuide={() => { setEligOpen(false); openGuideFromDetail() }}
         />
-      )}
-
-      {/* Guide panel overlay */}
-      {guideOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9998, display: 'flex', justifyContent: 'flex-end' }}>
-          <div onClick={() => setGuideOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(26,15,8,0.3)' }} />
-          <div style={{
-            position: 'relative', width: 420, height: '100%',
-            boxShadow: '-12px 0 40px rgba(90,40,15,0.18)',
-          }}>
-            <GuidePanel
-              onClose={() => setGuideOpen(false)}
-              initialGreeting={guideGreeting}
-              opportunitySlug={selectedSlug ?? undefined}
-              opportunityTitle={selectedData?.title}
-              eligibilityCriteria={selectedData?.eligibilityCriteria}
-              isPremium={isPremium}
-              onPremiumRequired={() => setGateOpen(true)}
-            />
-          </div>
-        </div>
       )}
 
     </div>

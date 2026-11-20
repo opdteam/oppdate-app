@@ -67,18 +67,17 @@
     const S = companySections();
     const B = companyBottom();
 
-    const handleInquire = (roleId, roleTitle) => {
-      const mapped = S.ROLE_TO_CATEGORY[roleId] || 'general';
-      window.location.href = '/contact?category=' + encodeURIComponent(mapped);
-    };
-
     return (
       <>
         <NavBar markSrc={COMPANY_NAV_MARK} />
         <S.CompanyHero />
         <S.MissionSection />
+        <S.TimingSection />
+        <S.DiscoverySection />
         <S.GlobalReachMap />
-        <S.WorkWithUsSection onInquire={handleInquire} />
+        <S.PremiumSection />
+        <S.FounderSection />
+        <S.CompanyCta />
         <div style={{ position: 'relative', background: 'var(--surface-dark)', isolation: 'isolate' }}>
           <B.FooterWatermark />
           <Footer
@@ -96,8 +95,12 @@
   const __companyNeeded = [
     'CompanyHero',
     'MissionSection',
+    'TimingSection',
+    'DiscoverySection',
     'GlobalReachMap',
-    'WorkWithUsSection',
+    'PremiumSection',
+    'FounderSection',
+    'CompanyCta',
   ];
   let __companyRoot = null;
 

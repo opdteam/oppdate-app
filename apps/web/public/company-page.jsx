@@ -3,7 +3,7 @@
    particle fields, scroll-linked mission rail, bento masonry layout with
    magnetic tilt cards + cursor particle trails, drag-and-drop file upload. */
 (function () {
-  const { Eyebrow, Icon, Button } = window.OppDateDesignSystem_4aa598;
+  const { Eyebrow, Icon, Button, LinkArrow } = window.OppDateDesignSystem_4aa598;
   const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   /* ================================================================
@@ -134,9 +134,10 @@
               margin: '20px auto 0',
             }}
           >
-            OppDate connects talent with global opportunity: scholarships,
-            internships, jobs, and funded programmes, all in one place with the
-            guidance to land them.
+            Great potential is everywhere, yet capable people miss out on
+            life-changing opportunities every day because they find them too
+            late or get lost in the application process alone. OppDate
+            changes that.
           </p>
         </div>
       </section>
@@ -186,9 +187,8 @@
             Democratising access to life-changing opportunities.
           </h2>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-large-size, 18px)', lineHeight: 1.6, color: 'var(--text-body)', maxWidth: '58ch', marginTop: 18 }}>
-            Millions of scholarships, grants, and programmes go unfilled every year. Not because
-            people are unqualified, but because they never hear about them. OppDate exists to change that.
-            Where you were born should not determine what you can become.
+            OppDate grants you early access to verified opportunities alongside every tool,
+            resource, and specialized service you need to secure them, all within one unified platform.
           </p>
           <div ref={railRef} style={{ position: 'relative', marginTop: 48 }}>
             {/* Horizontal rail */}
@@ -210,6 +210,726 @@
               })}
             </div>
           </div>
+        </div>
+      </section>
+    );
+  }
+
+  /* ================================================================
+     TIMING — immersive 3-act narrative
+     Scene 1: Full-width, animated floating notification cards drift
+              upward like a live feed. Text overlays.
+     Scene 2: Narrowed, large countdown clock dominates center,
+              urgent warm tone shift, text wraps around clock.
+     Scene 3: Fragmented chaos - scattered CSS document shapes at
+              angles, text amid the disorder.
+     Closing: Gold line draws from center, manifesto text.
+     ================================================================ */
+
+  var FAKE_ALERTS = [
+    { title: 'Rhodes Scholarship 2027', tag: '98% match', deadline: '32 days left' },
+    { title: 'Google STEP Internship', tag: 'New', deadline: '18 days left' },
+    { title: 'Chevening Award - UK', tag: '94% match', deadline: '45 days left' },
+    { title: 'MIT Media Lab Fellowship', tag: 'New', deadline: '12 days left' },
+    { title: 'DAAD Research Grant', tag: '91% match', deadline: '28 days left' },
+    { title: 'Mastercard Foundation', tag: '96% match', deadline: '8 days left' },
+  ];
+
+  var MOBILE_MQ = window.matchMedia('(max-width: 768px)');
+
+  function AlertCard({ a, highlight, style }) {
+    return (
+      <div style={Object.assign({
+        padding: '12px 16px',
+        borderRadius: 'var(--radius-lg)',
+        background: 'rgba(22,14,8,0.75)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(232,168,77,' + (highlight ? '0.35' : '0.1') + ')',
+        boxShadow: highlight ? '0 0 20px rgba(194,65,12,0.15)' : 'none',
+      }, style || {})}>
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#FFF9F4', lineHeight: 1.3, marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: '2px 8px',
+            borderRadius: 'var(--radius-pill)', letterSpacing: '0.04em',
+            background: a.tag === 'New' ? 'rgba(194,65,12,0.25)' : 'rgba(76,175,80,0.2)',
+            color: a.tag === 'New' ? 'var(--action)' : '#66BB6A',
+          }}>{a.tag}</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,249,244,0.45)', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' }}>{a.deadline}</span>
+        </div>
+      </div>
+    );
+  }
+
+  /* Desktop: absolute-positioned vertical feed on the right half.
+     Mobile: horizontal ticker strip that scrolls left continuously. */
+  function FloatingAlerts({ visible }) {
+    var [offset, setOffset] = React.useState(0);
+    var [isMobile, setIsMobile] = React.useState(MOBILE_MQ.matches);
+
+    React.useEffect(function () {
+      var handler = function (e) { setIsMobile(e.matches); };
+      MOBILE_MQ.addEventListener('change', handler);
+      return function () { MOBILE_MQ.removeEventListener('change', handler); };
+    }, []);
+
+    React.useEffect(function () {
+      if (!visible || REDUCED.matches) return;
+      var raf;
+      var start = null;
+      var speed = isMobile ? 30 : 40;
+      var range = isMobile ? 1200 : 600;
+      var step = function (ts) {
+        if (!start) start = ts;
+        setOffset(((ts - start) / speed) % range);
+        raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+      return function () { cancelAnimationFrame(raf); };
+    }, [visible, isMobile]);
+
+    if (isMobile) {
+      var totalW = FAKE_ALERTS.length * 192;
+      return (
+        <div style={{
+          overflow: 'hidden', pointerEvents: 'none',
+          marginBottom: 24,
+          maskImage: 'linear-gradient(90deg, transparent 0%, black 10%, black 90%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, black 10%, black 90%, transparent 100%)',
+          opacity: visible ? 1 : 0,
+          transition: REDUCED.matches ? 'none' : 'opacity 600ms ease',
+        }}>
+          <div style={{
+            display: 'flex', gap: 12, width: totalW * 2,
+            transform: 'translateX(-' + offset + 'px)',
+          }}>
+            {FAKE_ALERTS.concat(FAKE_ALERTS).map(function (a, i) {
+              return (
+                <AlertCard key={i} a={a} highlight={i === 0 || i === FAKE_ALERTS.length}
+                  style={{ flex: '0 0 180px' }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '50%', overflow: 'hidden', pointerEvents: 'none' }}>
+        {FAKE_ALERTS.map(function (a, i) {
+          var col = i % 2;
+          var leftPct = 6 + col * 46;
+          var baseY = i * 100;
+          var y = ((baseY - offset + 600) % 600) - 100;
+          var opacity = y < 0 ? 0 : y > 500 ? 0 : (y < 80 ? y / 80 : y > 420 ? (500 - y) / 80 : 1) * 0.85;
+          return (
+            <AlertCard key={i} a={a} highlight={i === 0}
+              style={{
+                position: 'absolute',
+                left: leftPct + '%',
+                top: y,
+                width: 'clamp(180px, 22vw, 240px)',
+                opacity: visible ? opacity : 0,
+                transition: REDUCED.matches ? 'none' : 'opacity 300ms ease',
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  function CountdownClock({ active }) {
+    var _a = React.useState(0);
+    var angle = _a[0]; var setAngle = _a[1];
+    var raf = React.useRef(null);
+    React.useEffect(function () {
+      if (!active || REDUCED.matches) {
+        if (active) setAngle(360);
+        return;
+      }
+      var start = null;
+      var step = function (ts) {
+        if (!start) start = ts;
+        var t = Math.min((ts - start) / 2400, 1);
+        var eased = 1 - Math.pow(1 - t, 3);
+        setAngle(eased * 360);
+        if (t < 1) raf.current = requestAnimationFrame(step);
+      };
+      raf.current = requestAnimationFrame(step);
+      return function () { if (raf.current) cancelAnimationFrame(raf.current); };
+    }, [active]);
+
+    var r = 90;
+    var circ = 2 * Math.PI * r;
+    var dashOffset = circ - (angle / 360) * circ;
+    return (
+      <div className="co-clock" style={{ position: 'relative', width: 220, height: 220, flexShrink: 0 }}>
+        {/* Pulsing radial glow behind the clock - beacon effect */}
+        <div className="co-clock-beacon" style={{
+          position: 'absolute', top: '50%', left: '50%',
+          width: 300, height: 300,
+          transform: 'translate(-50%, -50%)',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(194,65,12,0.2) 0%, rgba(232,168,77,0.08) 40%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Second pulse ring - offset timing for layered effect */}
+        <div className="co-clock-beacon-outer" style={{
+          position: 'absolute', top: '50%', left: '50%',
+          width: 380, height: 380,
+          transform: 'translate(-50%, -50%)',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(232,168,77,0.06) 0%, transparent 60%)',
+          pointerEvents: 'none',
+        }} />
+        <svg viewBox="0 0 220 220" style={{ position: 'relative', width: '100%', height: '100%' }}>
+          <circle cx="110" cy="110" r={r} fill="none" stroke="rgba(255,249,244,0.05)" strokeWidth="4" />
+          <circle cx="110" cy="110" r={r} fill="none" stroke="var(--decor-numeral)" strokeWidth="4"
+            strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dashOffset}
+            style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+          />
+          <circle cx="110" cy="110" r={r + 12} fill="none" stroke="var(--decor-numeral)" strokeWidth="1"
+            className="co-ring-pulse" style={{ opacity: 0.2, transformOrigin: '50% 50%' }}
+          />
+          <circle cx="110" cy="110" r={r - 15} fill="none" stroke="rgba(255,249,244,0.03)" strokeWidth="1" />
+        </svg>
+        <div className="co-clock-center" style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon name="clock" size={28} style={{ color: 'var(--decor-numeral)', marginBottom: 6 }} />
+          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 36, fontWeight: 800, color: 'var(--decor-numeral)', lineHeight: 1 }}>24h</span>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'rgba(255,249,244,0.45)', marginTop: 4, letterSpacing: '0.08em', textTransform: 'uppercase' }}>remaining</span>
+        </div>
+      </div>
+    );
+  }
+
+  var SCATTER_DOCS = [
+    { w: 72, h: 90, rot: -12, x: '8%', y: '15%', opacity: 0.5 },
+    { w: 60, h: 78, rot: 22, x: '75%', y: '8%', opacity: 0.35 },
+    { w: 54, h: 70, rot: -6, x: '62%', y: '65%', opacity: 0.4 },
+    { w: 66, h: 84, rot: 15, x: '25%', y: '70%', opacity: 0.3 },
+    { w: 48, h: 62, rot: -18, x: '85%', y: '45%', opacity: 0.25 },
+    { w: 56, h: 72, rot: 8, x: '45%', y: '5%', opacity: 0.35 },
+  ];
+
+  function ScatteredDocs({ visible }) {
+    return (
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {SCATTER_DOCS.map(function (d, i) {
+          var delay = i * 100;
+          return (
+            <div key={i} style={{
+              position: 'absolute', left: d.x, top: d.y,
+              width: d.w, height: d.h,
+              borderRadius: 6,
+              border: '1px solid rgba(178,58,42,0.2)',
+              background: 'linear-gradient(135deg, rgba(178,58,42,0.08) 0%, rgba(22,14,8,0.4) 100%)',
+              transform: visible ? 'rotate(' + d.rot + 'deg) scale(1)' : 'rotate(0deg) scale(0.5)',
+              opacity: visible ? d.opacity : 0,
+              transition: REDUCED.matches ? 'none' : 'transform 800ms var(--ease-out-soft) ' + delay + 'ms, opacity 600ms ease ' + delay + 'ms',
+            }}>
+              {/* Fake text lines */}
+              <div style={{ padding: 8 }}>
+                <div style={{ height: 3, width: '70%', borderRadius: 2, background: 'rgba(255,249,244,0.08)', marginBottom: 5 }} />
+                <div style={{ height: 2, width: '90%', borderRadius: 2, background: 'rgba(255,249,244,0.05)', marginBottom: 4 }} />
+                <div style={{ height: 2, width: '60%', borderRadius: 2, background: 'rgba(255,249,244,0.05)', marginBottom: 4 }} />
+                <div style={{ height: 2, width: '80%', borderRadius: 2, background: 'rgba(255,249,244,0.04)' }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  /* Ambient background layer that shifts mood with scroll progress.
+     Scene 1: warm amber glow on the right (opportunity radiating).
+     Scene 2: intensifying gold/red center pulse (urgency beacon).
+     Scene 3: dark vignette closing in + diagonal static lines (stress).
+     Closing: calm dark with single gold pinpoint center. */
+  function TimingAmbient({ progress }) {
+    var s1Amt = Math.max(0, Math.min(1, progress / 0.35));
+    var s2Amt = Math.max(0, Math.min(1, (progress - 0.3) / 0.35));
+    var s3Amt = Math.max(0, Math.min(1, (progress - 0.6) / 0.3));
+    var closeAmt = Math.max(0, Math.min(1, (progress - 0.85) / 0.15));
+
+    var glowHue = 30 + s2Amt * -12 + s3Amt * -10;
+    var glowSat = 80 + s2Amt * 15;
+    var glowLight = 18 + s1Amt * 6 - s3Amt * 8;
+    var glowAlpha = 0.06 + s1Amt * 0.1 + s2Amt * 0.08 - closeAmt * 0.12;
+
+    var vignetteSpread = 70 - s3Amt * 25;
+
+    return (
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        {/* Base gradient - deep warm tones instead of flat brown */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse 120% 100% at 50% 0%, #1E130A 0%, #110B06 50%, #0A0604 100%)',
+        }} />
+
+        {/* Scene 1: amber glow from right side */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse 60% 80% at 80% 40%, hsla(' + glowHue + ',' + glowSat + '%,' + glowLight + '%,' + (s1Amt * 0.18) + ') 0%, transparent 70%)',
+          transition: REDUCED.matches ? 'none' : 'opacity 600ms ease',
+        }} />
+
+        {/* Scene 2: urgency beacon from center-right, warmer and more intense */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(circle 400px at 65% 55%, rgba(194,65,12,' + (s2Amt * 0.12) + ') 0%, rgba(232,168,77,' + (s2Amt * 0.06) + ') 40%, transparent 70%)',
+        }} />
+
+        {/* Scene 3: closing vignette - darkness creeps in from edges */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse ' + vignetteSpread + '% ' + vignetteSpread + '% at 50% 50%, transparent 0%, rgba(5,3,2,' + (s3Amt * 0.7) + ') 100%)',
+        }} />
+
+        {/* Scene 3: diagonal stress lines */}
+        {s3Amt > 0 && (
+          <svg style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            opacity: s3Amt * 0.06,
+            transition: REDUCED.matches ? 'none' : 'opacity 500ms ease',
+          }}>
+            {Array.from({ length: 18 }, function (_, i) {
+              var x1 = (i * 120) - 200;
+              return React.createElement('line', {
+                key: i, x1: x1, y1: 0, x2: x1 + 800, y2: '100%',
+                stroke: '#B23A2A', strokeWidth: 0.5,
+              });
+            })}
+          </svg>
+        )}
+
+        {/* Closing: calm gold pinpoint */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(circle 200px at 50% 60%, rgba(232,168,77,' + (closeAmt * 0.1) + ') 0%, transparent 100%)',
+        }} />
+
+        {/* Subtle noise texture overlay for depth */}
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.03,
+          backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")',
+          backgroundSize: '200px 200px',
+        }} />
+      </div>
+    );
+  }
+
+  function useTimingReveal(ref) {
+    var _s = React.useState(0);
+    var progress = _s[0]; var setProgress = _s[1];
+    React.useEffect(function () {
+      var el = ref.current;
+      if (!el) return;
+      if (REDUCED.matches) { setProgress(1); return; }
+      var onScroll = function () {
+        var r = el.getBoundingClientRect();
+        var viewMid = window.innerHeight * 0.6;
+        var p = Math.max(0, Math.min(1, (viewMid - r.top) / (r.height * 0.65)));
+        setProgress(p);
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+      return function () { window.removeEventListener('scroll', onScroll); };
+    }, []);
+    return progress;
+  }
+
+  function TimingSection() {
+    var sectionRef = React.useRef(null);
+    var progress = useTimingReveal(sectionRef);
+    var s1 = progress > 0.05;
+    var s2 = progress > 0.35;
+    var s3 = progress > 0.65;
+    var closing = progress > 0.88;
+
+    return (
+      <section id="timing" ref={sectionRef} style={{ background: '#0A0604', position: 'relative', isolation: 'isolate', overflow: 'hidden' }}>
+        <TimingAmbient progress={progress} />
+        <Constellation count={40} lineAlpha={0.08} dotAlpha={0.3} speed={0.12} />
+        <div className="wrap" style={{ position: 'relative', zIndex: 2 }}>
+
+          {/* Header */}
+          <div style={{ textAlign: 'center', padding: '80px var(--container-pad) 0' }}>
+            <Eyebrow tone="gold" style={{ marginBottom: 16 }}>The advantage of timing</Eyebrow>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'var(--type-h2-size, 48px)', fontWeight: 700, lineHeight: 1.08, color: 'var(--text-on-dark)', maxWidth: '20ch', margin: '0 auto' }}>
+              You know the feeling.
+            </h2>
+          </div>
+
+          {/* Scene 1 — floating alert feed + text */}
+          <div className="co-scene1" style={{
+            position: 'relative', padding: '64px var(--container-pad)',
+            opacity: s1 ? 1 : 0,
+            transition: REDUCED.matches ? 'none' : 'opacity 800ms var(--ease-out-soft)',
+          }}>
+            <FloatingAlerts visible={s1} />
+            <div style={{ position: 'relative', zIndex: 2, maxWidth: 480 }}>
+              <h3 style={{
+                fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 3vw, 40px)',
+                fontWeight: 700, lineHeight: 1.08, color: 'var(--text-on-dark)', margin: 0,
+              }}>
+                You spot something perfect
+              </h3>
+              <p style={{
+                fontFamily: 'var(--font-sans)', fontSize: 17, lineHeight: 1.65,
+                color: 'rgba(255,249,244,0.72)', marginTop: 16, maxWidth: '38ch',
+              }}>
+                You are scrolling through your feed and spot an extraordinary internship,
+                a prestigious scholarship, or a career-defining role. You feel an immediate
+                rush of excitement and tap the link.
+              </p>
+            </div>
+          </div>
+
+          {/* Divider line */}
+          <div style={{ height: 1, background: 'rgba(255,249,244,0.06)', margin: '0 var(--container-pad)' }} />
+
+          {/* Scene 2 — narrowed, clock dominates center */}
+          <div style={{
+            position: 'relative',
+            padding: '56px var(--container-pad)',
+            background: 'radial-gradient(ellipse 80% 100% at 50% 50%, rgba(194,65,12,0.06) 0%, rgba(232,168,77,0.03) 40%, transparent 80%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 48,
+            flexWrap: 'wrap',
+            opacity: s2 ? 1 : 0,
+            transform: s2 ? 'translateY(0)' : 'translateY(20px)',
+            transition: REDUCED.matches ? 'none' : 'opacity 700ms var(--ease-out-soft), transform 700ms var(--ease-out-soft)',
+          }}>
+            <div style={{ maxWidth: 380 }}>
+              <h3 style={{
+                fontFamily: 'var(--font-serif)', fontSize: 'clamp(32px, 3.5vw, 44px)',
+                fontWeight: 800, lineHeight: 1.05,
+                color: 'var(--decor-numeral)', margin: 0,
+              }}>
+                The deadline is{' '}
+                <span style={{ display: 'inline-block', position: 'relative' }}>
+                  tomorrow.
+                  <span style={{
+                    position: 'absolute', bottom: -4, left: 0, height: 3,
+                    width: s2 ? '100%' : '0%', borderRadius: 2,
+                    background: 'var(--decor-numeral)', opacity: 0.5,
+                    transition: REDUCED.matches ? 'none' : 'width 800ms var(--ease-out-soft) 400ms',
+                  }} />
+                </span>
+              </h3>
+              <p style={{
+                fontFamily: 'var(--font-sans)', fontSize: 17, lineHeight: 1.65,
+                color: 'rgba(255,249,244,0.68)', marginTop: 16, maxWidth: '36ch',
+              }}>
+                Then you see it. The closing date is tomorrow. The excitement curdles into
+                panic. You have less than 24 hours to assemble references, write a compelling
+                statement, and submit everything.
+              </p>
+            </div>
+            <CountdownClock active={s2} />
+          </div>
+
+          {/* Divider line */}
+          <div style={{ height: 1, background: 'rgba(255,249,244,0.06)', margin: '0 var(--container-pad)' }} />
+
+          {/* Scene 3 — fragmented chaos, scattered documents */}
+          <div style={{
+            position: 'relative', minHeight: 340,
+            padding: '56px var(--container-pad)',
+            opacity: s3 ? 1 : 0,
+            transform: s3 ? 'translateY(0)' : 'translateY(20px)',
+            transition: REDUCED.matches ? 'none' : 'opacity 700ms var(--ease-out-soft), transform 700ms var(--ease-out-soft)',
+          }}>
+            <ScatteredDocs visible={s3} />
+            <div style={{ position: 'relative', zIndex: 2, maxWidth: 440, margin: '0 auto', textAlign: 'center' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 56, height: 56, borderRadius: 'var(--radius-pill)',
+                background: 'rgba(178,58,42,0.15)', border: '1px solid rgba(178,58,42,0.25)',
+                marginBottom: 20,
+              }}>
+                <Icon name="alert-triangle" size={26} style={{ color: '#B23A2A' }} />
+              </div>
+              <h3 style={{
+                fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px, 3vw, 40px)',
+                fontWeight: 700, lineHeight: 1.08, color: 'var(--text-on-dark)', margin: 0,
+              }}>
+                You are scrambling.
+              </h3>
+              <p style={{
+                fontFamily: 'var(--font-sans)', fontSize: 17, lineHeight: 1.65,
+                color: 'rgba(255,249,244,0.68)', marginTop: 16,
+              }}>
+                Pulling together documents, rushing essays late into the night,
+                and submitting under pressure against candidates who have been
+                quietly preparing for months.
+              </p>
+            </div>
+          </div>
+
+          {/* Closing manifesto */}
+          <div style={{
+            textAlign: 'center', padding: '40px var(--container-pad) 80px',
+            opacity: closing ? 1 : 0,
+            transform: closing ? 'translateY(0)' : 'translateY(16px)',
+            transition: REDUCED.matches ? 'none' : 'opacity 700ms var(--ease-out-soft), transform 700ms var(--ease-out-soft)',
+          }}>
+            {/* Gold line draws from center */}
+            <div style={{
+              width: closing ? 64 : 0, height: 2,
+              background: 'var(--decor-numeral)', borderRadius: 1,
+              margin: '0 auto 32px',
+              transition: REDUCED.matches ? 'none' : 'width 600ms var(--ease-out-soft) 200ms',
+            }} />
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(20px, 2.4vw, 28px)', lineHeight: 1.4, color: 'var(--decor-numeral)', maxWidth: '32ch', margin: '0 auto' }}>
+              That is why we built OppDate - to put you ahead of the starting line.
+            </p>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, lineHeight: 1.6, color: 'rgba(255,249,244,0.5)', maxWidth: '44ch', margin: '16px auto 0' }}>
+              Here, you gain early access to verified opportunities before they reach the general crowd.
+              We track openings and deadlines so you claim one advantage: the time to
+              breathe, prepare, and submit your strongest work.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  /* ================================================================
+     DISCOVERY — interactive accordion strips
+     Three vertical strips side by side. The active strip expands
+     to show full content (icon, title, body, illustration placeholder)
+     while others compress to show only a rotated title + icon.
+     Click/hover to switch. Smooth width transitions.
+     ================================================================ */
+  const DISCOVERY_STRIPS = [
+    {
+      icon: 'shield-check',
+      title: 'Eligibility clarity',
+      body: 'Know whether you qualify before you spend time preparing. Our screening tools cross-reference your profile against each listing\'s requirements and give you a clear match score upfront.',
+      imgPrompt: 'AI image prompt: Clean UI mockup showing a checklist with green checkmarks next to eligibility criteria, modern app interface, warm amber accent colors on dark surface, isometric perspective',
+      accent: 'var(--action)',
+    },
+    {
+      icon: 'file-text',
+      title: 'Documents ready',
+      body: 'Your CV, transcripts, and references - uploaded once, reused everywhere. No more re-entering the same information across 20 different portals.',
+      imgPrompt: 'AI image prompt: Organized document folder with neatly arranged files, modern flat design, warm amber and cream color palette, soft shadows, clean editorial style',
+      accent: 'var(--decor-numeral)',
+    },
+    {
+      icon: 'compass',
+      title: 'Guided from start to finish',
+      body: 'Tools and services for everything that happens after you find the right fit. From consultation bookings to essay reviews, the full pipeline lives in one place.',
+      imgPrompt: 'AI image prompt: Abstract path or roadmap illustration showing stages from discovery to submission, warm gradient from amber to orange, modern minimalist design, editorial quality',
+      accent: '#B87333',
+    },
+  ];
+
+  var DISC_INTERVAL = 5000;
+
+  function DiscoverySection() {
+    const [active, setActive] = React.useState(0);
+    const [entered, setEntered] = React.useState(false);
+    const [paused, setPaused] = React.useState(false);
+    const [progress, setProgress] = React.useState(0);
+    const sectionRef = React.useRef(null);
+    const timerRef = React.useRef(null);
+    const startRef = React.useRef(null);
+    const rafRef = React.useRef(null);
+
+    React.useEffect(() => {
+      const el = sectionRef.current;
+      if (!el) return;
+      if (REDUCED.matches) { setEntered(true); return; }
+      const obs = new IntersectionObserver(([e]) => {
+        if (e.isIntersecting) { setEntered(true); obs.disconnect(); }
+      }, { threshold: 0.2 });
+      obs.observe(el);
+      return () => obs.disconnect();
+    }, []);
+
+    React.useEffect(() => {
+      if (paused || !entered) return;
+      startRef.current = performance.now();
+      setProgress(0);
+      var tick = function (now) {
+        var elapsed = now - startRef.current;
+        var p = Math.min(elapsed / DISC_INTERVAL, 1);
+        setProgress(p);
+        if (p < 1) {
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          setActive(function (prev) { return (prev + 1) % DISCOVERY_STRIPS.length; });
+        }
+      };
+      rafRef.current = requestAnimationFrame(tick);
+      return function () { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    }, [active, paused, entered]);
+
+    var handleSelect = function (i) {
+      setActive(i);
+      setPaused(true);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(function () { setPaused(false); }, 8000);
+    };
+
+    const strip = DISCOVERY_STRIPS[active];
+
+    return (
+      <section id="beyond-discovery" ref={sectionRef} style={{ background: 'var(--row-rest)' }}>
+        <div className="wrap" style={{ padding: '80px var(--container-pad)' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <Eyebrow style={{ marginBottom: 16 }}>More than discovery</Eyebrow>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'var(--type-h2-size, 48px)', fontWeight: 700, lineHeight: 1.05, color: 'var(--color-text-ink)', maxWidth: '24ch', margin: '0 auto' }}>
+              Anyone can surface a listing. Few platforms equip you to win it.
+            </h2>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-large-size, 18px)', lineHeight: 1.6, color: 'var(--text-body)', maxWidth: '52ch', margin: '18px auto 0' }}>
+              Most platforms stop at the listing. You are still left guessing whether you qualify,
+              scrambling for documents, writing from scratch, and tracking everything in a spreadsheet.
+            </p>
+          </div>
+
+          {/* Accordion strip tabs */}
+          <div className="co-strips" style={{
+            display: 'flex', gap: 6,
+            opacity: entered ? 1 : 0,
+            transform: entered ? 'translateY(0)' : 'translateY(24px)',
+            transition: REDUCED.matches ? 'none' : 'opacity 700ms var(--ease-out-soft), transform 700ms var(--ease-out-soft)',
+          }}>
+            {DISCOVERY_STRIPS.map((s, i) => {
+              var isActive = active === i;
+              return (
+                <button
+                  key={s.title}
+                  className={'co-strip' + (isActive ? ' co-strip-active' : '')}
+                  onClick={() => handleSelect(i)}
+                  style={{
+                    flex: isActive ? '1 1 0' : '0 0 auto',
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: isActive ? '14px 24px' : '14px 20px',
+                    borderRadius: 'var(--radius-pill)',
+                    background: isActive ? 'var(--surface-card)' : 'transparent',
+                    border: '1px solid ' + (isActive ? 'var(--action)' : 'var(--line)'),
+                    cursor: 'pointer',
+                    transition: REDUCED.matches ? 'none' : 'all 400ms var(--ease-out-soft)',
+                    boxShadow: isActive ? '0 4px 16px rgba(194,65,12,0.1)' : 'none',
+                    maxWidth: isActive ? '100%' : 'auto',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Auto-advance progress bar */}
+                  {isActive && (
+                    <span style={{
+                      position: 'absolute', bottom: 0, left: 0, height: 2,
+                      width: (progress * 100) + '%',
+                      background: s.accent, opacity: paused ? 0 : 0.5,
+                      borderRadius: 1,
+                      transition: paused ? 'opacity 300ms ease' : 'none',
+                    }} />
+                  )}
+                  <span style={{
+                    width: 36, height: 36, borderRadius: 'var(--radius-pill)', flexShrink: 0,
+                    background: isActive ? s.accent : 'var(--action-wash)',
+                    color: isActive ? 'var(--color-text-inverse)' : s.accent,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: REDUCED.matches ? 'none' : 'background 300ms ease, color 300ms ease',
+                  }}>
+                    <Icon name={s.icon} size={18} />
+                  </span>
+                  <span style={{
+                    fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600,
+                    color: isActive ? 'var(--color-text-ink)' : 'var(--text-body)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {s.title}
+                  </span>
+                  {isActive && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
+                      letterSpacing: '0.1em', textTransform: 'uppercase',
+                      color: s.accent, opacity: 0.7,
+                    }}>
+                      {'0' + (i + 1)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active strip content panel */}
+          <div className="co-strip-panel" style={{
+            marginTop: 20,
+            padding: 32,
+            borderRadius: 'var(--radius-lg)',
+            background: 'var(--surface-card)',
+            border: '1px solid var(--action)',
+            boxShadow: '0 8px 32px rgba(194,65,12,0.08)',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 32,
+            alignItems: 'center',
+          }}>
+            <div key={active + '-text'} style={{
+              opacity: 1,
+              animation: REDUCED.matches ? 'none' : 'co-strip-fade 400ms var(--ease-out-soft)',
+            }}>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(26px, 2.8vw, 36px)', fontWeight: 700, lineHeight: 1.1, color: 'var(--color-text-ink)', margin: 0 }}>
+                {strip.title}
+              </h3>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 17, lineHeight: 1.65, color: 'var(--text-body)', marginTop: 16, maxWidth: '38ch' }}>
+                {strip.body}
+              </p>
+            </div>
+
+            <div key={active + '-img'} style={{
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--row-rest)',
+              border: '1px solid var(--line)',
+              aspectRatio: '4/3',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden',
+              animation: REDUCED.matches ? 'none' : 'co-strip-fade 400ms var(--ease-out-soft) 100ms both',
+            }}>
+              <div style={{ textAlign: 'center', padding: 24 }}>
+                <Icon name={strip.icon} size={40} style={{ color: strip.accent, opacity: 0.5 }} />
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5, color: 'var(--text-body)', opacity: 0.4, maxWidth: '26ch', margin: '14px auto 0' }}>
+                  {strip.imgPrompt}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Strip navigation dots */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
+            {DISCOVERY_STRIPS.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => handleSelect(i)}
+                aria-label={'Show ' + s.title}
+                style={{
+                  width: active === i ? 28 : 8, height: 8,
+                  borderRadius: 'var(--radius-pill)', border: 'none',
+                  background: active === i ? 'var(--action)' : 'var(--line-strong)',
+                  cursor: 'pointer', padding: 0,
+                  transition: REDUCED.matches ? 'none' : 'width 300ms var(--ease-out-soft), background 300ms ease',
+                }}
+              />
+            ))}
+          </div>
+
+          <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(18px, 2vw, 24px)', fontStyle: 'italic', lineHeight: 1.45, color: 'var(--text-body)', maxWidth: '48ch', marginTop: 40, textAlign: 'center', marginLeft: 'auto', marginRight: 'auto' }}>
+            OppDate is designed for everything that happens after you find the right fit.
+          </p>
         </div>
       </section>
     );
@@ -620,301 +1340,344 @@
   }
 
   /* ================================================================
-     WORK WITH US — magnetic tilt cards with cursor-following spotlight,
-     parallax icon depth, and staggered card-deal entrance
+     PREMIUM — split layout with contrast visual
+     Left: manifesto text with decorative monogram watermark.
+     Right: illustrative image placeholder with scroll parallax.
+     Gold divider accent. Scroll-triggered entrance.
      ================================================================ */
-  const ROLES = [
-    { id: 'careers', icon: 'briefcase', title: 'Careers', body: 'Join the team building the future of opportunity access. We are always looking for passionate people who believe in our mission.', cta: 'View open roles' },
-    { id: 'get-featured', icon: 'star', title: 'Get Featured', body: 'Put your scholarship, grant, or programme in front of thousands of driven applicants on OppDate.', cta: 'Submit your listing' },
-    { id: 'partner', icon: 'handshake', title: 'Partner With Us', body: 'Universities, NGOs, and companies looking to expand their reach. Let us build a pipeline of qualified, motivated applicants for your programmes.', cta: 'Explore partnerships' },
-    { id: 'consultant', icon: 'graduation-cap', title: 'Become a Consultant', body: 'You have deep expertise in applications, admissions, or career strategy. Offer 1-on-1 consultation sessions through our platform.', cta: 'Apply as consultant' },
-    { id: 'mentor', icon: 'heart-handshake', title: 'Become a Mentor', body: 'Guide the next generation through the application process. Share your experience, review documents, and help people land their dream opportunities.', cta: 'Apply as mentor' },
-    { id: 'list-ebook', icon: 'book-open', title: 'List Your eBook', body: 'Publish and sell your guides on scholarships, visa processes, or career strategy to a global audience on OppDate.', cta: 'Start listing' },
-  ];
-
-  function useTiltTrail(cardRef, canvasRef) {
-    const [tilt, setTilt] = React.useState({ rx: 0, ry: 0, active: false });
-    const raf = React.useRef(null);
-    const target = React.useRef({ rx: 0, ry: 0 });
-    const current = React.useRef({ rx: 0, ry: 0 });
-    const particles = React.useRef([]);
-    const drawing = React.useRef(false);
+  function PremiumSection() {
+    const sectionRef = React.useRef(null);
+    const [visible, setVisible] = React.useState(false);
+    const [scrollY, setScrollY] = React.useState(0);
 
     React.useEffect(() => {
-      if (REDUCED.matches) return;
-      const el = cardRef.current;
-      const canvas = canvasRef.current;
-      if (!el || !canvas) return;
-      const ctx = canvas.getContext('2d');
-      let running = false;
-      const lerp = (a, b, t) => a + (b - a) * t;
-
-      const resizeCanvas = () => {
-        canvas.width = el.offsetWidth;
-        canvas.height = el.offsetHeight;
-      };
-      resizeCanvas();
-      const ro = new ResizeObserver(resizeCanvas);
-      ro.observe(el);
-
-      const drawParticles = () => {
-        const pts = particles.current;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let i = pts.length - 1; i >= 0; i--) {
-          const p = pts[i];
-          p.life -= 0.014;
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vx *= 0.97;
-          p.vy *= 0.97;
-          if (p.life <= 0) { pts.splice(i, 1); continue; }
-          const alpha = p.life * p.life * 0.45;
-          const r = p.r * (0.6 + p.life * 0.4);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(' + p.rgb + ',' + alpha + ')';
-          ctx.fill();
-        }
-        if (pts.length > 0 || drawing.current) {
-          requestAnimationFrame(drawParticles);
-        } else {
-          drawing.current = false;
-        }
-      };
-      const ensureDrawing = () => {
-        if (!drawing.current) { drawing.current = true; requestAnimationFrame(drawParticles); }
-      };
-
-      let spawnCounter = 0;
-      const animate = () => {
-        const c = current.current;
-        const t = target.current;
-        c.rx = lerp(c.rx, t.rx, 0.12);
-        c.ry = lerp(c.ry, t.ry, 0.12);
-        setTilt({ rx: c.rx, ry: c.ry, active: true });
-        if (Math.abs(c.rx - t.rx) > 0.01 || Math.abs(c.ry - t.ry) > 0.01) {
-          raf.current = requestAnimationFrame(animate);
-        } else { running = false; }
-      };
-      const onMove = (e) => {
-        const rect = el.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const nx = (e.clientX - rect.left) / rect.width;
-        const ny = (e.clientY - rect.top) / rect.height;
-        target.current = { rx: (ny - 0.5) * -8, ry: (nx - 0.5) * 8 };
-        if (!running) { running = true; raf.current = requestAnimationFrame(animate); }
-        spawnCounter++;
-        if (spawnCounter % 2 === 0) {
-          const pts = particles.current;
-          if (pts.length < 60) {
-            const colors = ['194,65,12', '212,132,58', '232,168,77'];
-            for (let k = 0; k < 2; k++) {
-              pts.push({
-                x: x + (Math.random() - 0.5) * 8,
-                y: y + (Math.random() - 0.5) * 8,
-                vx: (Math.random() - 0.5) * 0.8,
-                vy: (Math.random() - 0.5) * 0.8,
-                r: 1.4 + Math.random() * 1.8,
-                life: 0.7 + Math.random() * 0.3,
-                rgb: colors[Math.floor(Math.random() * colors.length)],
-              });
-            }
-          }
-          ensureDrawing();
-        }
-      };
-      const onLeave = () => {
-        if (raf.current) cancelAnimationFrame(raf.current);
-        const settle = () => {
-          const c = current.current;
-          c.rx = lerp(c.rx, 0, 0.08);
-          c.ry = lerp(c.ry, 0, 0.08);
-          setTilt({ rx: c.rx, ry: c.ry, active: false });
-          if (Math.abs(c.rx) > 0.05 || Math.abs(c.ry) > 0.05) {
-            raf.current = requestAnimationFrame(settle);
-          } else {
-            setTilt({ rx: 0, ry: 0, active: false });
-            running = false;
-          }
-        };
-        running = true;
-        raf.current = requestAnimationFrame(settle);
-      };
-      el.addEventListener('mousemove', onMove);
-      el.addEventListener('mouseleave', onLeave);
-      return () => {
-        el.removeEventListener('mousemove', onMove);
-        el.removeEventListener('mouseleave', onLeave);
-        if (raf.current) cancelAnimationFrame(raf.current);
-        drawing.current = false;
-        ro.disconnect();
-      };
-    }, []);
-    return tilt;
-  }
-
-  function useCardDeal(containerRef) {
-    const [dealt, setDealt] = React.useState(false);
-    React.useEffect(() => {
-      const el = containerRef.current;
+      const el = sectionRef.current;
       if (!el) return;
-      if (REDUCED.matches) { setDealt(true); return; }
+      if (REDUCED.matches) { setVisible(true); return; }
       const obs = new IntersectionObserver(([e]) => {
-        if (e.isIntersecting) { setDealt(true); obs.disconnect(); }
+        if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
       }, { threshold: 0.15 });
       obs.observe(el);
       return () => obs.disconnect();
     }, []);
-    return dealt;
-  }
 
-  /* Bento grid area names per card index (desktop).
-     Layout:
-     ┌──────────┬──────────┬──────────┐
-     │ careers  │ featured │ partner  │
-     │ (hero,   ├──────────┤          │
-     │  2 rows) │ consult  │          │
-     ├──────────┼──────────┼──────────┤
-     │ mentor   │ mentor   │ ebook    │
-     └──────────┴──────────┴──────────┘
-     Careers is the hero tile (tall left). Partner spans 2 rows on
-     the right. Mentor spans 2 cols on the bottom left. */
-  const BENTO_AREAS = ['careers', 'featured', 'partner', 'consult', 'mentor', 'ebook'];
-  const HERO_IDS = { careers: true, partner: true, mentor: true };
+    React.useEffect(() => {
+      if (REDUCED.matches) return;
+      const onScroll = () => setScrollY(window.scrollY);
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }, []);
 
-  function RoleCard({ role, onInquire, index, dealt, area }) {
-    const cardRef = React.useRef(null);
-    const canvasRef = React.useRef(null);
-    const tilt = useTiltTrail(cardRef, canvasRef);
-    const isActive = tilt.active;
-    const isHero = HERO_IDS[area];
-    const dealDelay = (index * 80 + 60) + 'ms';
+    const imgRef = React.useRef(null);
+    const parallaxOffset = React.useMemo(() => {
+      if (REDUCED.matches || !imgRef.current) return 0;
+      const rect = imgRef.current && imgRef.current.getBoundingClientRect ? imgRef.current.getBoundingClientRect() : null;
+      return 0;
+    }, []);
 
     return (
-      <div
-        ref={cardRef}
-        id={role.id}
-        className="co-role-card"
-        style={{
-          gridArea: area,
-          perspective: 600,
-          opacity: dealt ? 1 : 0,
-          transform: dealt ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.97)',
-          transition: 'opacity 600ms var(--ease-out-soft) ' + dealDelay + ', transform 600ms var(--ease-out-soft) ' + dealDelay,
-        }}
-      >
-        <div
-          className="co-tilt-inner"
-          style={{
-            height: '100%',
-            padding: isHero ? 32 : 24,
-            borderRadius: 'var(--radius-lg)',
-            background: 'var(--surface-card)',
-            border: '1px solid ' + (isActive ? 'rgba(194,65,12,0.25)' : 'var(--line)'),
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'relative',
-            overflow: 'hidden',
-            transform: 'rotateX(' + tilt.rx + 'deg) rotateY(' + tilt.ry + 'deg)',
-            transition: isActive ? 'border-color 300ms ease' : 'transform 500ms var(--ease-out-soft), border-color 300ms ease',
-            willChange: isActive ? 'transform' : 'auto',
-            transformStyle: 'preserve-3d',
-          }}
-        >
-          <canvas ref={canvasRef} aria-hidden="true" style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            pointerEvents: 'none', zIndex: 0, borderRadius: 'var(--radius-lg)',
+      <section id="premium" ref={sectionRef} style={{ background: 'var(--surface-card)', borderTop: '1px solid var(--line)', overflow: 'hidden' }}>
+        <div className="wrap split" style={{ padding: '80px var(--container-pad)', display: 'grid', gridTemplateColumns: 'minmax(0, 55%) minmax(0, 45%)', gap: 56, alignItems: 'center', position: 'relative' }}>
+
+          {/* Watermark monogram behind text */}
+          <div aria-hidden="true" style={{
+            position: 'absolute', left: '-4%', top: '50%', transform: 'translateY(-50%)',
+            width: 320, height: 320, opacity: 0.03,
+            backgroundImage: 'url(' + ((window.__resources && window.__resources.monogram) || 'assets/oppdate-monogram.png') + ')',
+            backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+            pointerEvents: 'none',
           }} />
-          {/* Accent strip on hero cards */}
-          {isHero && <div style={{
-            position: 'absolute', top: 0, left: 0, width: 3, height: '100%',
-            background: 'linear-gradient(180deg, var(--action) 0%, rgba(232,168,77,0.4) 100%)',
-            borderRadius: '3px 0 0 3px', zIndex: 2,
-          }} />}
-          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <span
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: isHero ? 52 : 44, height: isHero ? 52 : 44,
-                borderRadius: 'var(--radius-pill)',
-                background: isActive ? 'var(--action)' : 'var(--action-wash)',
-                color: isActive ? 'var(--color-text-inverse)' : 'var(--action)',
-                transition: 'background 280ms var(--ease-out-soft), color 280ms var(--ease-out-soft), transform 300ms var(--ease-out-soft)',
-                transform: 'translate3d(' + (tilt.ry * 0.6) + 'px, ' + (tilt.rx * -0.6) + 'px, 20px)',
-                boxShadow: isActive ? '0 4px 16px rgba(194,65,12,0.3)' : 'none',
-              }}
-            >
-              <Icon name={role.icon} size={isHero ? 24 : 20} />
-            </span>
-            <h3 style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: isHero ? 26 : 20,
-              fontWeight: 600, lineHeight: 1.15,
-              color: 'var(--color-text-ink)', marginTop: isHero ? 22 : 16,
-              transform: 'translate3d(' + (tilt.ry * 0.2) + 'px, ' + (tilt.rx * -0.2) + 'px, 8px)',
-            }}>{role.title}</h3>
-            <p style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: isHero ? 16 : 14.5,
-              lineHeight: 1.6, color: 'var(--text-body)',
-              marginTop: isHero ? 14 : 10, flex: 1,
-            }}>{role.body}</p>
-            <button
-              onClick={() => onInquire(role.id, role.title)}
-              className="co-role-cta"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                marginTop: isHero ? 24 : 16, padding: 0,
-                border: 'none', background: 'none', fontFamily: 'var(--font-sans)',
-                fontSize: isHero ? 15.5 : 14, fontWeight: 600,
-                color: 'var(--action)', cursor: 'pointer',
-              }}
-            >
-              {role.cta}
-              <span className="co-role-cta-arrow" style={{ display: 'inline-flex', transition: 'transform 250ms var(--ease-out-soft)' }}>
-                <Icon name="arrow-right" size={16} />
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  function WorkWithUsSection({ onInquire }) {
-    const gridRef = React.useRef(null);
-    const dealt = useCardDeal(gridRef);
-    return (
-      <section id="work-with-us" className="co-wws" style={{ position: 'relative', borderTop: '1px solid var(--line)', overflow: 'hidden' }}>
-        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, opacity: 0.028, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundSize: '200px', pointerEvents: 'none', zIndex: 0 }} />
-        <div className="wrap" style={{ padding: '80px var(--container-pad)', position: 'relative', zIndex: 1 }}>
-          <Eyebrow style={{ marginBottom: 16 }}>Work With Us</Eyebrow>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'var(--type-h2-size, 48px)', fontWeight: 700, lineHeight: 1.05, color: 'var(--color-text-ink)', maxWidth: '22ch', margin: 0 }}>
-            There is a place for you here.
-          </h2>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-large-size, 18px)', lineHeight: 1.6, color: 'var(--text-body)', maxWidth: '58ch', marginTop: 18 }}>
-            Whether you want to join our team, list a programme, or share your expertise,
-            we would love to hear from you.
-          </p>
-          <div ref={gridRef} className="co-bento" style={{ marginTop: 48 }}>
-            {ROLES.map((r, i) => (
-              <RoleCard key={r.id} role={r} onInquire={onInquire} index={i} dealt={dealt} area={BENTO_AREAS[i]} />
-            ))}
+          {/* Text side */}
+          <div style={{
+            position: 'relative', zIndex: 1,
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateX(0)' : 'translateX(-32px)',
+            transition: REDUCED.matches ? 'none' : 'opacity 700ms var(--ease-out-soft), transform 700ms var(--ease-out-soft)',
+          }}>
+            <Eyebrow style={{ marginBottom: 16 }}>Premium by design</Eyebrow>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'var(--type-h2-size, 48px)', fontWeight: 700, lineHeight: 1.05, color: 'var(--color-text-ink)', maxWidth: '18ch', margin: 0 }}>
+              Free platforms are built for volume, not outcomes.
+            </h2>
+
+            {/* Gold divider */}
+            <div style={{
+              width: visible ? 56 : 0, height: 2,
+              background: 'var(--decor-numeral)', borderRadius: 1,
+              marginTop: 28, marginBottom: 28,
+              transition: REDUCED.matches ? 'none' : 'width 600ms var(--ease-out-soft) 300ms',
+            }} />
+
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-large-size, 18px)', lineHeight: 1.65, color: 'var(--text-body)', maxWidth: '44ch' }}>
+              When public boards push millions of rushed applications toward the same listings,
+              selection teams resort to automated filters to survive the flood.
+              Qualified candidates end up overlooked because the pipeline is overcrowded.
+            </p>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-large-size, 18px)', lineHeight: 1.65, color: 'var(--text-body)', maxWidth: '44ch', marginTop: 20 }}>
+              Our full platform sits behind a members-only gateway to protect the standard for
+              everyone inside. The subscription serves as an intentional filter against casual traffic
+              and noise, keeping our tools and listings reserved for committed, prepared applicants.
+            </p>
+            <div style={{ marginTop: 32 }}>
+              <LinkArrow href="/pricing">See our pricing</LinkArrow>
+            </div>
+          </div>
+
+          {/* Image side with parallax */}
+          <div ref={imgRef} className="co-premium-img" style={{
+            position: 'relative',
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateX(0) translateY(0)' : 'translateX(40px)',
+            transition: REDUCED.matches ? 'none' : 'opacity 700ms var(--ease-out-soft) 200ms, transform 700ms var(--ease-out-soft) 200ms',
+          }}>
+            {/* Main image placeholder */}
+            <div style={{
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
+              background: 'linear-gradient(145deg, var(--row-rest) 0%, rgba(232,168,77,0.08) 100%)',
+              border: '1px solid var(--line)',
+              aspectRatio: '3/4',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative',
+            }}>
+              {/* Decorative gradient overlay */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%',
+                background: 'linear-gradient(to top, rgba(194,65,12,0.08), transparent)',
+                pointerEvents: 'none',
+              }} />
+              <div style={{ textAlign: 'center', padding: 32, position: 'relative', zIndex: 1 }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: 'var(--radius-pill)',
+                  background: 'var(--action-wash)', color: 'var(--action)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}>
+                  <Icon name="lock" size={28} />
+                </div>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5, color: 'var(--text-body)', opacity: 0.4, maxWidth: '24ch', margin: '0 auto' }}>
+                  AI image prompt: Split visual comparison - left side shows a chaotic crowd of overlapping application forms, right side shows a clean curated space with organized documents and a golden gate/barrier between them, warm amber and cream tones, modern editorial illustration
+                </p>
+              </div>
+            </div>
+
+            {/* Floating stat badge */}
+            <div className="co-premium-badge" style={{
+              position: 'absolute', bottom: -16, left: -16,
+              padding: '14px 20px',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--surface-card)',
+              border: '1px solid var(--line)',
+              boxShadow: '0 8px 24px rgba(26,15,6,0.1)',
+              display: 'flex', alignItems: 'center', gap: 12,
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translate(0, 0) scale(1)' : 'translate(-12px, 12px) scale(0.9)',
+              transition: REDUCED.matches ? 'none' : 'opacity 500ms var(--ease-out-soft) 600ms, transform 500ms var(--ease-out-soft) 600ms',
+            }}>
+              <span style={{
+                width: 36, height: 36, borderRadius: 'var(--radius-pill)',
+                background: 'var(--action)', color: 'var(--color-text-inverse)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon name="trending-up" size={18} />
+              </span>
+              <div>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 700, color: 'var(--color-text-ink)', lineHeight: 1 }}>3x</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-body)', marginTop: 2 }}>higher completion rate</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
     );
   }
 
-  const ROLE_TO_CATEGORY = {
-    'careers': 'careers',
-    'get-featured': 'get-featured',
-    'partner': 'partner-with-us',
-    'consultant': 'become-a-consultant',
-    'mentor': 'become-a-mentor',
-    'list-ebook': 'list-your-ebook',
-  };
+  /* ================================================================
+     FOUNDER — floating glass letter card
+     The founder's words sit inside a frosted glass card that hovers
+     over the dark textured background with a subtle floating animation.
+     Large decorative quote mark as a watermark behind the glass.
+     Gold-tinted border pulses gently. Key phrases get scroll-triggered
+     gold underline highlights. No portrait, no name.
+     ================================================================ */
+  function useHighlightReveal(ref) {
+    const [revealed, setRevealed] = React.useState(false);
+    React.useEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      if (REDUCED.matches) { setRevealed(true); return; }
+      const obs = new IntersectionObserver(([e]) => {
+        if (e.isIntersecting) { setRevealed(true); obs.disconnect(); }
+      }, { threshold: 0.4 });
+      obs.observe(el);
+      return () => obs.disconnect();
+    }, []);
+    return revealed;
+  }
 
-  window.OMCO = { CompanyHero, MissionSection, GlobalReachMap, WorkWithUsSection, ROLE_TO_CATEGORY };
+  function GoldHighlight({ children, delay, revealed }) {
+    return (
+      <span style={{ position: 'relative', display: 'inline' }}>
+        {children}
+        <span style={{
+          position: 'absolute', bottom: -2, left: 0,
+          width: revealed ? '100%' : '0%', height: 2,
+          background: 'linear-gradient(90deg, var(--decor-numeral), rgba(232,168,77,0.5))',
+          borderRadius: 1,
+          transition: REDUCED.matches ? 'none' : 'width 800ms var(--ease-out-soft) ' + delay + 'ms',
+        }} />
+      </span>
+    );
+  }
+
+  function FounderSection() {
+    const cardRef = React.useRef(null);
+    const revealed = useHighlightReveal(cardRef);
+    const [floatY, setFloatY] = React.useState(0);
+
+    React.useEffect(() => {
+      if (REDUCED.matches) return;
+      let raf;
+      let start = null;
+      const animate = (ts) => {
+        if (!start) start = ts;
+        const elapsed = (ts - start) / 1000;
+        setFloatY(Math.sin(elapsed * 0.8) * 6);
+        raf = requestAnimationFrame(animate);
+      };
+      raf = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(raf);
+    }, []);
+
+    return (
+      <section id="founder" style={{ background: '#0E0905', position: 'relative', isolation: 'isolate', overflow: 'hidden' }}>
+        {/* Deep warm mesh gradient */}
+        <div aria-hidden="true" style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(135deg, #160E08 0%, #120B06 40%, #1A110A 70%, #0E0905 100%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Warm gold spotlight at center */}
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: '45%', left: '50%',
+          width: 900, height: 700,
+          transform: 'translate(-50%, -50%)',
+          background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(232,168,77,0.1) 0%, rgba(194,65,12,0.04) 40%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Secondary warm glow at top-right for mesh depth */}
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: 0, right: 0,
+          width: 600, height: 500,
+          background: 'radial-gradient(ellipse at 80% 20%, rgba(194,65,12,0.05) 0%, transparent 60%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div className="wrap" style={{ padding: '100px var(--container-pad)', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'center' }}>
+
+          {/* Quote mark - breaks above the card, gold on slate */}
+          <div aria-hidden="true" style={{
+            position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)',
+            fontFamily: 'var(--font-serif)', fontSize: 'clamp(100px, 14vw, 160px)',
+            lineHeight: 0.7, color: 'var(--decor-numeral)', opacity: revealed ? 0.15 : 0,
+            userSelect: 'none', pointerEvents: 'none', zIndex: 2,
+            transition: REDUCED.matches ? 'none' : 'opacity 1s var(--ease-out-soft) 200ms',
+          }}>
+            {'\u201C'}
+          </div>
+
+          {/* Light frosted glass card on dark slate */}
+          <div
+            ref={cardRef}
+            className="co-glass-letter"
+            style={{
+              position: 'relative',
+              maxWidth: 640,
+              width: '100%',
+              padding: '48px 48px 44px',
+              borderRadius: 'var(--radius-lg)',
+              background: 'rgba(255,252,248,0.07)',
+              backdropFilter: 'blur(28px)',
+              WebkitBackdropFilter: 'blur(28px)',
+              border: '1px solid rgba(255,249,244,0.12)',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.3), 0 1px 0 rgba(255,249,244,0.08) inset, 0 -1px 0 rgba(255,249,244,0.03) inset',
+              textAlign: 'center',
+              transform: 'translateY(' + floatY + 'px)',
+              opacity: revealed ? 1 : 0,
+              transition: REDUCED.matches ? 'none' : 'opacity 800ms var(--ease-out-soft)',
+            }}
+          >
+            {/* Border glow - brighter on slate */}
+            <div className="co-glass-glow" aria-hidden="true" style={{
+              position: 'absolute', inset: -1, borderRadius: 'var(--radius-lg)',
+              border: '1px solid transparent',
+              pointerEvents: 'none',
+            }} />
+
+            <Eyebrow tone="gold" style={{ marginBottom: 24, position: 'relative', zIndex: 1 }}>A note from our founder</Eyebrow>
+
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(18px, 2.2vw, 24px)', lineHeight: 1.7, color: 'rgba(255,249,244,0.92)', maxWidth: '38ch', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+              <GoldHighlight revealed={revealed} delay={400}>You are capable.</GoldHighlight>{' '}
+              You need a system built to prove it, so we built one dedicated
+              space for you to spot, prepare for, and win your next big opportunity.
+            </p>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(18px, 2.2vw, 24px)', lineHeight: 1.7, color: 'rgba(255,249,244,0.92)', maxWidth: '38ch', margin: '20px auto 0', position: 'relative', zIndex: 1 }}>
+              Every alert, tool, and service inside this app is here to{' '}
+              <GoldHighlight revealed={revealed} delay={800}>back you up from start to finish.</GoldHighlight>
+            </p>
+
+            {/* Gold divider */}
+            <div style={{
+              width: revealed ? 48 : 0, height: 2,
+              background: 'var(--decor-numeral)', borderRadius: 1,
+              margin: '28px auto',
+              transition: REDUCED.matches ? 'none' : 'width 600ms var(--ease-out-soft) 1000ms',
+            }} />
+
+            <p style={{
+              fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 600, lineHeight: 1.5,
+              color: 'var(--decor-numeral)', margin: 0, position: 'relative', zIndex: 1,
+              opacity: revealed ? 1 : 0,
+              transform: revealed ? 'translateY(0)' : 'translateY(12px)',
+              transition: REDUCED.matches ? 'none' : 'opacity 600ms var(--ease-out-soft) 1200ms, transform 600ms var(--ease-out-soft) 1200ms',
+            }}>
+              Get the right timing. Use the right tools. Trust the right system.
+            </p>
+            <p className="co-founder-tagline" style={{
+              fontFamily: 'var(--font-serif)', fontSize: 26, fontStyle: 'italic', fontWeight: 700,
+              color: '#FFF9F4', marginTop: 20, letterSpacing: '-0.01em',
+              position: 'relative', zIndex: 1,
+              opacity: revealed ? 1 : 0,
+              transform: revealed ? 'scale(1)' : 'scale(0.9)',
+              transition: REDUCED.matches ? 'none' : 'opacity 500ms var(--ease-out-soft) 1500ms, transform 500ms var(--ease-out-soft) 1500ms',
+            }}>
+              Stay OppDated.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  /* ================================================================
+     COMPANY CTA — transition between Founder note and Work With Us
+     Mirrors landing-page ClosingCta style (dark + dotted texture).
+     ================================================================ */
+  function CompanyCta() {
+    return (
+      <section className="om-tex om-tex-ink om-glow" style={{ background: 'var(--surface-dark)' }}>
+        <div className="wrap" style={{ padding: '100px var(--container-pad)', textAlign: 'center' }}>
+          <h2 style={{ color: 'var(--text-on-dark)', maxWidth: '18ch', margin: '0 auto' }}>Want in?</h2>
+          <p style={{ color: 'var(--text-on-dark-quiet)', fontSize: 'var(--type-body-large-size)', lineHeight: 'var(--type-body-large-leading)', maxWidth: '48ch', margin: '20px auto 0' }}>
+            From joining our team and offering guidance to partnering with us or listing opportunities, there is room for you here. See all the ways we can build together.
+          </p>
+          <div style={{ marginTop: 32 }}>
+            <Button as="a" href="/contact#work-with-us">Work with us</Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  window.OMCO = { CompanyHero, MissionSection, TimingSection, DiscoverySection, GlobalReachMap, PremiumSection, FounderSection, CompanyCta };
 })();

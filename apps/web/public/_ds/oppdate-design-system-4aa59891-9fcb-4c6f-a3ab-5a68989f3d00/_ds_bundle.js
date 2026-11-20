@@ -1597,29 +1597,43 @@
                 textDecoration: "none",
                 background: hover ? "rgba(255,249,244,0.07)" : "transparent",
                 cursor: "pointer",
-                transition: "background-color var(--duration-fast) var(--ease-out-soft)",
+                transition:
+                  "background-color var(--duration-fast) var(--ease-out-soft)",
               },
             },
             /*#__PURE__*/ React.createElement(
               "span",
               {
                 style: {
-                  width: 30, height: 30, flex: "none",
+                  width: 30,
+                  height: 30,
+                  flex: "none",
                   borderRadius: "var(--radius-sm)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: hover ? "rgba(232,168,77,0.22)" : "rgba(255,249,244,0.08)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: hover
+                    ? "rgba(232,168,77,0.22)"
+                    : "rgba(255,249,244,0.08)",
                   color: "var(--decor-numeral)",
-                  transition: "background-color var(--duration-fast) var(--ease-out-soft)",
+                  transition:
+                    "background-color var(--duration-fast) var(--ease-out-soft)",
                 },
               },
-              /*#__PURE__*/ React.createElement(__ds_scope.Icon, { name: item.icon, size: 16 }),
+              /*#__PURE__*/ React.createElement(__ds_scope.Icon, {
+                name: item.icon,
+                size: 16,
+              }),
             ),
             /*#__PURE__*/ React.createElement(
               "span",
               {
                 style: {
-                  flex: 1, fontFamily: "var(--font-sans)", fontSize: 15,
-                  fontWeight: 500, color: "var(--text-on-dark)",
+                  flex: 1,
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 15,
+                  fontWeight: 500,
+                  color: "var(--text-on-dark)",
                 },
               },
               item.label,
@@ -1629,12 +1643,18 @@
               {
                 style: {
                   display: "flex",
-                  color: hover ? "var(--decor-numeral)" : "rgba(255,249,244,0.35)",
-                  transition: "color var(--duration-fast), transform var(--duration-fast)",
+                  color: hover
+                    ? "var(--decor-numeral)"
+                    : "rgba(255,249,244,0.35)",
+                  transition:
+                    "color var(--duration-fast), transform var(--duration-fast)",
                   transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
                 },
               },
-              /*#__PURE__*/ React.createElement(__ds_scope.Icon, { name: "chevron-right", size: 14 }),
+              /*#__PURE__*/ React.createElement(__ds_scope.Icon, {
+                name: "chevron-right",
+                size: 14,
+              }),
             ),
           ),
           /*#__PURE__*/ React.createElement(
@@ -1644,7 +1664,8 @@
                 overflow: "hidden",
                 maxHeight: expanded ? kids.length * 42 + 8 : 0,
                 opacity: expanded ? 1 : 0,
-                transition: "max-height 300ms var(--ease-out-soft), opacity 200ms var(--ease-out-soft)",
+                transition:
+                  "max-height 300ms var(--ease-out-soft), opacity 200ms var(--ease-out-soft)",
                 paddingLeft: 20,
               },
             },
@@ -1652,14 +1673,20 @@
               "div",
               {
                 style: {
-                  display: "flex", flexDirection: "column", gap: 1,
-                  paddingTop: 4, paddingBottom: 4,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1,
+                  paddingTop: 4,
+                  paddingBottom: 4,
                   borderLeft: "1px solid rgba(255,249,244,0.1)",
                   marginLeft: 5,
                 },
               },
               kids.map(function (child) {
-                return /*#__PURE__*/ React.createElement(MegaItem, { key: child.label, item: child });
+                return /*#__PURE__*/ React.createElement(MegaItem, {
+                  key: child.label,
+                  item: child,
+                });
               }),
             ),
           ),
@@ -2535,21 +2562,41 @@
         {
           icon: "compass",
           label: "About Us",
-          href: "/company#about",
+          href: "/company",
           sub: true,
         },
         {
           icon: "users",
           label: "Work With Us",
-          href: "/company#work-with-us",
+          href: "/contact#work-with-us",
           sub: true,
           children: [
-            { icon: "briefcase", label: "Careers", href: "/company#careers" },
-            { icon: "star", label: "Get Featured", href: "/company#get-featured" },
-            { icon: "handshake", label: "Partner With Us", href: "/company#partner" },
-            { icon: "graduation-cap", label: "Become a Consultant", href: "/company#consultant" },
-            { icon: "heart-handshake", label: "Become a Mentor", href: "/company#mentor" },
-            { icon: "book-open", label: "List Your eBook", href: "/company#list-ebook" },
+            { icon: "briefcase", label: "Careers", href: "/contact#careers" },
+            {
+              icon: "star",
+              label: "Get Featured",
+              href: "/contact#get-featured",
+            },
+            {
+              icon: "handshake",
+              label: "Partner With Us",
+              href: "/contact#partner",
+            },
+            {
+              icon: "graduation-cap",
+              label: "Become a Consultant",
+              href: "/contact#consultant",
+            },
+            {
+              icon: "heart-handshake",
+              label: "Become a Mentor",
+              href: "/contact#mentor",
+            },
+            {
+              icon: "book-open",
+              label: "List Your eBook",
+              href: "/contact#list-ebook",
+            },
           ],
         },
       ];

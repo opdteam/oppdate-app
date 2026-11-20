@@ -59,6 +59,8 @@ div:has(>.oppdate-nav-center)>.om-nav-mark{position:absolute;left:50%;top:50%;tr
 .co-roles{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
 .co-bento{grid-template-columns:repeat(2,minmax(0,1fr)) !important;grid-template-rows:auto !important;grid-template-areas:"careers featured" "careers consult" "partner mentor" "ebook ebook" !important}
 .co-map-stats{gap:28px !important}.co-map-pills{gap:6px !important}
+.co-clock{width:160px !important;height:160px !important}
+.co-strip-panel{grid-template-columns:1fr 1fr !important}
 }
 @media (max-width:640px){.oppdate-nav-actions{gap:8px !important}.oppdate-nav-actions>a[href="/auth/register"]{padding-left:20px !important;padding-right:46px !important;font-size:14px !important}.oppdate-nav-burger{margin-left:0 !important}}@media (max-width:430px){.om-nav-mark{transform-origin:left center;scale:.82 !important}.oppdate-nav-actions>a[href="/auth/register"]{padding-left:12px !important;padding-right:34px !important;font-size:12px !important;height:34px !important}.oppdate-nav-burger{align-self:center !important}.oppdate-nav-actions{gap:6px !important}div:has(>.oppdate-nav-center){gap:8px !important;padding-left:16px !important;padding-right:16px !important}}
 @media (max-width:600px){.wrap{padding-left:var(--container-pad-sm) !important;padding-right:var(--container-pad-sm) !important}.co-roles{grid-template-columns:1fr !important}.co-bento{grid-template-columns:1fr !important;grid-template-areas:"careers" "featured" "partner" "consult" "mentor" "ebook" !important}#company-top{padding-top:40px !important;padding-bottom:48px !important}
@@ -73,6 +75,25 @@ div:has(>.oppdate-nav-center)>.om-nav-mark{position:absolute;left:50%;top:50%;tr
 .co-role-card p{font-size:13px !important}
 .co-role-cta{font-size:12px !important}
 #global-reach .wrap,#work-with-us .wrap{padding-top:52px !important;padding-bottom:52px !important}
+#timing .wrap,#beyond-discovery .wrap,#premium .wrap{padding-top:48px !important;padding-bottom:48px !important}
+#timing h2,#beyond-discovery h2,#premium h2{font-size:28px !important}
+#timing p,#beyond-discovery p,#premium p,#founder p{font-size:15px !important}
+#founder .wrap{padding-top:56px !important;padding-bottom:56px !important}
+.co-clock{width:140px !important;height:140px !important}
+.co-strips{flex-direction:column !important;gap:4px !important}
+.co-strip{flex:0 0 auto !important;padding:10px 16px !important;gap:8px !important}
+.co-strip>span:first-child{width:28px !important;height:28px !important}
+.co-strip>span:nth-child(2){font-size:13px !important}
+.co-strip-panel{grid-template-columns:1fr !important;padding:20px !important;gap:20px !important}
+.co-strip-panel h3{font-size:22px !important}
+.co-strip-panel p{font-size:14px !important}
+.co-strip-panel>div:last-child{aspect-ratio:16/10 !important}
+.co-glass-letter{padding:32px 20px !important}
+.co-founder-tagline{font-size:22px !important}
+.co-premium-img>div:first-child{aspect-ratio:4/3 !important}
+.co-premium-badge{position:static !important;margin-top:16px !important;transform:none !important}
+.om-tex .wrap{padding-top:64px !important;padding-bottom:64px !important}
+.om-tex h2{font-size:28px !important}
 }
 /* Icon micro-animations */
 @keyframes co-bounce{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
@@ -105,6 +126,33 @@ div:has(>.oppdate-nav-center)>.om-nav-mark{position:absolute;left:50%;top:50%;tr
 .co-map-pill.active:hover{background:rgba(255,249,244,0.1) !important}
 @media (prefers-reduced-motion:reduce){.co-map-ping{animation:none !important}.co-map-arc{animation:none !important;stroke-dashoffset:0 !important;opacity:0.4 !important}.co-map-continent{transition:none !important;stroke-dashoffset:0 !important}}
 @media (max-width:600px){.co-map-stats{gap:20px !important}.co-map-pills{gap:4px !important}.co-map-pill{padding:5px 10px !important;font-size:11px !important}}
+/* Timing countdown ring pulse */
+@keyframes co-ring-pulse{0%{r:92;opacity:0.3}100%{r:108;opacity:0}}
+.co-ring-pulse{animation:co-ring-pulse 2s ease-out infinite}
+/* Beacon glow behind clock - breathes in and out */
+@keyframes co-beacon{0%{opacity:0.4;transform:translate(-50%,-50%) scale(0.85)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0.4;transform:translate(-50%,-50%) scale(0.85)}}
+.co-clock-beacon{animation:co-beacon 2.4s ease-in-out infinite}
+/* Outer beacon ring - slower, offset */
+@keyframes co-beacon-outer{0%{opacity:0.3;transform:translate(-50%,-50%) scale(0.9)}50%{opacity:0.7;transform:translate(-50%,-50%) scale(1.05)}100%{opacity:0.3;transform:translate(-50%,-50%) scale(0.9)}}
+.co-clock-beacon-outer{animation:co-beacon-outer 3.2s ease-in-out infinite}
+/* Center content subtle blink */
+@keyframes co-clock-blink{0%{opacity:1}50%{opacity:0.6}100%{opacity:1}}
+.co-clock-center{animation:co-clock-blink 2s ease-in-out infinite 2.5s}
+@media (prefers-reduced-motion:reduce){.co-ring-pulse,.co-clock-beacon,.co-clock-beacon-outer,.co-clock-center{animation:none !important}}
+/* Glass letter glow border animation */
+@keyframes co-glass-border{0%{border-color:rgba(232,168,77,0.12)}50%{border-color:rgba(232,168,77,0.28)}100%{border-color:rgba(232,168,77,0.12)}}
+.co-glass-glow{animation:co-glass-border 4s ease-in-out infinite}
+/* Tagline warm glow */
+.co-founder-tagline{text-shadow:0 0 24px rgba(232,168,77,0.3),0 0 48px rgba(194,65,12,0.12)}
+@media (prefers-reduced-motion:reduce){.co-glass-glow{animation:none !important}.co-glass-letter{transform:none !important}}
+/* Strip tab hover */
+.co-strip:not(.co-strip-active):hover{border-color:rgba(194,65,12,0.25) !important;background:rgba(194,65,12,0.04) !important}
+/* Strip content crossfade */
+@keyframes co-strip-fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.co-strip-panel *{animation:none !important}}
+/* Scene 1 alert layout */
+.co-scene1{min-height:420px;display:flex;align-items:center}
+@media (max-width:768px){.co-scene1{min-height:0 !important;display:block !important}}
 </style>
 </head>
 <body><div id="om-app"></div>

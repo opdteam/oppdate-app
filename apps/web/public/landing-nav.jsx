@@ -7,7 +7,15 @@
 (function () {
   const NS = window.OppDateDesignSystem_4aa598;
   const create = React.createElement;
-  const linkStyle = { fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 500, padding: '8px 0', color: 'rgba(255,249,244,0.75)', textDecoration: 'none', transition: 'color var(--duration-fast) var(--ease-out-soft)' };
+  const linkStyle = {
+    fontFamily: "var(--font-sans)",
+    fontSize: 15,
+    fontWeight: 500,
+    padding: "8px 0",
+    color: "rgba(255,249,244,0.75)",
+    textDecoration: "none",
+    transition: "color var(--duration-fast) var(--ease-out-soft)",
+  };
   /* NavBar and Footer both render the lockup with href="#top" and tone="dark"; only the
      nav sets markSize 40 at size 22 (the footer uses size 28), so the wrap is gated on that. */
 
@@ -16,8 +24,10 @@
       <a
         href="/services/apply"
         style={linkStyle}
-        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--action)')}
-        onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,249,244,0.75)')}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--action)")}
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.color = "rgba(255,249,244,0.75)")
+        }
       >
         OppDate Apply
       </a>
@@ -25,24 +35,199 @@
   }
 
   const MOBILE_SECTIONS = [
-    { title: 'Company', links: [['About Us', '/company#about'], ['Work With Us', '/company#work-with-us', null, [['Careers', '/company#careers'], ['Get Featured', '/company#get-featured'], ['Partner With Us', '/company#partner'], ['Become a Consultant', '/company#consultant'], ['Become a Mentor', '/company#mentor'], ['List Your eBook', '/company#list-ebook']]], ['Contact', '/contact']] },
-    { title: 'Services', links: [['Consultations', '/services/consultations'], ['Mentorship', '/services/mentorship'], ['eBooks', '/services/ebooks']] },
-    { title: 'OppDate Apply', links: [['How it works', '/services/apply#flow'], ['Pricing', '/pricing'], ['Start an application', '/services/apply#start']] },
+    {
+      title: "Company",
+      links: [
+        ["About Us", "/company"],
+        [
+          "Work With Us",
+          "/contact#work-with-us",
+          null,
+          [
+            ["Careers", "/contact#careers"],
+            ["Get Featured", "/contact#get-featured"],
+            ["Partner With Us", "/contact#partner"],
+            ["Become a Consultant", "/contact#consultant"],
+            ["Become a Mentor", "/contact#mentor"],
+            ["List Your eBook", "/contact#list-ebook"],
+          ],
+        ],
+        ["Contact", "/contact"],
+      ],
+    },
+    {
+      title: "Services",
+      links: [
+        ["Consultations", "/services/consultations"],
+        ["Mentorship", "/services/mentorship"],
+        ["eBooks", "/services/ebooks"],
+      ],
+    },
+    {
+      title: "OppDate Apply",
+      links: [
+        ["How it works", "/services/apply#flow"],
+        ["Pricing", "/pricing"],
+        ["Start an application", "/services/apply#start"],
+      ],
+    },
   ];
 
   function MobileAccordionLink({ label, href, children, linkStyle, onClose }) {
     const [open, setOpen] = React.useState(false);
     return (
       <div>
-        <div style={Object.assign({}, linkStyle, { display: 'flex', alignItems: 'center', cursor: 'pointer' })} onClick={() => setOpen(!open)}>
+        <div
+          style={Object.assign({}, linkStyle, {
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+          })}
+          onClick={() => setOpen(!open)}
+        >
           <span style={{ flex: 1 }}>{label}</span>
-          <NS.Icon name="chevron-down" size={16} style={{ color: 'rgba(255,249,244,0.45)', transition: 'transform 250ms var(--ease-out-soft)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+          <NS.Icon
+            name="chevron-down"
+            size={16}
+            style={{
+              color: "rgba(255,249,244,0.45)",
+              transition: "transform 250ms var(--ease-out-soft)",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+          />
         </div>
-        <div style={{ overflow: 'hidden', maxHeight: open ? children.length * 52 + 8 : 0, opacity: open ? 1 : 0, transition: 'max-height 300ms var(--ease-out-soft), opacity 200ms var(--ease-out-soft)' }}>
-          <div style={{ paddingLeft: 16, borderLeft: '1px solid rgba(255,249,244,0.1)', marginLeft: 4, marginTop: 2, marginBottom: 4 }}>
+        <div
+          style={{
+            overflow: "hidden",
+            maxHeight: open ? children.length * 52 + 8 : 0,
+            opacity: open ? 1 : 0,
+            transition:
+              "max-height 300ms var(--ease-out-soft), opacity 200ms var(--ease-out-soft)",
+          }}
+        >
+          <div
+            style={{
+              paddingLeft: 16,
+              borderLeft: "1px solid rgba(255,249,244,0.1)",
+              marginLeft: 4,
+              marginTop: 2,
+              marginBottom: 4,
+            }}
+          >
             {children.map(([cLabel, cHref]) => (
-              <a key={cLabel} href={cHref} onClick={onClose} style={Object.assign({}, linkStyle, { fontSize: 16, color: 'rgba(255,249,244,0.72)' })}>{cLabel}</a>
+              <a
+                key={cLabel}
+                href={cHref}
+                onClick={onClose}
+                style={Object.assign({}, linkStyle, {
+                  fontSize: 16,
+                  color: "rgba(255,249,244,0.72)",
+                })}
+              >
+                {cLabel}
+              </a>
             ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function MobileSectionAccordion({ section, defaultOpen, linkStyle, onClose }) {
+    const [open, setOpen] = React.useState(defaultOpen);
+    const innerRef = React.useRef(null);
+    const [height, setHeight] = React.useState(0);
+    React.useEffect(() => {
+      if (!innerRef.current) return;
+      var ro = new ResizeObserver(() => {
+        if (innerRef.current) setHeight(innerRef.current.scrollHeight);
+      });
+      ro.observe(innerRef.current);
+      setHeight(innerRef.current.scrollHeight);
+      return () => ro.disconnect();
+    }, []);
+    return (
+      <div style={{ marginBottom: 28 }}>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen(!open)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(!open); } }}
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "var(--decor-numeral)",
+            marginBottom: 6,
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+        >
+          <span style={{ flex: 1 }}>{section.title}</span>
+          <NS.Icon
+            name="chevron-down"
+            size={14}
+            style={{
+              color: "rgba(255,249,244,0.35)",
+              transition: "transform 250ms var(--ease-out-soft)",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            overflow: "hidden",
+            maxHeight: open ? height : 0,
+            opacity: open ? 1 : 0,
+            transition: "max-height 300ms var(--ease-out-soft), opacity 200ms var(--ease-out-soft)",
+          }}
+        >
+          <div ref={innerRef}>
+            {section.links.map(([label, href, tag, children]) =>
+              children ? (
+                <MobileAccordionLink
+                  key={label}
+                  label={label}
+                  href={href}
+                  children={children}
+                  linkStyle={linkStyle}
+                  onClose={onClose}
+                />
+              ) : (
+                <a
+                  key={label}
+                  href={href}
+                  onClick={onClose}
+                  style={Object.assign(
+                    {},
+                    linkStyle,
+                    tag ? { color: "var(--text-on-dark-quiet)" } : null,
+                  )}
+                >
+                  {label}
+                  {tag && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        padding: "3px 7px",
+                        borderRadius: "var(--radius-pill)",
+                        background: "rgba(255,249,244,0.1)",
+                        color: "var(--text-on-dark-quiet)",
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  )}
+                </a>
+              ),
+            )}
           </div>
         </div>
       </div>
@@ -52,21 +237,52 @@
   /* Two-line burger that morphs into an X. The shipped control swaps a menu icon for an x
      with no transition, so it is replaced with two bars that rotate and converge. */
   function Burger({ open, onClick }) {
-    const narrow = window.matchMedia('(max-width: 430px)').matches;
+    const narrow = window.matchMedia("(max-width: 430px)").matches;
     const sz = narrow ? 34 : 44;
     const mid = sz / 2;
-    const bar = { position: 'absolute', left: narrow ? 7 : 11, width: 20, height: 2, borderRadius: 2, background: 'currentColor', transition: 'translate var(--duration-base) var(--ease-out-soft), rotate var(--duration-base) var(--ease-out-soft)' };
+    const bar = {
+      position: "absolute",
+      left: narrow ? 7 : 11,
+      width: 20,
+      height: 2,
+      borderRadius: 2,
+      background: "currentColor",
+      transition:
+        "translate var(--duration-base) var(--ease-out-soft), rotate var(--duration-base) var(--ease-out-soft)",
+    };
     return (
       <button
         type="button"
         className="oppdate-nav-burger om-burger"
-        aria-label={open ? 'Close menu' : 'Menu'}
+        aria-label={open ? "Close menu" : "Menu"}
         aria-expanded={open}
         onClick={onClick}
-        style={{ display: 'none', position: 'relative', width: sz, height: sz, background: 'none', border: 'none', color: 'var(--text-on-dark)', cursor: 'pointer', padding: 0 }}
+        style={{
+          display: "none",
+          position: "relative",
+          width: sz,
+          height: sz,
+          background: "none",
+          border: "none",
+          color: "var(--text-on-dark)",
+          cursor: "pointer",
+          padding: 0,
+        }}
       >
-        <span style={Object.assign({}, bar, { top: mid - 1, translate: open ? '0 0' : '0 -4px', rotate: open ? '45deg' : '0deg' })} />
-        <span style={Object.assign({}, bar, { top: mid - 1, translate: open ? '0 0' : '0 4px', rotate: open ? '-45deg' : '0deg' })} />
+        <span
+          style={Object.assign({}, bar, {
+            top: mid - 1,
+            translate: open ? "0 0" : "0 -4px",
+            rotate: open ? "45deg" : "0deg",
+          })}
+        />
+        <span
+          style={Object.assign({}, bar, {
+            top: mid - 1,
+            translate: open ? "0 0" : "0 4px",
+            rotate: open ? "-45deg" : "0deg",
+          })}
+        />
       </button>
     );
   }
@@ -87,8 +303,8 @@
       const prevOverflow = body.style.overflow;
       const prevPad = body.style.paddingRight;
       const gap = window.innerWidth - document.documentElement.clientWidth;
-      body.style.overflow = 'hidden';
-      if (gap > 0) body.style.paddingRight = gap + 'px';
+      body.style.overflow = "hidden";
+      if (gap > 0) body.style.paddingRight = gap + "px";
       return () => {
         cancelAnimationFrame(r);
         body.style.overflow = prevOverflow;
@@ -96,31 +312,54 @@
       };
     }, []);
     React.useEffect(() => {
-      panelExit = (done) => { setShown(false); setTimeout(done, EXIT_MS); };
-      return () => { panelExit = null; };
+      panelExit = (done) => {
+        setShown(false);
+        setTimeout(done, EXIT_MS);
+      };
+      return () => {
+        panelExit = null;
+      };
     }, []);
     const closeAnimated = (e) => {
       if (!close) return;
       setShown(false);
       setTimeout(() => close(e), EXIT_MS);
     };
-    const linkStyleM = { display: 'flex', alignItems: 'center', gap: 10, padding: '13px 0', borderBottom: '1px solid var(--line-on-dark)', fontFamily: 'var(--font-sans)', fontSize: 17, fontWeight: 500, color: 'var(--text-on-dark)', textDecoration: 'none' };
+    const linkStyleM = {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "13px 0",
+      borderBottom: "1px solid var(--line-on-dark)",
+      fontFamily: "var(--font-sans)",
+      fontSize: 17,
+      fontWeight: 500,
+      color: "var(--text-on-dark)",
+      textDecoration: "none",
+    };
     return (
-      <div style={Object.assign({}, style, { overflow: 'hidden' })}>
-        <div style={{ translate: shown ? '0 0' : '-100% 0', transition: 'translate ' + EXIT_MS + 'ms var(--ease-out-soft)' }}>
-          <div style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto', padding: 24 }}>
-            {MOBILE_SECTIONS.map((s) => (
-              <div key={s.title} style={{ marginBottom: 28 }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--decor-numeral)', marginBottom: 6 }}>{s.title}</div>
-                {s.links.map(([label, href, tag, children]) => (
-                  children
-                    ? <MobileAccordionLink key={label} label={label} href={href} children={children} linkStyle={linkStyleM} onClose={closeAnimated} />
-                    : <a key={label} href={href} onClick={closeAnimated} style={Object.assign({}, linkStyleM, tag ? { color: 'var(--text-on-dark-quiet)' } : null)}>
-                        {label}
-                        {tag && <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 'var(--radius-pill)', background: 'rgba(255,249,244,0.1)', color: 'var(--text-on-dark-quiet)' }}>{tag}</span>}
-                      </a>
-                ))}
-              </div>
+      <div style={Object.assign({}, style, { overflow: "hidden" })}>
+        <div
+          style={{
+            translate: shown ? "0 0" : "-100% 0",
+            transition: "translate " + EXIT_MS + "ms var(--ease-out-soft)",
+          }}
+        >
+          <div
+            style={{
+              maxHeight: "calc(100vh - 140px)",
+              overflowY: "auto",
+              padding: 24,
+            }}
+          >
+            {MOBILE_SECTIONS.map((s, si) => (
+              <MobileSectionAccordion
+                key={s.title}
+                section={s}
+                defaultOpen={si === 0}
+                linkStyle={linkStyleM}
+                onClose={closeAnimated}
+              />
             ))}
             {/* Get started already sits in the persistent header row, so the panel body
                 carries Log In instead: same pill anatomy, inverted: white fill, ink label,
@@ -130,11 +369,35 @@
               <a
                 href="/dashboard"
                 onClick={closeAnimated}
-                style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 52px', borderRadius: 'var(--radius-pill)', background: 'var(--action)', color: 'var(--color-text-inverse)', fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 600, textDecoration: 'none' }}
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: 52,
+                  padding: "0 52px",
+                  borderRadius: "var(--radius-pill)",
+                  background: "var(--action)",
+                  color: "var(--color-text-inverse)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
               >
                 Dashboard
-                <span className="om-btn-badge" style={{ width: 36, height: 36, background: 'var(--color-text-inverse)', color: 'var(--action)' }}>
-                  <span className="om-btn-arrow"><NS.Icon name="arrow-up-right" size={16} /></span>
+                <span
+                  className="om-btn-badge"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    background: "var(--color-text-inverse)",
+                    color: "var(--action)",
+                  }}
+                >
+                  <span className="om-btn-arrow">
+                    <NS.Icon name="arrow-up-right" size={16} />
+                  </span>
                 </span>
               </a>
             ) : (
@@ -142,22 +405,71 @@
                 <a
                   href="/auth/login"
                   onClick={closeAnimated}
-                  style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 52px', borderRadius: 'var(--radius-pill)', background: 'var(--color-text-inverse)', color: 'var(--color-text-ink)', fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 600, textDecoration: 'none' }}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: 52,
+                    padding: "0 52px",
+                    borderRadius: "var(--radius-pill)",
+                    background: "var(--color-text-inverse)",
+                    color: "var(--color-text-ink)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
                 >
                   Log In
-                  <span className="om-btn-badge" style={{ width: 36, height: 36, background: 'var(--action)', color: 'var(--color-text-inverse)' }}>
-                    <span className="om-btn-arrow"><NS.Icon name="arrow-up-right" size={16} /></span>
+                  <span
+                    className="om-btn-badge"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      background: "var(--action)",
+                      color: "var(--color-text-inverse)",
+                    }}
+                  >
+                    <span className="om-btn-arrow">
+                      <NS.Icon name="arrow-up-right" size={16} />
+                    </span>
                   </span>
                 </a>
                 <a
                   href="/auth/register"
                   onClick={closeAnimated}
                   className="om-panel-cta"
-                  style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', height: 52, marginTop: 12, padding: '0 52px', borderRadius: 'var(--radius-pill)', background: 'var(--action)', color: 'var(--color-text-inverse)', fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 600, textDecoration: 'none' }}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: 52,
+                    marginTop: 12,
+                    padding: "0 52px",
+                    borderRadius: "var(--radius-pill)",
+                    background: "var(--action)",
+                    color: "var(--color-text-inverse)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 16,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
                 >
                   Get started
-                  <span className="om-btn-badge" style={{ width: 36, height: 36, background: 'var(--color-text-inverse)', color: 'var(--action)' }}>
-                    <span className="om-btn-arrow"><NS.Icon name="arrow-up-right" size={16} /></span>
+                  <span
+                    className="om-btn-badge"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      background: "var(--color-text-inverse)",
+                      color: "var(--action)",
+                    }}
+                  >
+                    <span className="om-btn-arrow">
+                      <NS.Icon name="arrow-up-right" size={16} />
+                    </span>
                   </span>
                 </a>
               </>
@@ -168,92 +480,136 @@
     );
   }
 
-  const isAuthenticated = !!(typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem('oppdate_token'));
+  const isAuthenticated = !!(
+    typeof window !== "undefined" &&
+    window.localStorage &&
+    window.localStorage.getItem("oppdate_token")
+  );
 
   // Map TagCloud link labels to their actual routes
   // Listings page filter param only supports: scholarships, internships, jobs, training, funded
   // Region and deadline filters are not yet implemented — land on /opportunities (all listings)
   const GROUP_LINK_HREFS = {
     // By region — no region filter in app yet, land on all listings
-    'Africa':        '/opportunities',
-    'Europe':        '/opportunities',
-    'North America': '/opportunities',
-    'Asia Pacific':  '/opportunities',
-    'Global':        '/opportunities',
+    Africa: "/opportunities",
+    Europe: "/opportunities",
+    "North America": "/opportunities",
+    "Asia Pacific": "/opportunities",
+    Global: "/opportunities",
     // By type — map to supported filter params
-    'Funded':        '/opportunities?filter=funded',
-    'Paid':          '/opportunities',
-    'Unpaid':        '/opportunities',
-    'Remote':        '/opportunities',
+    Funded: "/opportunities?filter=funded",
+    Paid: "/opportunities",
+    Unpaid: "/opportunities",
+    Remote: "/opportunities",
     // Deadlines — no deadline filter in app yet, land on all listings
-    'Closing this week': '/opportunities',
-    'This month':        '/opportunities',
+    "Closing this week": "/opportunities",
+    "This month": "/opportunities",
   };
 
   React.createElement = function (type, props) {
     const args = Array.prototype.slice.call(arguments, 1);
-    if (type === 'nav' && props && props.className === 'oppdate-nav-center') {
-      args.push(create(ApplyLink, { key: 'oppdate-apply' }));
+    if (type === "nav" && props && props.className === "oppdate-nav-center") {
+      args.push(create(ApplyLink, { key: "oppdate-apply" }));
     }
     /* Both panels ship non-left anchoring (Opportunities align="center", Services
        align="right"). Force flush-left: the trigger button has no horizontal padding, so
        left:0 lands on the label's first glyph. The om-mega class carries the height condense. */
-    if (type === 'div' && props && props.style && props.style.zIndex === 70) {
+    if (type === "div" && props && props.style && props.style.zIndex === 70) {
       args[0] = Object.assign({}, props, {
-        className: ['om-mega', props.className].filter(Boolean).join(' '),
-        style: Object.assign({}, props.style, { left: 0, right: 'auto', transform: 'none' }),
+        className: ["om-mega", props.className].filter(Boolean).join(" "),
+        style: Object.assign({}, props.style, {
+          left: 0,
+          right: "auto",
+          transform: "none",
+        }),
       });
     }
-    if (type === 'div' && props && props.style && props.style.position === 'sticky') {
-      args[0] = Object.assign({}, props, { 'data-no-reveal': true });
+    if (
+      type === "div" &&
+      props &&
+      props.style &&
+      props.style.position === "sticky"
+    ) {
+      args[0] = Object.assign({}, props, { "data-no-reveal": true });
     }
     /* Mobile panel: the shipped list is Opportunities / Services / Log in, missing OppDate
        Apply, and flat. Rebuilt as categorised sections carrying each dropdown's primary links,
        with Log in and Get started at the foot. The close handler is lifted off the shipped
        anchors so the panel still dismisses on tap. */
-    if (type === 'div' && props && props.style && props.style.padding === 24 && props.style.borderTop === '1px solid var(--line-on-dark)') {
+    if (
+      type === "div" &&
+      props &&
+      props.style &&
+      props.style.padding === 24 &&
+      props.style.borderTop === "1px solid var(--line-on-dark)"
+    ) {
       const shipped = args[1];
-      const close = shipped && shipped[0] && shipped[0].props ? shipped[0].props.onClick : undefined;
+      const close =
+        shipped && shipped[0] && shipped[0].props
+          ? shipped[0].props.onClick
+          : undefined;
       const style = Object.assign({}, props.style);
       delete style.padding;
       return create(MobilePanel, { close, style });
     }
     /* The shipped burger swaps icons with no transition; replaced with the morphing pair.
        Skips its own output (om-burger), which would otherwise re-enter this branch forever. */
-    if (type === 'button' && props && props.className === 'oppdate-nav-burger') {
+    if (
+      type === "button" &&
+      props &&
+      props.className === "oppdate-nav-burger"
+    ) {
       const icon = args[1];
-      const open = !!(icon && icon.props && icon.props.name === 'x');
+      const open = !!(icon && icon.props && icon.props.name === "x");
       const onClick = (e) => {
         if (open && panelExit) panelExit(() => props.onClick(e));
         else props.onClick(e);
       };
       return create(Burger, { open, onClick });
     }
-    if (type === NS.Wordmark && props && props.href === '#top' && props.markSize === 40 && props.size === 22) {
-      return create('span', { className: 'om-nav-mark' }, create.apply(React, [type].concat(args)));
+    if (
+      type === NS.Wordmark &&
+      props &&
+      props.href === "#top" &&
+      props.markSize === 40 &&
+      props.size === 22
+    ) {
+      return create(
+        "span",
+        { className: "om-nav-mark" },
+        create.apply(React, [type].concat(args)),
+      );
     }
     /* Swap nav auth CTAs for authenticated users */
-    if (isAuthenticated && type === 'a' && props && props.href === '#login') {
+    if (isAuthenticated && type === "a" && props && props.href === "#login") {
       return null;
     }
-    if (isAuthenticated && type === 'a' && props && props.href === '#start') {
-      args[0] = Object.assign({}, props, { href: '/dashboard', children: 'Dashboard' });
-      return create.apply(React, ['a'].concat(args));
+    if (isAuthenticated && type === "a" && props && props.href === "#start") {
+      args[0] = Object.assign({}, props, {
+        href: "/dashboard",
+        children: "Dashboard",
+      });
+      return create.apply(React, ["a"].concat(args));
     }
-    if (!isAuthenticated && type === 'a' && props && props.href === '#login') {
-      args[0] = Object.assign({}, props, { href: '/auth/login' });
-      return create.apply(React, ['a'].concat(args));
+    if (!isAuthenticated && type === "a" && props && props.href === "#login") {
+      args[0] = Object.assign({}, props, { href: "/auth/login" });
+      return create.apply(React, ["a"].concat(args));
     }
-    if (!isAuthenticated && type === 'a' && props && props.href === '#start') {
-      args[0] = Object.assign({}, props, { href: '/auth/register' });
-      return create.apply(React, ['a'].concat(args));
+    if (!isAuthenticated && type === "a" && props && props.href === "#start") {
+      args[0] = Object.assign({}, props, { href: "/auth/register" });
+      return create.apply(React, ["a"].concat(args));
     }
     // Intercept TagCloud group links (region/type/deadline) which ship with href="#"
-    if (type === 'a' && props && props.href === '#' && typeof props.children === 'string') {
+    if (
+      type === "a" &&
+      props &&
+      props.href === "#" &&
+      typeof props.children === "string"
+    ) {
       const dest = GROUP_LINK_HREFS[props.children];
       if (dest) {
         args[0] = Object.assign({}, props, { href: dest });
-        return create.apply(React, ['a'].concat(args));
+        return create.apply(React, ["a"].concat(args));
       }
     }
     return create.apply(React, [type].concat(args));

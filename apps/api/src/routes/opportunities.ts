@@ -60,7 +60,7 @@ const createOpportunitySchema = z.object({
 
 export async function opportunityRoutes(server: FastifyInstance) {
   // GET /api/v1/opportunities
-  server.get('/', async (request, reply) => {
+  server.get('/', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const query = listQuerySchema.safeParse(request.query)
     if (!query.success) return badRequest(reply, query.error.errors[0].message)
 
@@ -189,7 +189,7 @@ export async function opportunityRoutes(server: FastifyInstance) {
   })
 
   // GET /api/v1/opportunities/:slug - requires premium
-  server.get('/:slug', async (request, reply) => {
+  server.get('/:slug', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { slug } = request.params as { slug: string }
 
     // Gate detail view behind premium
@@ -308,7 +308,7 @@ export async function opportunityRoutes(server: FastifyInstance) {
   )
 
   // GET /api/v1/opportunities/placements?zone= -- public: fetch active ad placement for a zone
-  server.get('/placements', async (request, reply) => {
+  server.get('/placements', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { zone } = request.query as { zone?: string }
     if (!zone) return ok(reply, null)
 

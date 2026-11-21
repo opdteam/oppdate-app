@@ -34,7 +34,7 @@ export interface NotificationJobData {
 }
 
 export interface ScheduledJobData {
-  type: 'deadline_reminder' | 'subscription_expiry_check' | 'saved_search_alert' | 'opportunity_expiry_archive'
+  type: 'deadline_reminder' | 'subscription_expiry_check' | 'subscription_expiry_warning' | 'saved_search_alert' | 'opportunity_expiry_archive'
   payload: Record<string, unknown>
 }
 
@@ -57,6 +57,16 @@ export async function registerScheduledJobs() {
     {
       name: 'subscription_expiry_check',
       data: { type: 'subscription_expiry_check', payload: {} },
+    }
+  )
+
+  // Warn users whose Premium subscription expires within 3 days, daily at 9 AM UTC
+  await scheduledQueue.upsertJobScheduler(
+    'subscription_expiry_warning',
+    { pattern: '0 9 * * *' },
+    {
+      name: 'subscription_expiry_warning',
+      data: { type: 'subscription_expiry_warning', payload: {} },
     }
   )
 

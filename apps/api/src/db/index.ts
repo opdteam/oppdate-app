@@ -24,6 +24,7 @@ async function createDb() {
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
+      statement_timeout: 30000,
     })
     return drizzle(_pool, {
       schema,

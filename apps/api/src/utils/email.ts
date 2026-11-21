@@ -58,9 +58,9 @@ function layout(preheader: string, bodyContent: string): string {
     <td align="center" style="padding:32px 16px;">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
 
-        <!-- Header -->
+        <!-- Header with subtle pattern -->
         <tr>
-          <td style="background:#1a1107;padding:28px 40px 24px;">
+          <td style="background:#1a1107;padding:28px 40px 24px;background-image:url('data:image/svg+xml,%3Csvg width%3D%2260%22 height%3D%2260%22 xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Ccircle cx%3D%2230%22 cy%3D%2230%22 r%3D%221%22 fill%3D%22rgba(196%2C136%2C28%2C0.08)%22/%3E%3C/svg%3E');background-repeat:repeat;">
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td>
@@ -83,10 +83,17 @@ function layout(preheader: string, bodyContent: string): string {
           </td>
         </tr>
 
+        <!-- Sign-off -->
+        <tr>
+          <td style="padding:0 40px 24px;">
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:13px;color:#c4881c;font-style:italic;letter-spacing:0.3px;">Stay OppDated.</p>
+          </td>
+        </tr>
+
         <!-- Footer -->
         <tr>
-          <td style="padding:24px 40px 32px;border-top:1px solid #ede8e1;">
-            <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#a09070;line-height:1.5;">
+          <td style="padding:20px 40px 28px;border-top:1px solid #ede8e1;">
+            <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#a09070;line-height:1.5;">
               You are receiving this email because you have an active OppDate account.
             </p>
             <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#a09070;line-height:1.5;">
@@ -468,6 +475,114 @@ export function securityAlertEmail(
     to: "",
     subject: "OppDate account security notice",
     html: layout("We detected new activity on your OppDate account.", body),
+  };
+}
+
+export function welcomeEmail(userName: string): EmailParams {
+  const body = `
+    ${greeting(userName)}
+    ${bodyText(`
+      <p style="margin:0 0 16px;">Welcome to OppDate. Your account is set up and ready to go.</p>
+      <p style="margin:0 0 16px;">Here is what you can do from your dashboard:</p>
+      <table cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 24px;">
+        <tr>
+          <td style="padding:12px 16px;background:#fdf3e3;border-radius:6px 6px 0 0;border-bottom:1px solid #ede8e1;">
+            <strong style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1107;">Browse opportunities</strong>
+            <p style="margin:4px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6b5840;">Scholarships, grants, fellowships, and more -- filtered to what matters to you.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;background:#fdf3e3;border-bottom:1px solid #ede8e1;">
+            <strong style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1107;">Save and track</strong>
+            <p style="margin:4px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6b5840;">Bookmark opportunities, set up search alerts, and never miss a deadline.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;background:#fdf3e3;border-radius:0 0 6px 6px;">
+            <strong style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1107;">Apply with support</strong>
+            <p style="margin:4px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6b5840;">Upload your documents once and use OppDate Apply when you are ready for hands-on help.</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;">Start by completing your profile -- it helps us surface the most relevant opportunities for you.</p>
+    `)}
+    ${ctaButton("Go to your dashboard", `${WEB_URL}/dashboard`)}
+  `;
+
+  return {
+    to: "",
+    subject: "Welcome to OppDate",
+    html: layout("Your OppDate account is ready. Start exploring opportunities.", body),
+  };
+}
+
+export function passwordResetEmail(
+  userName: string,
+  resetLink: string,
+  expiry: string,
+): EmailParams {
+  const body = `
+    ${greeting(userName)}
+    ${bodyText(`
+      <p style="margin:0 0 16px;">We received a request to reset the password on your OppDate account.</p>
+      <p style="margin:0 0 16px;">Click the button below to choose a new password. This link expires in ${highlight(expiry)}.</p>
+    `)}
+    ${ctaButton("Reset your password", resetLink)}
+    ${bodyText(`
+      <p style="margin:24px 0 0;font-size:13px;color:#6b5840;">If you did not request this, you can safely ignore this email. Your password will remain unchanged.</p>
+    `)}
+  `;
+
+  return {
+    to: "",
+    subject: "Reset your OppDate password",
+    html: layout("A password reset was requested for your OppDate account.", body),
+  };
+}
+
+export function subscriptionExpiryWarningEmail(
+  userName: string,
+  daysLeft: number,
+): EmailParams {
+  const dayWord = daysLeft === 1 ? "day" : "days";
+  const body = `
+    ${greeting(userName)}
+    ${bodyText(`
+      <p style="margin:0 0 16px;">Your OppDate Premium subscription expires in ${highlight(`${daysLeft} ${dayWord}`)}.</p>
+      <table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;background:#fdf3e3;border-left:3px solid #c4881c;border-radius:0 4px 4px 0;">
+        <tr>
+          <td style="padding:14px 18px;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6b3f0a;">After your subscription ends, you will lose access to premium opportunity listings, priority application support, and AI-powered recommendations.</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;">Renew now to keep your access uninterrupted.</p>
+    `)}
+    ${ctaButton("Renew your subscription", `${WEB_URL}/pricing`)}
+  `;
+
+  return {
+    to: "",
+    subject: `Your OppDate Premium expires in ${daysLeft} ${dayWord}`,
+    html: layout(`Your Premium subscription expires in ${daysLeft} ${dayWord}. Renew to keep access.`, body),
+  };
+}
+
+export function subscriptionExpiredEmail(userName: string): EmailParams {
+  const body = `
+    ${greeting(userName)}
+    ${bodyText(`
+      <p style="margin:0 0 16px;">Your OppDate Premium subscription has expired.</p>
+      <p style="margin:0 0 16px;">You still have access to your account, saved opportunities, and documents. However, premium features -- including full opportunity listings, priority support, and AI recommendations -- are no longer available.</p>
+      <p style="margin:0;">Reactivate any time to pick up where you left off.</p>
+    `)}
+    ${ctaButton("Reactivate Premium", `${WEB_URL}/pricing`)}
+  `;
+
+  return {
+    to: "",
+    subject: "Your OppDate Premium subscription has expired",
+    html: layout("Your Premium subscription has ended. Reactivate to regain full access.", body),
   };
 }
 

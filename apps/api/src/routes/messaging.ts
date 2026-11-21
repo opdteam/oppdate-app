@@ -97,8 +97,23 @@ export async function messagingRoutes(server: FastifyInstance) {
         }
       }, 30000)
 
+      // Re-validate auth every 5 minutes (user still exists and not suspended)
+      const authCheckInterval = setInterval(async () => {
+        try {
+          const [user] = await db
+            .select({ id: schema.users.id, suspendedAt: schema.users.suspendedAt })
+            .from(schema.users)
+            .where(eq(schema.users.id, userId))
+            .limit(1)
+          if (!user || user.suspendedAt) {
+            socket.close(1008, 'Session revoked')
+          }
+        } catch {}
+      }, 5 * 60 * 1000)
+
       function cleanupConnection() {
         clearInterval(pingInterval)
+        clearInterval(authCheckInterval)
         const connections = activeConnections.get(userId)
         if (connections) {
           connections.delete(socket)
@@ -211,7 +226,7 @@ export async function messagingRoutes(server: FastifyInstance) {
   })
 
   // GET /api/v1/messages/threads - get all threads for current user
-  server.get('/threads', { preHandler: [requireAuth] }, async (request, reply) => {
+  server.get('/threads', { preHandler: [requireAuth], config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
     const payload = request.user as { id: string; role: string }
     const isAdmin = ['staff_admin', 'manager_admin', 'super_admin'].includes(payload.role)
 
@@ -626,7 +641,7 @@ export async function messagingRoutes(server: FastifyInstance) {
   })
 
   // POST /api/v1/messages/guide/messages - send a message to Guide
-  server.post('/guide/messages', { preHandler: [requirePremium] }, async (request, reply) => {
+  server.post('/guide/messages', { preHandler: [requirePremium], config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const payload = request.user as { id: string }
     const body = z.object({
       content: z.string().min(1).max(2000),

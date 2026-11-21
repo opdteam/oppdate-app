@@ -55,13 +55,17 @@ export async function registerRoutes(server: FastifyInstance) {
   server.setErrorHandler((error, request, reply) => {
     server.log.error(error)
 
+    const isProd = process.env.NODE_ENV === 'production'
+
     if (error.validation) {
       return reply.status(400).send({
         success: false,
         error: 'Validation failed.',
         code: 'VALIDATION_ERROR',
         statusCode: 400,
-        details: error.validation,
+        details: isProd
+          ? error.validation.map(v => ({ message: v.message }))
+          : error.validation,
       })
     }
 
@@ -73,9 +77,14 @@ export async function registerRoutes(server: FastifyInstance) {
       })
     }
 
+    // In production, never expose internal error messages for 5xx
+    const clientMessage = (isProd && status >= 500)
+      ? 'An unexpected error occurred.'
+      : (error.message || 'An unexpected error occurred.')
+
     return reply.status(status).send({
       success: false,
-      error: error.message || 'An unexpected error occurred.',
+      error: clientMessage,
       code: 'SERVER_ERROR',
       statusCode: status,
     })

@@ -59,6 +59,8 @@ const server = Fastify({
         : undefined,
   },
   trustProxy: true,
+  connectionTimeout: 10000,
+  requestTimeout: 30000,
   ajv: {
     customOptions: {
       removeAdditional: 'all',
@@ -120,5 +122,21 @@ const shutdown = async (signal: string) => {
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT', () => shutdown('SIGINT'))
 process.on('SIGBREAK', () => shutdown('SIGBREAK'))
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[fatal] Unhandled promise rejection:', reason)
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)))
+  }
+  shutdown('unhandledRejection')
+})
+
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] Uncaught exception:', err)
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err)
+  }
+  shutdown('uncaughtException')
+})
 
 start()

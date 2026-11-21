@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq'
 import IORedis from 'ioredis'
-import { sendEmail } from '../utils/email'
+import { sendEmail, deadlineReminderEmail, savedSearchAlertEmail, subscriptionExpiryWarningEmail, subscriptionExpiredEmail } from '../utils/email'
 import { db, schema } from '../db'
 import { eq, and, lt, gt, gte, lte, ilike, sql } from 'drizzle-orm'
 import type { EmailJobData, NotificationJobData, ScheduledJobData } from './queue'
@@ -71,7 +71,7 @@ const scheduledWorker = new Worker<ScheduledJobData>(
         // Find users with expired Premium subscriptions
         const now = new Date()
         const expired = await db
-          .select({ id: schema.users.id, email: schema.users.email })
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
           .from(schema.users)
           .where(
             and(
@@ -95,6 +95,46 @@ const scheduledWorker = new Worker<ScheduledJobData>(
             referenceType: 'premium',
           }).returning()
           broadcastToUser(user.id, { type: 'new_notification', notification: expiryNotif })
+
+          const mail = subscriptionExpiredEmail(user.name)
+          mail.to = user.email
+          await enqueueEmail(mail)
+        }
+        break
+      }
+
+      case 'subscription_expiry_warning': {
+        // Warn users whose Premium expires within 3 days (but hasn't expired yet)
+        const now = new Date()
+        const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+
+        const expiringSoon = await db
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, premiumUntil: schema.users.premiumUntil })
+          .from(schema.users)
+          .where(
+            and(
+              eq(schema.users.isPremium, true),
+              gt(schema.users.premiumUntil, now),
+              lte(schema.users.premiumUntil, threeDaysFromNow)
+            )
+          )
+
+        for (const user of expiringSoon) {
+          if (!user.premiumUntil) continue
+          const daysLeft = Math.ceil((user.premiumUntil.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+
+          await enqueueNotification({
+            userId: user.id,
+            type: 'payment_confirmed',
+            title: 'Premium subscription expiring soon',
+            body: `Your Premium subscription expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew to keep access.`,
+            referenceId: user.id,
+            referenceType: 'premium',
+          })
+
+          const mail = subscriptionExpiryWarningEmail(user.name, daysLeft)
+          mail.to = user.email
+          await enqueueEmail(mail)
         }
         break
       }
@@ -145,11 +185,9 @@ const scheduledWorker = new Worker<ScheduledJobData>(
           }
 
           if (user && prefs.email_deadline !== false) {
-            await enqueueEmail({
-              to: user.email,
-              subject: `Deadline in ${daysLeft} day${daysLeft === 1 ? '' : 's'}: ${app.oppTitle}`,
-              html: `<p>Hi ${user.name},</p><p>The deadline for <strong>${app.oppTitle}</strong> is in <strong>${daysLeft} day${daysLeft === 1 ? '' : 's'}</strong>.</p><p>Log in to your OppDate dashboard to check your application status.</p><p>-- The OppDate Team</p>`,
-            })
+            const mail = deadlineReminderEmail(user.name, app.oppTitle!, daysLeft)
+            mail.to = user.email
+            await enqueueEmail(mail)
           }
         }
         break
@@ -168,7 +206,7 @@ const scheduledWorker = new Worker<ScheduledJobData>(
           )
           .returning()
         if (result.length > 0) {
-          console.log(`Archived ${result.length} expired opportunities`)
+          console.log(`[worker:scheduled] archived ${result.length} expired opportunities`)
         }
         break
       }
@@ -246,12 +284,9 @@ const scheduledWorker = new Worker<ScheduledJobData>(
           }
 
           if (user && prefs.email_matching !== false) {
-            const listHtml = matches.slice(0, 5).map((m) => `<li>${m.title}</li>`).join('')
-            await enqueueEmail({
-              to: user.email,
-              subject: `${matches.length} new match${matches.length === 1 ? '' : 'es'} for "${search.name}"`,
-              html: `<p>Hi ${user.name},</p><p>New opportunities matching your saved search "<strong>${search.name}</strong>":</p><ul>${listHtml}</ul>${matches.length > 5 ? `<p>...and ${matches.length - 5} more.</p>` : ''}<p>Log in to your OppDate dashboard to view them.</p><p>-- The OppDate Team</p>`,
-            })
+            const mail = savedSearchAlertEmail(user.name, search.name, matches.map((m) => ({ title: m.title })))
+            mail.to = user.email
+            await enqueueEmail(mail)
           }
         }
         break
@@ -266,11 +301,23 @@ const scheduledWorker = new Worker<ScheduledJobData>(
   }
 )
 
+function attachWorkerListeners(worker: Worker, name: string) {
+  worker.on('completed', (job) => {
+    console.log(`[worker:${name}] completed job=${job.id} name=${job.name}`)
+  })
+  worker.on('failed', (job, err) => {
+    console.error(`[worker:${name}] failed job=${job?.id} name=${job?.name} attempts=${job?.attemptsMade} error=${err.message}`)
+  })
+  worker.on('error', (err) => {
+    console.error(`[worker:${name}] error: ${err.message}`)
+  })
+}
+
 export function startWorkers() {
   console.log('BullMQ workers started')
-  emailWorker.on('failed', (job, err) => console.error('Email job failed:', job?.id, err.message))
-  notificationWorker.on('failed', (job, err) => console.error('Notification job failed:', job?.id, err.message))
-  scheduledWorker.on('failed', (job, err) => console.error('Scheduled job failed:', job?.id, err.message))
+  attachWorkerListeners(emailWorker, 'email')
+  attachWorkerListeners(notificationWorker, 'notification')
+  attachWorkerListeners(scheduledWorker, 'scheduled')
 }
 
 export async function stopWorkers() {

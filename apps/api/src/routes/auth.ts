@@ -16,7 +16,7 @@ import {
 import { setAuthCookies, clearAuthCookies } from "../utils/cookies";
 import { requireAuth } from "../middleware/auth";
 import { enqueueEmail } from "../jobs/queue";
-import { securityAlertEmail } from "../utils/email";
+import { securityAlertEmail, welcomeEmail, passwordResetEmail } from "../utils/email";
 import { parseExpiryToMs } from "../utils/time";
 
 const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -92,14 +92,13 @@ async function createRefreshToken(userId: string): Promise<string> {
 
 async function sendPasswordResetEmail(
   email: string,
+  name: string,
   resetLink: string,
 ): Promise<void> {
   const expiry = process.env.PASSWORD_RESET_EXPIRES_IN || "15m";
-  await enqueueEmail({
-    to: email,
-    subject: "Reset your password",
-    html: `<p>Use the link below to reset your password. It expires in ${expiry}.</p><p><a href="${resetLink}">${resetLink}</a></p>`,
-  });
+  const mail = passwordResetEmail(name, resetLink, expiry);
+  mail.to = email;
+  await enqueueEmail(mail);
 }
 
 export async function authRoutes(server: FastifyInstance) {
@@ -174,6 +173,11 @@ export async function authRoutes(server: FastifyInstance) {
     } catch {
       // Silently ignore if thread already exists (unique index)
     }
+
+    // Send welcome email
+    const welcome = welcomeEmail(user.name);
+    welcome.to = user.email;
+    enqueueEmail(welcome).catch(() => {});
 
     return created(
       reply,
@@ -681,6 +685,12 @@ export async function authRoutes(server: FastifyInstance) {
 
     setAuthCookies(reply, accessToken, refreshToken);
 
+    if (isNew) {
+      const welcome = welcomeEmail(user.name);
+      welcome.to = user.email;
+      enqueueEmail(welcome).catch(() => {});
+    }
+
     return ok(
       reply,
       {
@@ -709,7 +719,7 @@ export async function authRoutes(server: FastifyInstance) {
       "If an account exists with that email, a reset link has been sent.";
 
     const [user] = await db
-      .select({ id: schema.users.id, passwordHash: schema.users.passwordHash })
+      .select({ id: schema.users.id, name: schema.users.name, passwordHash: schema.users.passwordHash })
       .from(schema.users)
       .where(eq(schema.users.email, email.toLowerCase()))
       .limit(1);
@@ -726,7 +736,7 @@ export async function authRoutes(server: FastifyInstance) {
     const webUrl = process.env.WEB_URL || "http://localhost:3000";
     const resetLink = `${webUrl}/reset-password?token=${resetToken}`;
 
-    await sendPasswordResetEmail(email, resetLink);
+    await sendPasswordResetEmail(email, user.name, resetLink);
 
     return ok(reply, null, genericResponse);
   });

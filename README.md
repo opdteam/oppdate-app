@@ -32,24 +32,22 @@ oppdate/
 ## Build Status
 
 <!-- oppdate:build-status:start -->
+_Last updated: 2026-11-21_
 
-_Last updated: 2026-11-20_
-
-| Feature             | Status | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| projectScaffolding  | done   | Monorepo, Docker, Fastify API, Next.js web, GitHub repo set up with main + dev branches                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| databaseSchema      | done   | Proposal B pivot fully applied. Removed all Gmail credential columns and portal credential columns from applications. Removed gmail_setup from applicationStatusEnum. Added: complianceCategoryEnum (A/B/C), documentReadinessStatusEnum (ready/needs_refinement/needs_creation). Added cover_letter, statement_of_purpose, essay to documentTypeEnum. threadTypeEnum: apply_for_me renamed to vip_assist. paymentPurposeEnum: apply_for_me renamed to vip_assist, added premium. users table: hasPaid replaced by isPremium + premiumSince + premiumUntil. opportunities table: added oppDateApply (bool), complianceCategory, institutionLogoUrl. New tables: authorizationAgreements (RAA signed before payment), applicationDocuments (per-slot readiness tracking). type-check clean on both workspaces.                                            |
-| landingPage         | done   | Final version approved by Emmanuella 2026-06-01. Exported to GitHub Pages. Ready for Next.js build on feature/landing-page branch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| mobileNav           | done   | Landing page Navbar with mobile hamburger menu, Services dropdown (desktop mega menu + mobile accordion), all links wired including /services/consultations. Footer links updated. Mobile slide-out menu sections (Company, Services, OppDate Apply) are collapsible accordions (multi-open, first section expanded by default). Work With Us sub-links navigate to `/contact#hash` with category pre-selection.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| authSystem          | done   | Email/password auth and Google OAuth both wired. Google OAuth returns isNew flag to route new users to /onboarding. Admin login at /admin/login. Seed script creates super_admin. JWT stored in localStorage as oppdate_token; cleared on 401. httpOnly cookie + ws-ticket pattern implemented for WebSocket auth. Redirect-after-auth: ?redirect= param preserved through login and register flows; middleware carries full pathname + search string.                                                                                                                                                                                                                                                                                                                                                                                                   |
-| opportunityListings | done   | Fully wired to real API. Three-state premium gating (guest 10 / free 20 / premium all unlocked). LockedCard shimmer placeholder with gate modal. Saved searches - save button in filter bar, dropdown to apply/delete — now gated to premium only (requirePremium on all 4 routes + UI hidden for free users). Institution logos rendered in cards when available. Filter tabs mapped to URL params. Search overlay (Cmd+K) gated to premium — free users see UpgradeModal. Recommendations widget: fixed ?opp= → ?slug= nav param so clicked cards pre-select and scroll correctly in listings panel. Capped at 6 with scoped query key to prevent cache bleed.                                                                                                                                                                                         |
-| applyForMeFlow      | done   | Full apply flow wired: eligibility scoring with AI-generated assessment result (POST /api/v1/ai/eligibility-assessment), real document library modal + file upload to R2, application_documents table migrated, borderline modal and ineligible view both show AI-written summary and concern cards. Payment step calls Stripe checkout. Submitted view shows 4-stage pipeline. Application DB record deferred to payment confirmation step.                                                                                                                                                                                                                                                                                                                                                                                                             |
-| paymentIntegration  | done   | Premium subscription gate fully implemented: backend requirePremium middleware on GET /:slug (403 for non-premium), all non-premium users see zero real listings (all locked), persistent locked gate panel on listings right panel. Sidebar premium badge with expiry awareness (amber when <=7 days). Post-upgrade success banner on dashboard (?payment=success). Renewal nudge within 7 days of premiumUntil. IP-based regional pricing via geoip-lite (server-side, not spoofable). Lemon Squeezy eBook checkout flow: POST /ebooks/:id/checkout creates LS checkout URL, webhook handler confirms purchase. UpgradeModal cleaned up: no lockedCount, no manual PPP toggle, auto-detects region from API. Pending: LEMONSQUEEZY_API_KEY/STORE_ID/WEBHOOK_SECRET env vars, lsVariantId per eBook in admin, Stripe webhook secret for isPremium flip. |
-| userDashboard       | done   | Dashboard, applications list, opportunity listings, messages, and credential library all wired. Onboarding checklist card. Notification bell badge resets on open. Full notifications page with 6 filter tabs. Notification click navigation: resolveHref maps all 7 notification types to correct routes, clicking navigates and closes dropdown. Notification preferences fully wired end-to-end with Resend (prefs.key !== false pattern — default on). Covers: inapp_pipeline, email_app_status, inapp_reminders, email_deadline, inapp_announcements, email_matching, email_new_message, email_security. Security alert email on password change. Profile page: fieldOfStudy and educationLevel fields added. Fixed Apply For Me CTA routing (/services/apply).                                                                                     |
-| adminPanel          | done   | All wireable screens done. Avatar Presets module added at /admin/avatars (manager_admin+): upload images to R2 under avatars/presets/, label, delete with confirm dialog. DB migration 0014_avatar_presets applied. Public GET /api/v1/auth/avatar-presets endpoint added. ProfileSettingsPage preset tab now fetches from API instead of hardcoded placeholder array. Landing nav right-side filter links fixed via React.createElement interception (GROUP_LINK_HREFS map). Mentorship automated first message on payment confirmation wired.                                                                                                                                                                                                                                                                                                          |
-| advertisingSpaces   | done   | Public GET /api/v1/admin/ads/public?zone= endpoint added (no auth). AdBanner component fetches active placement and renders Google AdSense or image/link ad based on config. Inserted into ListingsPage (listings_feed zone, after GuideCTA) and DashboardPage (dashboard zone, below SavedSection). Admin can toggle placements and set config via the Advertising tab in Settings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| onboardingTooltips  | done   | Full onboarding wizard at /onboarding: welcome screen with word-by-word animation, Step 1 (role tiles), Step 2 (interest multi-select), Step 3 (country/nationality fields), Step 4 (goal tiles), personalising loader, then redirect to /dashboard. New users routed here from register page and Google OAuth (isNew flag). Preferences persisted server-side via PATCH /auth/me.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-
+| Feature | Status | Notes |
+|---|---|---|
+| projectScaffolding | done | Monorepo, Docker, Fastify API, Next.js web, GitHub repo set up with main + dev branches |
+| databaseSchema | done | Proposal B pivot fully applied. Removed all Gmail credential columns and portal credential columns from applications. Removed gmail_setup from applicationStatusEnum. Added: complianceCategoryEnum (A/B/C), documentReadinessStatusEnum (ready/needs_refinement/needs_creation). Added cover_letter, statement_of_purpose, essay to documentTypeEnum. threadTypeEnum: apply_for_me renamed to vip_assist. paymentPurposeEnum: apply_for_me renamed to vip_assist, added premium. users table: hasPaid replaced by isPremium + premiumSince + premiumUntil. opportunities table: added oppDateApply (bool), complianceCategory, institutionLogoUrl. New tables: authorizationAgreements (RAA signed before payment), applicationDocuments (per-slot readiness tracking). type-check clean on both workspaces. |
+| landingPage | done | Final version approved by Emmanuella 2026-06-01. Exported to GitHub Pages. Ready for Next.js build on feature/landing-page branch. |
+| mobileNav | done | Landing page Navbar with mobile hamburger menu, Services dropdown (desktop mega menu + mobile accordion), all links wired including /services/consultations. Footer links updated. |
+| authSystem | done | Email/password auth and Google OAuth both wired. Google OAuth returns isNew flag to route new users to /onboarding. Admin login at /admin/login. Seed script creates super_admin. JWT stored in localStorage as oppdate_token; cleared on 401. httpOnly cookie + ws-ticket pattern implemented for WebSocket auth. Redirect-after-auth: ?redirect= param preserved through login and register flows; middleware carries full pathname + search string. |
+| opportunityListings | done | Fully wired to real API. Three-state premium gating (guest 10 / free 20 / premium all unlocked). LockedCard shimmer placeholder with gate modal. Saved searches - save button in filter bar, dropdown to apply/delete — now gated to premium only (requirePremium on all 4 routes + UI hidden for free users). Institution logos rendered in cards when available. Filter tabs mapped to URL params. Search overlay (Cmd+K) gated to premium — free users see UpgradeModal. Recommendations widget: fixed ?opp= → ?slug= nav param so clicked cards pre-select and scroll correctly in listings panel. Capped at 6 with scoped query key to prevent cache bleed. |
+| applyForMeFlow | done | Full apply flow wired: eligibility scoring with AI-generated assessment result (POST /api/v1/ai/eligibility-assessment), real document library modal + file upload to R2, application_documents table migrated, borderline modal and ineligible view both show AI-written summary and concern cards. Payment step calls Stripe checkout. Submitted view shows 4-stage pipeline. Application DB record deferred to payment confirmation step. |
+| paymentIntegration | done | Premium subscription gate fully implemented: backend requirePremium middleware on GET /:slug (403 for non-premium), all non-premium users see zero real listings (all locked), persistent locked gate panel on listings right panel. Sidebar premium badge with expiry awareness (amber when <=7 days). Post-upgrade success banner on dashboard (?payment=success). Renewal nudge within 7 days of premiumUntil. IP-based regional pricing via geoip-lite (server-side, not spoofable). Lemon Squeezy eBook checkout flow: POST /ebooks/:id/checkout creates LS checkout URL, webhook handler confirms purchase. UpgradeModal cleaned up: no lockedCount, no manual PPP toggle, auto-detects region from API. Pending: LEMONSQUEEZY_API_KEY/STORE_ID/WEBHOOK_SECRET env vars, lsVariantId per eBook in admin, Stripe webhook secret for isPremium flip. |
+| userDashboard | done | Dashboard, applications list, opportunity listings, messages, and credential library all wired. Onboarding checklist card. Notification bell badge resets on open. Full notifications page with 6 filter tabs. Notification click navigation: resolveHref maps all 7 notification types to correct routes, clicking navigates and closes dropdown. Notification preferences fully wired end-to-end with Resend (prefs.key !== false pattern — default on). Covers: inapp_pipeline, email_app_status, inapp_reminders, email_deadline, inapp_announcements, email_matching, email_new_message, email_security. Security alert email on password change. Profile page: fieldOfStudy and educationLevel fields added. Fixed Apply For Me CTA routing (/services/apply). |
+| adminPanel | done | All wireable screens done. Avatar Presets module added at /admin/avatars (manager_admin+): upload images to R2 under avatars/presets/, label, delete with confirm dialog. DB migration 0014_avatar_presets applied. Public GET /api/v1/auth/avatar-presets endpoint added. ProfileSettingsPage preset tab now fetches from API instead of hardcoded placeholder array. Landing nav right-side filter links fixed via React.createElement interception (GROUP_LINK_HREFS map). Mentorship automated first message on payment confirmation wired. |
+| advertisingSpaces | done | Public GET /api/v1/admin/ads/public?zone= endpoint added (no auth). AdBanner component fetches active placement and renders Google AdSense or image/link ad based on config. Inserted into ListingsPage (listings_feed zone, after GuideCTA) and DashboardPage (dashboard zone, below SavedSection). Admin can toggle placements and set config via the Advertising tab in Settings. |
+| onboardingTooltips | done | Full onboarding wizard at /onboarding: welcome screen with word-by-word animation, Step 1 (role tiles), Step 2 (interest multi-select), Step 3 (country/nationality fields), Step 4 (goal tiles), personalising loader, then redirect to /dashboard. New users routed here from register page and Google OAuth (isNew flag). Preferences persisted server-side via PATCH /auth/me. |
 <!-- oppdate:build-status:end -->
 
 ## Phase 2 Features
@@ -412,6 +410,99 @@ Hash-based category pre-selection: navigating to `/contact#careers`, `/contact#g
 ### Inquiry route
 
 `POST /api/v1/inquiries` - multipart form (category, name, email, message, optional file). Rate limited to 5/hour. File uploaded to R2 under `inquiries/`. Forwards to SUPPORT_EMAIL via Resend.
+
+---
+
+## Production Hardening
+
+All changes in this section were applied on 2026-11-21.
+
+### Rate limiting
+
+Per-route rate limits added to high-cost and frequently-polled endpoints:
+
+| Route | Limit | Reason |
+|---|---|---|
+| `GET /opportunities` | 30/min | Heavy filtered DB query |
+| `GET /opportunities/:slug` | 60/min | Single-row lookup |
+| `GET /opportunities/placements` | 60/min | Public endpoint |
+| `GET /notifications` | 60/min | Polled frequently |
+| `GET /messages/threads` | 60/min | Polled frequently |
+| `POST /messages/guide/messages` | 10/min | Anthropic API cost |
+| `POST /ai/chat` | 10/min | Anthropic API cost |
+| `POST /ai/eligibility-assessment` | 5/min | Anthropic API cost |
+| `GET /ai/recommendations` | 20/min | Heavy DB scoring |
+
+### Error sanitisation
+
+Production error handler (`routes/index.ts`) now:
+- Strips Ajv schema internals from validation error details (only `message` exposed)
+- Masks all 5xx error messages with "An unexpected error occurred."
+
+### WebSocket auth revalidation
+
+WebSocket connections (`messaging.ts`) recheck the user's status every 5 minutes. If the user is deleted or suspended (`suspendedAt` is set), the socket is closed with code 1008.
+
+### Structured worker logging
+
+BullMQ worker event listeners (`workers.ts`) now emit structured log lines: `[worker:<name>] completed|failed job=<id> name=<name>`.
+
+### Database migration 0026
+
+`0026_authorization_agreements.sql` creates the `authorization_agreements` table and adds the `authorization_agreement_id` column to `applications`. This was missing from production, causing 500 errors on `POST /api/v1/applications/submit`.
+
+### Premium paywall modal fix
+
+The "Unlock all opportunities" modal on `/opportunities` no longer re-appears after dismissal. Dismiss state is tracked in `sessionStorage` via a ref (`gateDismissedRef`). Explicit user actions (locked card click, upgrade button) still open the modal.
+
+---
+
+## Email System
+
+All changes in this section were applied on 2026-11-21. Covers template design, new email types, and wiring.
+
+### Design
+
+All emails use a shared `layout()` function with:
+- Dark header (`#1a1107`) with subtle gold dot-pattern SVG background and OppDate monogram
+- Amber gradient divider (`#c4881c`)
+- White card body with serif headings, sans-serif body text
+- "Stay OppDated." italic gold sign-off before footer
+- Copyright footer
+
+Builder functions: `greeting()`, `bodyText()`, `ctaButton()`, `highlight()`, `badge()`.
+
+### Templates
+
+| Template | Trigger | Description |
+|---|---|---|
+| `welcomeEmail` | Registration (email or Google OAuth, when `isNew`) | 3-panel feature overview (browse, save/track, apply with support) |
+| `passwordResetEmail` | `POST /auth/forgot-password` | Branded reset with expiry callout (replaces plain-HTML) |
+| `applicationStatusEmail` | Admin stage advancement | Status badge, context copy per status, CTA to dashboard |
+| `paymentConfirmationEmail` | Stripe/Paystack/Flutterwave webhook | Full receipt table (reference, service, amount, gateway, txn ID, date) |
+| `consultationBookingEmail` | Consultation booking | Date/time/duration callout card |
+| `mentorshipWelcomeEmail` | Mentorship enrolment | Mentor name, CTA to messages |
+| `newMessageEmail` | New team message in thread | CTA to messages |
+| `deadlineReminderEmail` | Scheduled job (daily 8 AM UTC) | Urgency-aware (red accent if <= 2 days) |
+| `savedSearchAlertEmail` | Scheduled job (every 12h) | Up to 5 match titles listed |
+| `subscriptionExpiryWarningEmail` | Scheduled job (daily 9 AM UTC) | Warns 3 days before Premium expires |
+| `subscriptionExpiredEmail` | Scheduled job (daily midnight UTC) | Sent when Premium is deactivated |
+| `securityAlertEmail` | Password change | Red alert callout, CTA to settings |
+| `adminInviteEmail` | Admin invites team member | 48-hour expiry link |
+
+### Scheduled jobs
+
+| Job | Cron | Description |
+|---|---|---|
+| `subscription_expiry_check` | `0 0 * * *` | Deactivate expired Premium, send expired email |
+| `subscription_expiry_warning` | `0 9 * * *` | Email + in-app notification for Premium expiring within 3 days |
+| `deadline_reminder` | `0 8 * * *` | Deadline emails + in-app notifications for applications due within 3 days |
+| `saved_search_alert` | `0 */12 * * *` | Match new opportunities against saved searches |
+| `opportunity_expiry_archive` | `0 2 * * *` | Archive listings whose deadline passed 30+ days ago |
+
+### User email preferences
+
+All email types respect user preferences (stored in `users.preferences` JSONB). Preference keys: `email_app_status`, `email_new_message`, `email_deadline`, `email_matching`, `email_security`. Default is on (`prefs.key !== false` pattern).
 
 ---
 

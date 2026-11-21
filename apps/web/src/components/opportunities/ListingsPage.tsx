@@ -1735,6 +1735,9 @@ export function ListingsPage() {
   })
   const [eligOpen, setEligOpen] = useState(false)
   const [gateOpen, setGateOpen] = useState(false)
+  const gateDismissedRef = useRef(
+    typeof window !== 'undefined' && sessionStorage.getItem('oppdate_gate_dismissed') === '1'
+  )
   const [saveSearchOpen, setSaveSearchOpen] = useState(false)
   const [savedSearchesOpen, setSavedSearchesOpen] = useState(false)
   const [saveSearchName, setSaveSearchName] = useState('')
@@ -1852,7 +1855,7 @@ export function ListingsPage() {
     // Non-premium users cannot view detail panels
     if (!isPremium) {
       setSelectedSlug(null)
-      setGateOpen(true)
+      if (!gateDismissedRef.current) setGateOpen(true)
       return
     }
     let cancelled = false
@@ -1863,7 +1866,7 @@ export function ListingsPage() {
         const status = (err as { response?: { status?: number; data?: { code?: string } } })?.response?.status
         const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code
         if (status === 403 || code === 'PREMIUM_REQUIRED') {
-          if (!cancelled) { setSelectedSlug(null); setGateOpen(true) }
+          if (!cancelled) { setSelectedSlug(null); if (!gateDismissedRef.current) setGateOpen(true) }
         }
       })
       .finally(() => { if (!cancelled) setDetailLoading(false) })
@@ -1995,7 +1998,11 @@ export function ListingsPage() {
     }}>
       {gateOpen && (
         <UpgradeModal
-          onClose={() => setGateOpen(false)}
+          onClose={() => {
+            setGateOpen(false)
+            gateDismissedRef.current = true
+            sessionStorage.setItem('oppdate_gate_dismissed', '1')
+          }}
         />
       )}
       {/* Warm background */}

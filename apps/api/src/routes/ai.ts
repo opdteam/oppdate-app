@@ -457,7 +457,7 @@ Writing rules (follow strictly):
 export async function aiRoutes(server: FastifyInstance) {
   server.post(
     "/chat",
-    { preHandler: [requirePremium] },
+    { preHandler: [requirePremium], config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const user = request.user as { id: string }
       const body = chatSchema.safeParse(request.body)
@@ -472,7 +472,7 @@ export async function aiRoutes(server: FastifyInstance) {
   // POST /api/v1/ai/eligibility-assessment
   server.post(
     "/eligibility-assessment",
-    { preHandler: [requirePremium] },
+    { preHandler: [requirePremium], config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const bodySchema = z.object({
         opportunityTitle: z.string().min(1).max(500),
@@ -574,7 +574,7 @@ Return ONLY raw JSON — no markdown fences, no code blocks, no preamble, no exp
   // GET /api/v1/ai/recommendations?limit=6
   server.get(
     "/recommendations",
-    { preHandler: [requireAuth] },
+    { preHandler: [requireAuth], config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const user = request.user as { id: string; isPremium?: boolean }
       const limit = Math.min(

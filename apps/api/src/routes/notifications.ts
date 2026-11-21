@@ -6,7 +6,7 @@ import { requireAuth } from '../middleware/auth'
 
 export async function notificationRoutes(server: FastifyInstance) {
   // GET /api/v1/notifications -- list user's notifications
-  server.get('/', { preHandler: [requireAuth] }, async (request, reply) => {
+  server.get('/', { preHandler: [requireAuth], config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
     const user = request.user as { id: string }
     const query = request.query as { unread?: string; limit?: string; offset?: string }
 

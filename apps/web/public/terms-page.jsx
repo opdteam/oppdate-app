@@ -130,7 +130,7 @@ const SECTIONS = [
       e(
         "p",
         null,
-        "You must be at least 16 years old to use OppDate. By using the Platform, you confirm that:",
+        "You must be at least 18 years old to use OppDate independently. By using the Platform, you confirm that:",
       ),
       e(
         "ul",
@@ -138,12 +138,7 @@ const SECTIONS = [
         e(
           "li",
           null,
-          "You are at least 16 years of age, or have the consent of a parent or legal guardian who has read and agreed to these Terms on your behalf.",
-        ),
-        e(
-          "li",
-          null,
-          "You have the legal capacity to enter into a binding agreement in your jurisdiction.",
+          "You are at least 18 years of age and have the legal capacity to enter into a binding agreement in your jurisdiction, or you are 16 or 17 years of age and your parent or legal guardian has read and agreed to these Terms (including authorizing any required fees) on your behalf.",
         ),
         e(
           "li",
@@ -754,17 +749,6 @@ const SECTIONS = [
           "li",
           null,
           "Address: 6545 Market Ave. North, STE 100, Canton, OH, 44721, USA",
-        ),
-      ),
-      e(
-        "div",
-        { className: "notice" },
-        e(
-          "p",
-          null,
-          "For account deletion requests, data access requests, or privacy concerns, please use the contact details in our ",
-          e("a", { href: "/legal/privacy" }, "Privacy Policy"),
-          ".",
         ),
       ),
     ),

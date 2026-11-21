@@ -649,7 +649,7 @@ const SECTIONS = [
       e(
         "p",
         null,
-        "We aim to respond to all data-related requests within 30 days. For account deletion, you can also proceed directly from your profile settings without contacting us.",
+        "We aim to respond to all data-related requests within 30 days.",
       ),
       e(
         "div",

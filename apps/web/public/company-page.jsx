@@ -409,12 +409,12 @@
   }
 
   var SCATTER_DOCS = [
-    { w: 72, h: 90, rot: -12, x: '8%', y: '15%', opacity: 0.5 },
-    { w: 60, h: 78, rot: 22, x: '75%', y: '8%', opacity: 0.35 },
-    { w: 54, h: 70, rot: -6, x: '62%', y: '65%', opacity: 0.4 },
-    { w: 66, h: 84, rot: 15, x: '25%', y: '70%', opacity: 0.3 },
-    { w: 48, h: 62, rot: -18, x: '85%', y: '45%', opacity: 0.25 },
-    { w: 56, h: 72, rot: 8, x: '45%', y: '5%', opacity: 0.35 },
+    { w: 72, h: 90, rot: -12, x: '8%', y: '15%', opacity: 0.7 },
+    { w: 60, h: 78, rot: 22, x: '75%', y: '8%', opacity: 0.55 },
+    { w: 54, h: 70, rot: -6, x: '62%', y: '65%', opacity: 0.65 },
+    { w: 66, h: 84, rot: 15, x: '25%', y: '70%', opacity: 0.5 },
+    { w: 48, h: 62, rot: -18, x: '85%', y: '45%', opacity: 0.45 },
+    { w: 56, h: 72, rot: 8, x: '45%', y: '5%', opacity: 0.55 },
   ];
 
   function ScatteredDocs({ visible }) {
@@ -427,18 +427,19 @@
               position: 'absolute', left: d.x, top: d.y,
               width: d.w, height: d.h,
               borderRadius: 6,
-              border: '1px solid rgba(178,58,42,0.2)',
-              background: 'linear-gradient(135deg, rgba(178,58,42,0.08) 0%, rgba(22,14,8,0.4) 100%)',
+              border: '1px solid rgba(178,58,42,0.4)',
+              background: 'linear-gradient(135deg, rgba(178,58,42,0.18) 0%, rgba(42,20,10,0.6) 100%)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
               transform: visible ? 'rotate(' + d.rot + 'deg) scale(1)' : 'rotate(0deg) scale(0.5)',
               opacity: visible ? d.opacity : 0,
               transition: REDUCED.matches ? 'none' : 'transform 800ms var(--ease-out-soft) ' + delay + 'ms, opacity 600ms ease ' + delay + 'ms',
             }}>
               {/* Fake text lines */}
               <div style={{ padding: 8 }}>
-                <div style={{ height: 3, width: '70%', borderRadius: 2, background: 'rgba(255,249,244,0.08)', marginBottom: 5 }} />
-                <div style={{ height: 2, width: '90%', borderRadius: 2, background: 'rgba(255,249,244,0.05)', marginBottom: 4 }} />
-                <div style={{ height: 2, width: '60%', borderRadius: 2, background: 'rgba(255,249,244,0.05)', marginBottom: 4 }} />
-                <div style={{ height: 2, width: '80%', borderRadius: 2, background: 'rgba(255,249,244,0.04)' }} />
+                <div style={{ height: 3, width: '70%', borderRadius: 2, background: 'rgba(255,249,244,0.2)', marginBottom: 5 }} />
+                <div style={{ height: 2, width: '90%', borderRadius: 2, background: 'rgba(255,249,244,0.14)', marginBottom: 4 }} />
+                <div style={{ height: 2, width: '60%', borderRadius: 2, background: 'rgba(255,249,244,0.14)', marginBottom: 4 }} />
+                <div style={{ height: 2, width: '80%', borderRadius: 2, background: 'rgba(255,249,244,0.1)' }} />
               </div>
             </div>
           );

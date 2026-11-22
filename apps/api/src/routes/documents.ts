@@ -235,11 +235,16 @@ export async function documentRoutes(server: FastifyInstance) {
 
     if (!existing) return notFound(reply, 'Document')
 
-    // Detach from any application document slots before deleting to avoid FK violation
+    // Detach from any application document slots and document request items before deleting to avoid FK violation
     await db
       .update(schema.applicationDocuments)
       .set({ documentId: null })
       .where(eq(schema.applicationDocuments.documentId, id))
+
+    await db
+      .update(schema.documentRequestItems)
+      .set({ documentId: null })
+      .where(eq(schema.documentRequestItems.documentId, id))
 
     await db.delete(schema.documents).where(eq(schema.documents.id, id))
 

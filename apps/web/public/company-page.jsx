@@ -714,21 +714,24 @@
       icon: 'shield-check',
       title: 'Eligibility clarity',
       body: 'Know whether you qualify before you spend time preparing. Our screening tools cross-reference your profile against each listing\'s requirements and give you a clear match score upfront.',
-      imgPrompt: 'Clean UI mockup showing a checklist with green checkmarks next to eligibility criteria, modern app interface, warm amber accent colors on dark surface, isometric perspective',
+      image: '/assets/company-dashboard.png',
+      imgPrompt: null,
       accent: 'var(--action)',
     },
     {
       icon: 'file-text',
       title: 'Documents ready',
       body: 'Your CV, transcripts, and references - uploaded once, reused everywhere. No more re-entering the same information across 20 different portals.',
-      imgPrompt: 'Organized document folder with neatly arranged files, modern flat design, warm amber and cream color palette, soft shadows, clean editorial style',
+      image: '/assets/company-documents.png',
+      imgPrompt: null,
       accent: 'var(--decor-numeral)',
     },
     {
       icon: 'compass',
       title: 'Guided from start to finish',
       body: 'Tools and services for everything that happens after you find the right fit. From consultation bookings to essay reviews, the full pipeline lives in one place.',
-      imgPrompt: 'Abstract path or roadmap illustration showing stages from discovery to submission, warm gradient from amber to orange, modern minimalist design, editorial quality',
+      image: '/assets/company-timeline.png',
+      imgPrompt: null,
       accent: '#B87333',
     },
   ];
@@ -899,14 +902,20 @@
               aspectRatio: '4/3',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
+              position: 'relative',
               animation: REDUCED.matches ? 'none' : 'co-strip-fade 400ms var(--ease-out-soft) 100ms both',
             }}>
-              <div style={{ textAlign: 'center', padding: 24 }}>
-                <Icon name={strip.icon} size={40} style={{ color: strip.accent, opacity: 0.5 }} />
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5, color: 'var(--text-body)', opacity: 0.4, maxWidth: '26ch', margin: '14px auto 0' }}>
-                  {strip.imgPrompt}
-                </p>
-              </div>
+              {strip.image ? (
+                <img src={strip.image} alt={strip.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} />
+              ) : (
+                <div style={{ textAlign: 'center', padding: 24 }}>
+                  <Icon name={strip.icon} size={40} style={{ color: strip.accent, opacity: 0.5 }} />
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5, color: 'var(--text-body)', opacity: 0.4, maxWidth: '26ch', margin: '14px auto 0' }}>
+                    {strip.imgPrompt}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1431,35 +1440,22 @@
             transform: visible ? 'translateX(0) translateY(0)' : 'translateX(40px)',
             transition: REDUCED.matches ? 'none' : 'opacity 700ms var(--ease-out-soft) 200ms, transform 700ms var(--ease-out-soft) 200ms',
           }}>
-            {/* Main image placeholder */}
+            {/* Main image */}
             <div style={{
               borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
-              background: 'linear-gradient(145deg, var(--row-rest) 0%, rgba(232,168,77,0.08) 100%)',
               border: '1px solid var(--line)',
               aspectRatio: '3/4',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
               position: 'relative',
             }}>
+              <img src="/assets/company-premium.png" alt="Premium by design"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
               {/* Decorative gradient overlay */}
               <div style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%',
                 background: 'linear-gradient(to top, rgba(194,65,12,0.08), transparent)',
                 pointerEvents: 'none',
               }} />
-              <div style={{ textAlign: 'center', padding: 32, position: 'relative', zIndex: 1 }}>
-                <div style={{
-                  width: 64, height: 64, borderRadius: 'var(--radius-pill)',
-                  background: 'var(--action-wash)', color: 'var(--action)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 16px',
-                }}>
-                  <Icon name="lock" size={28} />
-                </div>
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5, color: 'var(--text-body)', opacity: 0.4, maxWidth: '24ch', margin: '0 auto' }}>
-                  Split visual comparison - left side shows a chaotic crowd of overlapping application forms, right side shows a clean curated space with organized documents and a golden gate/barrier between them, warm amber and cream tones, modern editorial illustration
-                </p>
-              </div>
             </div>
 
             {/* Floating stat badge */}

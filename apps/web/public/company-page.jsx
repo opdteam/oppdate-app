@@ -714,7 +714,7 @@
       icon: 'shield-check',
       title: 'Eligibility clarity',
       body: 'Know whether you qualify before you spend time preparing. Our screening tools cross-reference your profile against each listing\'s requirements and give you a clear match score upfront.',
-      image: '/assets/company-dashboard.png',
+      image: '/assets/company-dashboard.webp',
       imgPrompt: null,
       accent: 'var(--action)',
     },
@@ -722,7 +722,7 @@
       icon: 'file-text',
       title: 'Documents ready',
       body: 'Your CV, transcripts, and references - uploaded once, reused everywhere. No more re-entering the same information across 20 different portals.',
-      image: '/assets/company-documents.png',
+      image: '/assets/company-documents.webp',
       imgPrompt: null,
       accent: 'var(--decor-numeral)',
     },
@@ -730,7 +730,7 @@
       icon: 'compass',
       title: 'Guided from start to finish',
       body: 'Tools and services for everything that happens after you find the right fit. From consultation bookings to essay reviews, the full pipeline lives in one place.',
-      image: '/assets/company-timeline.png',
+      image: '/assets/company-timeline.webp',
       imgPrompt: null,
       accent: '#B87333',
     },
@@ -1448,7 +1448,7 @@
               aspectRatio: '3/4',
               position: 'relative',
             }}>
-              <img src="/assets/company-premium.png" alt="Premium by design"
+              <img src="/assets/company-premium.webp" alt="Premium by design"
                 style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
               {/* Decorative gradient overlay */}
               <div style={{

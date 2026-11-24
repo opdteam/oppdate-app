@@ -224,6 +224,9 @@ export async function paymentRoutes(server: FastifyInstance) {
         .limit(1)
 
       if (!app) return notFound(reply, 'Application')
+      if (app.status === 'withdrawn' || app.status === 'rejected') {
+        return badRequest(reply, 'This application has been ' + app.status + '. Please start a new application for this opportunity.')
+      }
       if (app.status !== 'awaiting_payment') {
         return badRequest(reply, 'Application is not in awaiting_payment state.')
       }

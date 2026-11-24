@@ -17,7 +17,8 @@
     "db:generate": "yarn workspace @oppdate/api db:generate",
     "db:seed-admin": "yarn workspace @oppdate/api db:seed-admin",
     "type-check": "yarn workspaces run type-check",
-    "lint": "yarn workspace @oppdate/web lint"
+    "lint": "yarn workspace @oppdate/web lint",
+    "test:e2e": "yarn workspace @oppdate/web test:e2e"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

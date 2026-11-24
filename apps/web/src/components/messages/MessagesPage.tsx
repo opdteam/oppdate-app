@@ -873,7 +873,7 @@ function MessageBubble({ msg, showAvatar, showTail, index, compact, threadId }: 
             backdropFilter: !mine ? 'blur(16px) saturate(140%)' : undefined,
             WebkitBackdropFilter: !mine ? 'blur(16px) saturate(140%)' : undefined,
             border: mine ? 'none' : '1px solid rgba(216,204,196,0.5)',
-            color: mine ? '#fff' : 'var(--app-ink)',
+            color: mine ? '#fff' : '#2A1206',
             fontFamily: 'var(--font-sans)', fontSize: compact ? 13 : 14, lineHeight: 1.6,
             whiteSpace: 'pre-wrap',
           }}>

@@ -180,19 +180,17 @@ export async function applicationRoutes(server: FastifyInstance) {
     if (!opportunity) return notFound(reply, 'Opportunity')
 
     // Prevent duplicate submissions for the same opportunity (withdrawn/rejected can reapply)
-    const [existing] = await db
+    const existingApps = await db
       .select({ id: schema.applications.id, status: schema.applications.status })
       .from(schema.applications)
       .where(and(
         eq(schema.applications.userId, payload.id),
-        eq(schema.applications.opportunityId, opportunityId),
-        notInArray(schema.applications.status, ['withdrawn', 'rejected'] as any[])
+        eq(schema.applications.opportunityId, opportunityId)
       ))
-      .limit(1)
 
-    if (existing) {
-      // Already submitted - return the existing application so payment can proceed
-      return ok(reply, { applicationId: existing.id, status: existing.status, resumed: true })
+    const active = existingApps.find(a => a.status !== 'withdrawn' && a.status !== 'rejected')
+    if (active) {
+      return ok(reply, { applicationId: active.id, status: active.status, resumed: true })
     }
 
     const [application] = await db

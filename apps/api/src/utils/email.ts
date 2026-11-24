@@ -33,34 +33,20 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 }
 
 const WEB_URL = process.env.WEB_URL || "https://oppdate.com";
-const LOGO_URL = `${WEB_URL}/assets/oppdate-monogram.png`;
+const LOGO_URL = `${WEB_URL}/assets/logo-vars/monogram-transparent.png`;
 
-// Inline SVG icons as data URIs (email-safe, no external dependencies)
-const ICONS = {
-  checkCircle: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' fill='none'%3E%3Ccircle cx='24' cy='24' r='24' fill='%2322863a'/%3E%3Cpath d='M14 24l7 7 13-13' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E`,
-  receipt: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' fill='none'%3E%3Crect x='4' y='3' width='20' height='22' rx='2' stroke='%23c4881c' stroke-width='1.5'/%3E%3Cpath d='M9 9h10M9 13h10M9 17h6' stroke='%23c4881c' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E`,
-  hash: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none'%3E%3Cpath d='M4 7h10M4 11h10M7 4v10M11 4v10' stroke='%23a09070' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E`,
-  layers: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none'%3E%3Cpath d='M9 2L2 6l7 4 7-4-7-4zM2 9l7 4 7-4M2 12l7 4 7-4' stroke='%23a09070' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E`,
-  creditCard: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none'%3E%3Crect x='2' y='4' width='14' height='10' rx='2' stroke='%23a09070' stroke-width='1.3'/%3E%3Cpath d='M2 8h14' stroke='%23a09070' stroke-width='1.3'/%3E%3C/svg%3E`,
-  gateway: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none'%3E%3Crect x='2' y='4' width='14' height='10' rx='2' stroke='%23a09070' stroke-width='1.3'/%3E%3Cpath d='M5 11h3M10 11h3' stroke='%23a09070' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E`,
-  transfer: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none'%3E%3Cpath d='M4 7h10M14 7l-3-3M4 11h10M4 11l3 3' stroke='%23a09070' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E`,
-  calendar: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none'%3E%3Crect x='3' y='4' width='12' height='11' rx='2' stroke='%23a09070' stroke-width='1.3'/%3E%3Cpath d='M3 8h12M6 2v3M12 2v3' stroke='%23a09070' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E`,
-  barChart: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none'%3E%3Crect x='5' y='12' width='4' height='7' rx='1' fill='%23c4881c'/%3E%3Crect x='10' y='8' width='4' height='11' rx='1' fill='%23c4881c'/%3E%3Crect x='15' y='5' width='4' height='14' rx='1' fill='%23c4881c'/%3E%3C/svg%3E`,
-  shield: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Cpath d='M20 4L6 10v8c0 8.8 6 16 14 18 8-2 14-9.2 14-18v-8L20 4z' stroke='%23ef4444' stroke-width='2' fill='none'/%3E%3Cpath d='M15 20l4 4 7-8' stroke='%23ef4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E`,
-  mail: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Crect x='4' y='8' width='32' height='24' rx='3' stroke='%23c4881c' stroke-width='2'/%3E%3Cpath d='M4 11l16 10 16-10' stroke='%23c4881c' stroke-width='2'/%3E%3C/svg%3E`,
-  clock: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Ccircle cx='20' cy='20' r='16' stroke='%23c4881c' stroke-width='2'/%3E%3Cpath d='M20 10v10l6 4' stroke='%23c4881c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E`,
-  search: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Ccircle cx='17' cy='17' r='10' stroke='%23c4881c' stroke-width='2'/%3E%3Cpath d='M25 25l8 8' stroke='%23c4881c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E`,
-  users: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Ccircle cx='15' cy='13' r='5' stroke='%23c4881c' stroke-width='2'/%3E%3Cpath d='M5 32c0-5.5 4.5-10 10-10s10 4.5 10 10' stroke='%23c4881c' stroke-width='2'/%3E%3Ccircle cx='28' cy='13' r='4' stroke='%23c4881c' stroke-width='1.5'/%3E%3Cpath d='M30 22c3 1 5 4 5 7' stroke='%23c4881c' stroke-width='1.5'/%3E%3C/svg%3E`,
-  key: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Ccircle cx='26' cy='14' r='8' stroke='%23c4881c' stroke-width='2'/%3E%3Cpath d='M20 20L6 34M6 34l5-1M6 34l1-5' stroke='%23c4881c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E`,
-  star: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Cpath d='M20 4l5 10h11l-9 7 4 11-11-7-11 7 4-11-9-7h11z' stroke='%23c4881c' stroke-width='2' fill='none'/%3E%3C/svg%3E`,
-  bell: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' fill='none'%3E%3Cpath d='M20 4c-6 0-10 4-10 10v8l-3 3h26l-3-3v-8c0-6-4-10-10-10z' stroke='%23c4881c' stroke-width='2'/%3E%3Cpath d='M16 35c1 2 3 3 4 3s3-1 4-3' stroke='%23c4881c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E`,
-};
+// HTML/CSS icon builders -- no images, renders in every email client
+function iconCircle(char: string, bg: string, fg: string, size = 48): string {
+  return `<td style="width:${size}px;height:${size}px;vertical-align:middle;padding-right:16px;">
+    <div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};text-align:center;line-height:${size}px;font-size:${Math.round(size * 0.46)}px;color:${fg};font-family:Arial,sans-serif;">
+      ${char}
+    </div>
+  </td>`;
+}
 
-// Golden aurora wave SVG for header background (embedded, email-safe)
-const HEADER_AURORA = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='120' viewBox='0 0 600 120'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23c4881c' stop-opacity='0.15'/%3E%3Cstop offset='50%25' stop-color='%23d4973a' stop-opacity='0.25'/%3E%3Cstop offset='100%25' stop-color='%23c4881c' stop-opacity='0.08'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='1' y1='0' x2='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%23e4b86a' stop-opacity='0.12'/%3E%3Cstop offset='100%25' stop-color='%23c4881c' stop-opacity='0.06'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 80 Q150 20 300 60 T600 40 V120 H0Z' fill='url(%23g1)'/%3E%3Cpath d='M0 90 Q200 40 400 70 T600 50 V120 H0Z' fill='url(%23g2)'/%3E%3C/svg%3E`;
-
-// Wavy divider SVG
-const WAVE_DIVIDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='20' viewBox='0 0 600 20'%3E%3Cpath d='M0 10 Q75 0 150 10 T300 10 T450 10 T600 10 V20 H0Z' fill='%23fdf8f0' opacity='0.6'/%3E%3C/svg%3E`;
+function iconSmall(char: string, color = "#a09070"): string {
+  return `<td style="width:22px;vertical-align:middle;text-align:center;font-size:14px;color:${color};font-family:Arial,sans-serif;">${char}</td>`;
+}
 
 function layout(preheader: string, bodyContent: string): string {
   return `<!DOCTYPE html>
@@ -84,25 +70,37 @@ function layout(preheader: string, bodyContent: string): string {
     <td align="center" style="padding:32px 16px;">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);">
 
-        <!-- Header -->
+        <!-- Header with gradient background -->
         <tr>
-          <td style="background:#1a1107;padding:0;position:relative;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-image:url('${HEADER_AURORA}');background-position:right bottom;background-repeat:no-repeat;background-size:cover;">
+          <td style="background:#1a1107;">
+            <!--[if gte mso 9]>
+            <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:80px;">
+            <v:fill type="gradient" color="#1a1107" color2="#2a1f10" angle="135"/>
+            <v:textbox inset="0,0,0,0">
+            <![endif]-->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:linear-gradient(135deg, #1a1107 0%, #2a1f10 50%, #1a1107 70%, #3d2a12 100%);">
               <tr>
-                <td style="padding:28px 36px 24px;">
+                <td style="padding:28px 40px 24px;">
                   <table cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                      <td style="vertical-align:middle;padding-right:12px;">
-                        <img src="${LOGO_URL}" alt="OppDate" width="38" height="38" style="display:block;border:0;" />
+                      <td style="vertical-align:middle;padding-right:16px;">
+                        <img src="${LOGO_URL}" alt="OppDate" width="44" height="44" style="display:block;border:0;" />
                       </td>
-                      <td style="vertical-align:middle;border-left:2px solid rgba(196,136,28,0.4);padding-left:12px;">
+                      <td style="vertical-align:middle;border-left:2px solid rgba(196,136,28,0.4);padding-left:16px;">
                         <span style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">OppDate</span>
                       </td>
                     </tr>
                   </table>
                 </td>
+                <td style="vertical-align:bottom;text-align:right;padding:0 20px 16px 0;">
+                  <div style="width:200px;height:60px;border-radius:50%;background:radial-gradient(ellipse at 60% 50%, rgba(196,136,28,0.3) 0%, rgba(228,184,106,0.15) 40%, rgba(196,136,28,0.05) 70%, transparent 100%);"></div>
+                </td>
               </tr>
             </table>
+            <!--[if gte mso 9]>
+            </v:textbox>
+            </v:rect>
+            <![endif]-->
           </td>
         </tr>
 
@@ -156,16 +154,13 @@ function layout(preheader: string, bodyContent: string): string {
 </html>`;
 }
 
-// Hero block with icon, heading, and subtitle
-function heroBlock(icon: string, heading: string, subtitle: string, iconSize = 48): string {
+function heroBlock(char: string, bg: string, fg: string, heading: string, subtitle: string): string {
   return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 36px 24px;">
   <tr>
     <td>
       <table cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="vertical-align:middle;padding-right:16px;">
-            <img src="${icon}" alt="" width="${iconSize}" height="${iconSize}" style="display:block;border:0;" />
-          </td>
+          ${iconCircle(char, bg, fg, 52)}
           <td style="vertical-align:middle;border-left:3px solid #ede8e1;padding-left:16px;">
             <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:#1a1107;line-height:1.3;">${heading}</p>
             <p style="margin:4px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6b5840;">${subtitle}</p>
@@ -184,8 +179,15 @@ function greeting(name: string): string {
 function ctaButton(label: string, url: string): string {
   return `<table cellpadding="0" cellspacing="0" border="0" align="center" style="margin:28px auto 0;">
     <tr>
-      <td style="background:linear-gradient(135deg,#c4881c,#a06b10);border-radius:8px;box-shadow:0 2px 8px rgba(196,136,28,0.3);">
-        <a href="${url}" target="_blank" style="display:inline-block;padding:14px 36px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">${label} &rarr;</a>
+      <td style="background:#c4881c;border-radius:8px;">
+        <!--[if mso]>
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${url}" style="width:220px;height:44px;" arcsize="18%" fillcolor="#c4881c" stroke="false">
+        <v:textbox inset="0,0,0,0"><center style="font-family:Arial,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;">${label} &rarr;</center></v:textbox>
+        </v:roundrect>
+        <![endif]-->
+        <!--[if !mso]><!-->
+        <a href="${url}" target="_blank" style="display:inline-block;padding:14px 36px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.3px;border-radius:8px;">${label} &rarr;</a>
+        <!--<![endif]-->
       </td>
     </tr>
   </table>`;
@@ -210,37 +212,27 @@ function badge(text: string, color = "#22863a"): string {
   return `<span style="display:inline-block;padding:4px 14px;background:${bg};border:1px solid ${color};border-radius:20px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;color:${color};letter-spacing:0.3px;vertical-align:middle;">${text}</span>`;
 }
 
-// Callout block with icon + left border (like the "You're all set!" section)
-function calloutBlock(icon: string, heading: string, text: string, borderColor = "#c4881c"): string {
+function calloutBlock(char: string, heading: string, text: string, color = "#c4881c"): string {
   return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0;">
   <tr>
-    <td style="padding:0;">
-      <table cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="vertical-align:top;padding-right:14px;">
-            <img src="${icon}" alt="" width="24" height="24" style="display:block;border:0;" />
-          </td>
-          <td style="vertical-align:top;border-left:3px solid ${borderColor};padding-left:14px;">
-            <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#1a1107;">${heading}</p>
-            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6b5840;line-height:1.6;">${text}</p>
-          </td>
-        </tr>
-      </table>
+    <td style="width:28px;vertical-align:top;padding-right:12px;">
+      <div style="width:28px;height:28px;border-radius:6px;background:${color === "#c4881c" ? "#fdf3e3" : "#fde8e8"};text-align:center;line-height:28px;font-size:14px;color:${color};">${char}</div>
+    </td>
+    <td style="vertical-align:top;border-left:3px solid ${color};padding-left:14px;">
+      <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#1a1107;">${heading}</p>
+      <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6b5840;line-height:1.6;">${text}</p>
     </td>
   </tr>
 </table>`;
 }
 
-// Receipt row with icon
-function receiptRow(icon: string, label: string, value: string, isLast = false, mono = false): string {
+function receiptRow(char: string, label: string, value: string, isLast = false, mono = false): string {
   const border = isLast ? "" : "border-bottom:1px solid #ede8e1;";
   const valueStyle = mono
     ? "font-family:Consolas,'Courier New',monospace;font-size:12px;color:#6b5840;word-break:break-all;"
     : "font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1107;";
   return `<tr>
-    <td style="padding:12px 0;${border}width:20px;vertical-align:middle;">
-      <img src="${icon}" alt="" width="18" height="18" style="display:block;border:0;" />
-    </td>
+    ${iconSmall(char)}
     <td style="padding:12px 8px;${border}font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#a09070;vertical-align:middle;width:110px;">${label}</td>
     <td style="padding:12px 0;${border}${valueStyle}font-weight:600;vertical-align:middle;">${value}</td>
   </tr>`;
@@ -295,15 +287,16 @@ export function applicationStatusEmail(
   const isDone = ["accepted", "rejected", "withdrawn"].includes(newStatus);
 
   const statusColor = newStatus === "accepted" ? "#22863a" : newStatus === "rejected" ? "#ef4444" : "#c4881c";
-  const heroIcon = newStatus === "accepted" ? ICONS.checkCircle : ICONS.mail;
+  const heroChar = newStatus === "accepted" ? "&#10003;" : "&#9993;";
+  const heroBg = newStatus === "accepted" ? "#22863a" : "#fdf3e3";
+  const heroFg = newStatus === "accepted" ? "#ffffff" : "#c4881c";
   const heroHeading = newStatus === "accepted" ? "Application Accepted" : newStatus === "rejected" ? "Application Update" : "Status Update";
 
   const body = `
-    ${heroBlock(heroIcon, heroHeading, `Your application ${referenceId} has been updated.`)}
+    ${heroBlock(heroChar, heroBg, heroFg, heroHeading, `Your application ${referenceId} has been updated.`)}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
-      ${bodyText(`<p style="margin:0 0 20px;">We have received your payment and your application status has been updated.</p>`)}
-      <table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+      <table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 20px;">
         <tr>
           <td style="padding:0 16px 0 0;vertical-align:middle;">
             <span style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6b5840;">Current status:</span>
@@ -314,7 +307,7 @@ export function applicationStatusEmail(
         </tr>
       </table>
       ${bodyText(`<p style="margin:0 0 16px;">${context}</p>`)}
-      ${isDone ? "" : calloutBlock(ICONS.barChart, "What happens next?", "If you have any questions, reply to your application message thread and our team will respond.")}
+      ${isDone ? "" : calloutBlock("&#9432;", "What happens next?", "If you have any questions, reply to your application message thread and our team will respond.")}
       ${ctaButton("View your application", `${WEB_URL}/applications`)}
     </td></tr></table>
   `;
@@ -373,16 +366,16 @@ export function paymentConfirmationEmail(
   const gatewayName = gateway ? (GATEWAY_NAMES[gateway] ?? gateway) : null;
 
   const rows = [
-    referenceId ? receiptRow(ICONS.hash, "Reference", referenceId) : "",
-    receiptRow(ICONS.layers, "Service", purpose),
-    receiptRow(ICONS.creditCard, "Amount", `<span style="font-size:16px;">${amount}</span>`),
-    gatewayName ? receiptRow(ICONS.gateway, "Paid via", gatewayName) : "",
-    gatewayPaymentId ? receiptRow(ICONS.transfer, "Transaction ID", gatewayPaymentId, false, true) : "",
-    receiptRow(ICONS.calendar, "Date &amp; Time", displayDate, true),
+    referenceId ? receiptRow("#", "Reference", referenceId) : "",
+    receiptRow("&#9776;", "Service", purpose),
+    receiptRow("&#9634;", "Amount", `<span style="font-size:16px;">${amount}</span>`),
+    gatewayName ? receiptRow("&#8801;", "Paid via", gatewayName) : "",
+    gatewayPaymentId ? receiptRow("&#8644;", "Transaction ID", gatewayPaymentId, false, true) : "",
+    receiptRow("&#128197;", "Date &amp; Time", displayDate, true),
   ].filter(Boolean).join("");
 
   const body = `
-    ${heroBlock(ICONS.checkCircle, "Payment Successful", "Your transaction has been confirmed.")}
+    ${heroBlock("&#10003;", "#22863a", "#ffffff", "Payment Successful", "Your transaction has been confirmed.")}
 
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 8px;">
       ${greeting(userName)}
@@ -401,7 +394,7 @@ export function paymentConfirmationEmail(
                   <table cellpadding="0" cellspacing="0" border="0">
                     <tr>
                       <td style="vertical-align:middle;padding-right:10px;">
-                        <img src="${ICONS.receipt}" alt="" width="28" height="28" style="display:block;border:0;" />
+                        <div style="width:28px;height:28px;border-radius:6px;background:#fdf3e3;border:1px solid #e4b86a;text-align:center;line-height:28px;font-size:14px;color:#c4881c;">&#9776;</div>
                       </td>
                       <td style="vertical-align:middle;">
                         <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;font-weight:700;color:#1a1107;">Payment Receipt</p>
@@ -443,7 +436,7 @@ export function paymentConfirmationEmail(
 
     <!-- Callout + CTA -->
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
-      ${calloutBlock(ICONS.barChart, "You're all set!", "Keep this email as your proof of payment. You can access your account and continue your journey through your dashboard.")}
+      ${calloutBlock("&#9432;", "You're all set!", "Keep this email as your proof of payment. You can access your account and continue your journey through your dashboard.")}
       ${ctaButton("Go to your dashboard", `${WEB_URL}/dashboard`)}
     </td></tr></table>
   `;
@@ -461,7 +454,7 @@ export function consultationBookingEmail(
   duration: number,
 ): EmailParams {
   const body = `
-    ${heroBlock(ICONS.clock, "Booking Confirmed", `Your ${duration}-minute Strategy Session is scheduled.`)}
+    ${heroBlock("&#128337;", "#fdf3e3", "#c4881c", "Booking Confirmed", `Your ${duration}-minute Strategy Session is scheduled.`)}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`<p style="margin:0 0 20px;">Your ${highlight(`${duration}-minute Strategy Session`)} has been confirmed.</p>`)}
@@ -472,13 +465,13 @@ export function consultationBookingEmail(
         </td></tr>
         <tr><td style="padding:16px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            ${receiptRow(ICONS.calendar, "Date & time", date)}
-            ${receiptRow(ICONS.clock, "Duration", `${duration} minutes`, true)}
+            ${receiptRow("&#128197;", "Date & time", date)}
+            ${receiptRow("&#128337;", "Duration", `${duration} minutes`, true)}
           </table>
         </td></tr>
       </table>
 
-      ${calloutBlock(ICONS.barChart, "What happens next?", "The meeting link will be sent to you before your session. You can also view your booking details in your dashboard.")}
+      ${calloutBlock("&#9432;", "What happens next?", "The meeting link will be sent to you before your session. You can also view your booking details in your dashboard.")}
       ${ctaButton("View booking details", `${WEB_URL}/consultations`)}
     </td></tr></table>
   `;
@@ -498,7 +491,7 @@ export function mentorshipWelcomeEmail(
   mentorName: string,
 ): EmailParams {
   const body = `
-    ${heroBlock(ICONS.users, "Mentorship Active", "Your 30-Day Guidance membership has started.")}
+    ${heroBlock("&#9733;", "#fdf3e3", "#c4881c", "Mentorship Active", "Your 30-Day Guidance membership has started.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`
@@ -522,7 +515,7 @@ export function mentorshipWelcomeEmail(
 
 export function newMessageEmail(userName: string): EmailParams {
   const body = `
-    ${heroBlock(ICONS.mail, "New Message", "The OppDate team has sent you a message.")}
+    ${heroBlock("&#9993;", "#fdf3e3", "#c4881c", "New Message", "The OppDate team has sent you a message.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`
@@ -552,7 +545,7 @@ export function deadlineReminderEmail(
   const dayWord = daysLeft === 1 ? "day" : "days";
 
   const body = `
-    ${heroBlock(ICONS.bell, urgency ? "Urgent Reminder" : "Deadline Reminder", `${daysLeft} ${dayWord} remaining for ${oppTitle}.`)}
+    ${heroBlock("&#9888;", urgency ? "#fde8e8" : "#fdf3e3", urgency ? "#ef4444" : "#c4881c", urgency ? "Urgent Reminder" : "Deadline Reminder", `${daysLeft} ${dayWord} remaining for ${oppTitle}.`)}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`<p style="margin:0 0 20px;">This is a reminder that the deadline for an opportunity you are tracking is coming up.</p>`)}
@@ -600,7 +593,7 @@ export function savedSearchAlertEmail(
     .join("");
 
   const body = `
-    ${heroBlock(ICONS.search, `${matches.length} New Match${matches.length === 1 ? "" : "es"}`, `New opportunities matching "${searchName}".`)}
+    ${heroBlock("&#128269;", "#fdf3e3", "#c4881c", `${matches.length} New Match${matches.length === 1 ? "" : "es"}`, `New opportunities matching "${searchName}".`)}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`<p style="margin:0 0 20px;">We found new opportunities matching your saved search ${highlight(`"${searchName}"`)}.</p>`)}
@@ -637,7 +630,7 @@ export function securityAlertEmail(
   event: string,
 ): EmailParams {
   const body = `
-    ${heroBlock(ICONS.shield, "Security Notice", "We detected activity on your account.", 40)}
+    ${heroBlock("&#9888;", "#fde8e8", "#ef4444", "Security Notice", "We detected activity on your account.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`<p style="margin:0 0 20px;">We detected the following activity on your OppDate account:</p>`)}
@@ -665,7 +658,7 @@ export function securityAlertEmail(
 
 export function welcomeEmail(userName: string): EmailParams {
   const body = `
-    ${heroBlock(ICONS.checkCircle, "Welcome to OppDate", "Your account is set up and ready to go.")}
+    ${heroBlock("&#10003;", "#22863a", "#ffffff", "Welcome to OppDate", "Your account is set up and ready to go.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`<p style="margin:0 0 20px;">Here is what you can do from your dashboard:</p>`)}
@@ -709,7 +702,7 @@ export function passwordResetEmail(
   expiry: string,
 ): EmailParams {
   const body = `
-    ${heroBlock(ICONS.key, "Password Reset", "A password reset was requested for your account.")}
+    ${heroBlock("&#128273;", "#fdf3e3", "#c4881c", "Password Reset", "A password reset was requested for your account.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`
@@ -736,7 +729,7 @@ export function subscriptionExpiryWarningEmail(
 ): EmailParams {
   const dayWord = daysLeft === 1 ? "day" : "days";
   const body = `
-    ${heroBlock(ICONS.star, "Subscription Expiring", `Your Premium access expires in ${daysLeft} ${dayWord}.`)}
+    ${heroBlock("&#9733;", "#fdf3e3", "#c4881c", "Subscription Expiring", `Your Premium access expires in ${daysLeft} ${dayWord}.`)}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`<p style="margin:0 0 20px;">Your OppDate Premium subscription expires in ${highlight(`${daysLeft} ${dayWord}`)}.</p>`)}
@@ -761,7 +754,7 @@ export function subscriptionExpiryWarningEmail(
 
 export function subscriptionExpiredEmail(userName: string): EmailParams {
   const body = `
-    ${heroBlock(ICONS.star, "Subscription Expired", "Your Premium membership has ended.")}
+    ${heroBlock("&#9733;", "#f5f0eb", "#a09070", "Subscription Expired", "Your Premium membership has ended.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(userName)}
       ${bodyText(`
@@ -785,7 +778,7 @@ export function adminInviteEmail(
   inviteLink: string,
 ): EmailParams {
   const body = `
-    ${heroBlock(ICONS.shield, "Admin Invitation", "You have been invited to the OppDate admin panel.", 40)}
+    ${heroBlock("&#9733;", "#fdf3e3", "#c4881c", "Admin Invitation", "You have been invited to the OppDate admin panel.")}
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
       ${greeting(name)}
       ${bodyText(`

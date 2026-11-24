@@ -179,13 +179,14 @@ export async function applicationRoutes(server: FastifyInstance) {
 
     if (!opportunity) return notFound(reply, 'Opportunity')
 
-    // Prevent duplicate submissions for the same opportunity
+    // Prevent duplicate submissions for the same opportunity (withdrawn/rejected can reapply)
     const [existing] = await db
       .select({ id: schema.applications.id, status: schema.applications.status })
       .from(schema.applications)
       .where(and(
         eq(schema.applications.userId, payload.id),
-        eq(schema.applications.opportunityId, opportunityId)
+        eq(schema.applications.opportunityId, opportunityId),
+        notInArray(schema.applications.status, ['withdrawn', 'rejected'] as any[])
       ))
       .limit(1)
 

@@ -282,6 +282,17 @@ export async function applicationRoutes(server: FastifyInstance) {
 
       if (!application) return notFound(reply, 'Application')
 
+      // Close the message thread when application reaches a terminal state
+      if (['accepted', 'rejected', 'withdrawn'].includes(status)) {
+        db.update(schema.messageThreads)
+          .set({ status: 'closed' as any, updatedAt: new Date() })
+          .where(and(
+            eq(schema.messageThreads.referenceId, id),
+            eq(schema.messageThreads.type, 'oppdate_apply' as any),
+          ))
+          .catch(() => {})
+      }
+
       broadcastToUser(application.userId, {
         type: 'application_status_change',
         applicationId: id,
@@ -346,6 +357,15 @@ export async function applicationRoutes(server: FastifyInstance) {
         .set({ status: 'withdrawn' as any, updatedAt: new Date() })
         .where(eq(schema.applications.id, id))
         .returning()
+
+      // Close the associated message thread
+      db.update(schema.messageThreads)
+        .set({ status: 'closed' as any, updatedAt: new Date() })
+        .where(and(
+          eq(schema.messageThreads.referenceId, id),
+          eq(schema.messageThreads.type, 'oppdate_apply' as any),
+        ))
+        .catch(() => {})
 
       return ok(reply, application, 'Application withdrawn.')
     }

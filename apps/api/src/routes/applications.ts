@@ -131,7 +131,8 @@ export async function applicationRoutes(server: FastifyInstance) {
         eq(schema.applications.opportunityId, opportunityId),
       ))
 
-    const existing = existingApps.find(a => a.status !== 'withdrawn' && a.status !== 'rejected') ?? null
+    const NON_RESUMABLE = ['withdrawn', 'rejected', 'awaiting_payment']
+    const existing = existingApps.find(a => !NON_RESUMABLE.includes(a.status)) ?? null
 
     return ok(reply, {
       eligibilityCriteria: opportunity.eligibilityCriteria,
@@ -189,7 +190,20 @@ export async function applicationRoutes(server: FastifyInstance) {
         eq(schema.applications.opportunityId, opportunityId)
       ))
 
-    const active = existingApps.find(a => a.status !== 'withdrawn' && a.status !== 'rejected')
+    // Auto-withdraw any stale awaiting_payment apps from previous abandoned attempts
+    const stale = existingApps.filter(a => a.status === 'awaiting_payment')
+    if (stale.length > 0) {
+      await db
+        .update(schema.applications)
+        .set({ status: 'withdrawn' as any, updatedAt: new Date() })
+        .where(and(
+          eq(schema.applications.userId, payload.id),
+          eq(schema.applications.opportunityId, opportunityId),
+          eq(schema.applications.status, 'awaiting_payment' as any),
+        ))
+    }
+
+    const active = existingApps.find(a => !['withdrawn', 'rejected', 'awaiting_payment'].includes(a.status))
     if (active) {
       return ok(reply, { applicationId: active.id, status: active.status, resumed: true })
     }

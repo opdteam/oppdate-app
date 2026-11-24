@@ -122,15 +122,16 @@ export async function applicationRoutes(server: FastifyInstance) {
       .values({ opportunityId: opportunity.id, eventType: 'apply_start', userId: payload.id })
       .catch(() => {})
 
-    // Check for an existing application so the frontend can resume at the right step
-    const [existing] = await db
+    // Check for an existing active application so the frontend can resume at the right step
+    const existingApps = await db
       .select({ id: schema.applications.id, status: schema.applications.status })
       .from(schema.applications)
       .where(and(
         eq(schema.applications.userId, payload.id),
         eq(schema.applications.opportunityId, opportunityId),
       ))
-      .limit(1)
+
+    const existing = existingApps.find(a => a.status !== 'withdrawn' && a.status !== 'rejected') ?? null
 
     return ok(reply, {
       eligibilityCriteria: opportunity.eligibilityCriteria,

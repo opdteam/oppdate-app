@@ -130,6 +130,10 @@ export async function paymentRoutes(server: FastifyInstance) {
       .limit(1)
 
     if (existing?.status === 'succeeded') {
+      // Payment was marked succeeded but the application update may have failed.
+      // Re-run the handler to ensure the application status is also updated.
+      // handleCheckoutCompleted is idempotent — it only updates if still awaiting_payment.
+      await handleCheckoutCompleted(server, session)
       return ok(reply, { alreadyProcessed: true })
     }
 
@@ -635,20 +639,39 @@ async function handleCheckoutCompleted(server: FastifyInstance, session: Stripe.
         .limit(1)
 
       if (existingApp?.status === 'awaiting_payment') {
-        await db
-          .update(schema.applications)
-          .set({
-            status: 'payment_confirmed',
-            currentStep: 4,
-            referenceId: appRef,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(schema.applications.id, referenceId),
-              eq(schema.applications.status, 'awaiting_payment')
+        try {
+          await db
+            .update(schema.applications)
+            .set({
+              status: 'payment_confirmed' as any,
+              currentStep: 4,
+              referenceId: appRef,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(schema.applications.id, referenceId),
+                eq(schema.applications.status, 'awaiting_payment' as any)
+              )
             )
-          )
+        } catch (err) {
+          // Unique constraint on referenceId -- retry with a new ref
+          const retryRef = generateApplicationRef(new Date(), instCode)
+          await db
+            .update(schema.applications)
+            .set({
+              status: 'payment_confirmed' as any,
+              currentStep: 4,
+              referenceId: retryRef,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(schema.applications.id, referenceId),
+                eq(schema.applications.status, 'awaiting_payment' as any)
+              )
+            )
+        }
       }
 
       // Create message thread only if one doesn't already exist for this application

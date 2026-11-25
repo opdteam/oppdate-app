@@ -14,5 +14,6 @@ export function generateApplicationRef(
   const y = String(paymentConfirmedAt.getUTCFullYear()).slice(2)
   const m = String(paymentConfirmedAt.getUTCMonth() + 1).padStart(2, '0')
   const d = String(paymentConfirmedAt.getUTCDate()).padStart(2, '0')
-  return `OPP-${y}${m}${d}-${institutionCode.toUpperCase()}`
+  const rand = Math.random().toString(36).slice(2, 5).toUpperCase()
+  return `OPP-${y}${m}${d}-${rand}`
 }

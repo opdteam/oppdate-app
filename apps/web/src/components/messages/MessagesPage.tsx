@@ -869,10 +869,10 @@ function MessageBubble({ msg, showAvatar, showTail, index, compact, threadId }: 
               : (showTail ? '18px 18px 18px 4px' : 18),
             background: mine
               ? (compact ? 'linear-gradient(135deg, #B5530A 0%, #7A2D05 100%)' : 'var(--app-ginger)')
-              : 'rgba(255,255,255,0.94)',
+              : (compact ? '#F5EDE4' : 'rgba(255,255,255,0.94)'),
             backdropFilter: !mine ? 'blur(16px) saturate(140%)' : undefined,
             WebkitBackdropFilter: !mine ? 'blur(16px) saturate(140%)' : undefined,
-            border: mine ? 'none' : '1px solid rgba(216,204,196,0.5)',
+            border: mine ? 'none' : (compact ? '1px solid rgba(196,160,120,0.3)' : '1px solid rgba(216,204,196,0.5)'),
             color: mine ? '#fff' : '#2A1206',
             fontFamily: 'var(--font-sans)', fontSize: compact ? 13 : 14, lineHeight: 1.6,
             whiteSpace: 'pre-wrap',

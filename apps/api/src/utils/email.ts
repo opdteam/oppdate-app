@@ -34,6 +34,8 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 
 const WEB_URL = process.env.WEB_URL || "https://oppdate.com";
 const LOGO_URL = `${WEB_URL}/assets/logo-vars/monogram-transparent.png`;
+const WORDMARK_URL = `${WEB_URL}/assets/logo-vars/wordmark-only.png`;
+const HEADER_BG_URL = `${WEB_URL}/assets/email-header-bg.jpg`;
 
 // HTML/CSS icon builders -- no images, renders in every email client
 function iconCircle(char: string, bg: string, fg: string, size = 48): string {
@@ -44,9 +46,6 @@ function iconCircle(char: string, bg: string, fg: string, size = 48): string {
   </td>`;
 }
 
-function iconSmall(char: string, color = "#a09070"): string {
-  return `<td style="width:22px;vertical-align:middle;text-align:center;font-size:14px;color:${color};font-family:Arial,sans-serif;">${char}</td>`;
-}
 
 function layout(preheader: string, bodyContent: string): string {
   return `<!DOCTYPE html>
@@ -70,15 +69,15 @@ function layout(preheader: string, bodyContent: string): string {
     <td align="center" style="padding:32px 16px;">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);">
 
-        <!-- Header with gradient background -->
+        <!-- Header with aurora background image -->
         <tr>
-          <td style="background:#1a1107;">
+          <td style="background:#1a1107;background-image:url('${HEADER_BG_URL}');background-size:cover;background-position:center;">
             <!--[if gte mso 9]>
             <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:80px;">
-            <v:fill type="gradient" color="#1a1107" color2="#2a1f10" angle="135"/>
+            <v:fill type="frame" src="${HEADER_BG_URL}" color="#1a1107"/>
             <v:textbox inset="0,0,0,0">
             <![endif]-->
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:linear-gradient(135deg, #1a1107 0%, #2a1f10 50%, #1a1107 70%, #3d2a12 100%);">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="padding:28px 40px 24px;">
                   <table cellpadding="0" cellspacing="0" border="0">
@@ -87,13 +86,10 @@ function layout(preheader: string, bodyContent: string): string {
                         <img src="${LOGO_URL}" alt="OppDate" width="44" height="44" style="display:block;border:0;" />
                       </td>
                       <td style="vertical-align:middle;border-left:2px solid rgba(196,136,28,0.4);padding-left:16px;">
-                        <span style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">OppDate</span>
+                        <img src="${WORDMARK_URL}" alt="OppDate" height="28" style="display:block;border:0;height:28px;width:auto;" />
                       </td>
                     </tr>
                   </table>
-                </td>
-                <td style="vertical-align:bottom;text-align:right;padding:0 20px 16px 0;">
-                  <div style="width:200px;height:60px;border-radius:50%;background:radial-gradient(ellipse at 60% 50%, rgba(196,136,28,0.3) 0%, rgba(228,184,106,0.15) 40%, rgba(196,136,28,0.05) 70%, transparent 100%);"></div>
                 </td>
               </tr>
             </table>
@@ -119,7 +115,7 @@ function layout(preheader: string, bodyContent: string): string {
         <!-- Sign-off -->
         <tr>
           <td align="center" style="padding:8px 36px 20px;">
-            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:15px;color:#c4881c;font-style:italic;letter-spacing:0.3px;font-weight:700;">Stay OppDated.</p>
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#c4881c;font-style:italic;letter-spacing:0.3px;font-weight:700;">Stay OppDated.</p>
             <p style="margin:6px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#a09070;">Thank you for being part of the OppDate community.</p>
           </td>
         </tr>
@@ -137,8 +133,8 @@ function layout(preheader: string, bodyContent: string): string {
                     &copy; ${new Date().getFullYear()} OppDate &mdash; All rights reserved.
                   </p>
                 </td>
-                <td width="40" style="vertical-align:middle;text-align:right;">
-                  <img src="${LOGO_URL}" alt="" width="28" height="28" style="display:block;border:0;opacity:0.4;" />
+                <td width="80" style="vertical-align:middle;text-align:right;">
+                  <img src="${LOGO_URL}" alt="" width="64" height="64" style="display:block;border:0;opacity:0.5;" />
                 </td>
               </tr>
             </table>
@@ -226,13 +222,12 @@ function calloutBlock(char: string, heading: string, text: string, color = "#c48
 </table>`;
 }
 
-function receiptRow(char: string, label: string, value: string, isLast = false, mono = false): string {
+function receiptRow(label: string, value: string, isLast = false, mono = false): string {
   const border = isLast ? "" : "border-bottom:1px solid #ede8e1;";
   const valueStyle = mono
     ? "font-family:Consolas,'Courier New',monospace;font-size:12px;color:#6b5840;word-break:break-all;"
     : "font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1a1107;";
   return `<tr>
-    ${iconSmall(char)}
     <td style="padding:12px 8px;${border}font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#a09070;vertical-align:middle;width:110px;">${label}</td>
     <td style="padding:12px 0;${border}${valueStyle}font-weight:600;vertical-align:middle;">${value}</td>
   </tr>`;
@@ -366,12 +361,12 @@ export function paymentConfirmationEmail(
   const gatewayName = gateway ? (GATEWAY_NAMES[gateway] ?? gateway) : null;
 
   const rows = [
-    referenceId ? receiptRow("#", "Reference", referenceId) : "",
-    receiptRow("&#9776;", "Service", purpose),
-    receiptRow("&#9634;", "Amount", `<span style="font-size:16px;">${amount}</span>`),
-    gatewayName ? receiptRow("&#8801;", "Paid via", gatewayName) : "",
-    gatewayPaymentId ? receiptRow("&#8644;", "Transaction ID", gatewayPaymentId, false, true) : "",
-    receiptRow("&#128197;", "Date &amp; Time", displayDate, true),
+    referenceId ? receiptRow("Reference", referenceId) : "",
+    receiptRow("Service", purpose),
+    receiptRow("Amount", `<span style="font-size:16px;">${amount}</span>`),
+    gatewayName ? receiptRow("Paid via", gatewayName) : "",
+    gatewayPaymentId ? receiptRow("Transaction ID", gatewayPaymentId, false, true) : "",
+    receiptRow("Date &amp; Time", displayDate, true),
   ].filter(Boolean).join("");
 
   const body = `
@@ -465,8 +460,8 @@ export function consultationBookingEmail(
         </td></tr>
         <tr><td style="padding:16px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            ${receiptRow("&#128197;", "Date & time", date)}
-            ${receiptRow("&#128337;", "Duration", `${duration} minutes`, true)}
+            ${receiptRow("Date &amp; time", date)}
+            ${receiptRow("Duration", `${duration} minutes`, true)}
           </table>
         </td></tr>
       </table>

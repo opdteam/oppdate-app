@@ -70,6 +70,39 @@ export async function requirePremium(request: FastifyRequest, reply: FastifyRepl
   }
 }
 
+// Require that the admin user has access to a specific module.
+// manager_admin and super_admin bypass the check (full access).
+// staff_admin must have the module listed in their permissions array.
+export function requireModule(module: string) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    await requireAuth(request, reply)
+
+    const payload = request.user as { id: string; role: string; permissions?: string[] }
+
+    if (!['staff_admin', 'manager_admin', 'super_admin'].includes(payload.role)) {
+      return reply.status(403).send({
+        success: false,
+        error: 'You do not have permission to access this resource.',
+        code: 'FORBIDDEN',
+        statusCode: 403,
+      })
+    }
+
+    // manager_admin and super_admin always have full module access
+    if (payload.role !== 'staff_admin') return
+
+    const perms: string[] = Array.isArray(payload.permissions) ? payload.permissions : []
+    if (!perms.includes(module)) {
+      return reply.status(403).send({
+        success: false,
+        error: 'You do not have access to this module.',
+        code: 'MODULE_FORBIDDEN',
+        statusCode: 403,
+      })
+    }
+  }
+}
+
 // Helpers
 export const isAdmin = (role: string) =>
   ['staff_admin', 'manager_admin', 'super_admin'].includes(role)

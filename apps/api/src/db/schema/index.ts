@@ -207,6 +207,7 @@ export const users = pgTable(
     suspendedAt: timestamp('suspended_at'),
     lastLoginAt: timestamp('last_login_at'),
     preferences: jsonb('preferences').default({}), // onboarding answers: { role, interests, goal, country, nationality }
+    permissions: jsonb('permissions').default([]), // admin module access: ['applications','consultations','mentorships','ebooks','opportunities','messages']
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
@@ -526,6 +527,7 @@ export const mentorships = pgTable(
     userId: uuid('user_id').notNull().references(() => users.id),
     mentorProfileId: uuid('mentor_profile_id').references(() => mentorProfiles.id),
     programmeId: uuid('programme_id').references(() => mentorshipProgrammes.id),
+    assignedTo: uuid('assigned_to').references(() => users.id, { onDelete: 'set null' }),
     status: mentorshipStatusEnum('status').notNull().default('pending'),
     threadId: uuid('thread_id').references(() => messageThreads.id),
     paymentId: uuid('payment_id'),
@@ -682,6 +684,7 @@ export const consultationSessions = pgTable(
     priceUsd: integer('price_usd').notNull(),               // in cents
     active: boolean('active').notNull().default(true),
     groupKey: varchar('group_key', { length: 100 }),        // groups duration variants of the same offering
+    schedule: jsonb('schedule'),                             // weekly availability template: { days: number[], startTime: "HH:MM", endTime: "HH:MM", slotInterval: number }
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },

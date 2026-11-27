@@ -5,6 +5,8 @@ import { eq, and, gte, lte, ilike, or, sql, desc, asc } from 'drizzle-orm'
 import { ok, created, notFound, badRequest } from '../utils/response'
 import { requireRole, requireAuth } from '../middleware/auth'
 import { triggerEligibilityGeneration } from './eligibility'
+import { tavilySearch } from '../utils/search'
+import Anthropic from '@anthropic-ai/sdk'
 
 
 const listQuerySchema = z.object({
@@ -34,7 +36,7 @@ const createOpportunitySchema = z.object({
   country: z.string().min(1).max(100),
   region: z.string().min(1).max(100),
   summary: z.string().min(1),
-  description: z.string().min(1),
+  description: z.string().default(''),
   whoItsFor: z.string().min(1),
   whatIsOffered: z.string().min(1),
   eligibilityCriteria: z.array(z.any()).default([]),
@@ -57,6 +59,51 @@ const createOpportunitySchema = z.object({
   complianceCategory: z.enum(['A', 'B']).nullable().optional(),
   institutionCode: z.string().max(3).nullable().optional(),
 })
+
+async function generateDescription(oppId: string, title: string, institution: string, country: string) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return
+
+  try {
+    const webResults = await tavilySearch(`${title} ${institution} ${country} official programme details`, 4)
+    const webContext = webResults.length > 0
+      ? webResults.map((r, i) => `[${i + 1}] ${r.title} (${r.url})\n${r.content.slice(0, 500)}`).join('\n\n')
+      : ''
+
+    const anthropic = new Anthropic({ apiKey })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 20_000)
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: `Write a concise 2-3 paragraph description/about section for this opportunity listing on an international opportunities platform.
+
+Title: ${title}
+Institution: ${institution}
+Country: ${country}
+${webContext ? `\nWeb research:\n${webContext}` : ''}
+
+Rules:
+- Write in third person, informative tone.
+- Focus on what the opportunity is, who it is for, and what it offers.
+- Do not use emojis, decorative formatting, or marketing language.
+- Do not include application deadlines or fee information.
+- Return ONLY the description text, no headings or labels.` }],
+    }, { signal: controller.signal as any })
+    clearTimeout(timeout)
+
+    const text = response.content.find(b => b.type === 'text')?.text?.trim()
+    if (text) {
+      await db
+        .update(schema.opportunities)
+        .set({ description: text, updatedAt: new Date() })
+        .where(and(eq(schema.opportunities.id, oppId), eq(schema.opportunities.description, '')))
+    }
+  } catch (err) {
+    console.log('description generation failed: ' + (err instanceof Error ? err.message : String(err)))
+  }
+}
 
 export async function opportunityRoutes(server: FastifyInstance) {
   // GET /api/v1/opportunities
@@ -259,6 +306,11 @@ export async function opportunityRoutes(server: FastifyInstance) {
       // Trigger AI eligibility question generation in background (non-blocking)
       triggerEligibilityGeneration(opportunity.id).catch(() => {})
 
+      // Auto-generate description from web research if not provided
+      if (!body.data.description?.trim()) {
+        generateDescription(opportunity.id, body.data.title, body.data.institution, body.data.country).catch(() => {})
+      }
+
       return created(reply, opportunity, 'Opportunity created successfully.')
     }
   )
@@ -289,6 +341,11 @@ export async function opportunityRoutes(server: FastifyInstance) {
 
       // Re-generate eligibility questions in background when listing content changes
       triggerEligibilityGeneration(id).catch(() => {})
+
+      // Auto-generate description if cleared or still empty
+      if (rest.description !== undefined && !rest.description.trim()) {
+        generateDescription(id, updated.title, updated.institution, updated.country).catch(() => {})
+      }
 
       return ok(reply, updated, 'Opportunity updated.')
     }

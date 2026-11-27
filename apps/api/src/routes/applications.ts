@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm'
 import { requireAuth, requireRole } from '../middleware/auth'
 import { broadcastToUser } from './messaging'
 import { enqueueEmail, enqueueNotification } from '../jobs/queue'
-import { applicationStatusEmail } from '../utils/email'
+import { applicationStatusEmail, withdrawalPrePaymentEmail, withdrawalPostPaymentEmail } from '../utils/email'
 
 // Valid status transitions -- maps current status to allowed next statuses
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -354,7 +354,13 @@ export async function applicationRoutes(server: FastifyInstance) {
       const payload = request.user as { id: string }
 
       const [current] = await db
-        .select({ id: schema.applications.id, status: schema.applications.status, userId: schema.applications.userId })
+        .select({
+          id: schema.applications.id,
+          status: schema.applications.status,
+          userId: schema.applications.userId,
+          opportunityId: schema.applications.opportunityId,
+          referenceId: schema.applications.referenceId,
+        })
         .from(schema.applications)
         .where(and(eq(schema.applications.id, id), eq(schema.applications.userId, payload.id)))
         .limit(1)
@@ -365,6 +371,8 @@ export async function applicationRoutes(server: FastifyInstance) {
       if (terminal.includes(current.status)) {
         return badRequest(reply, 'This application cannot be withdrawn.')
       }
+
+      const previousStatus = current.status
 
       const [application] = await db
         .update(schema.applications)
@@ -380,6 +388,25 @@ export async function applicationRoutes(server: FastifyInstance) {
           eq(schema.messageThreads.type, 'oppdate_apply' as any),
         ))
         .catch(() => {})
+
+      // Send withdrawal notification email
+      const postPaymentStatuses = ['payment_confirmed', 'submitted', 'under_review', 'decision_pending']
+      const isPaid = postPaymentStatuses.includes(previousStatus)
+      try {
+        const [[user], [opp]] = await Promise.all([
+          db.select({ name: schema.users.name, email: schema.users.email })
+            .from(schema.users).where(eq(schema.users.id, payload.id)).limit(1),
+          db.select({ title: schema.opportunities.title })
+            .from(schema.opportunities).where(eq(schema.opportunities.id, current.opportunityId)).limit(1),
+        ])
+        if (user && opp) {
+          const email = isPaid
+            ? withdrawalPostPaymentEmail(user.name, opp.title, current.referenceId || application.referenceId || 'N/A')
+            : withdrawalPrePaymentEmail(user.name, opp.title)
+          email.to = user.email
+          await enqueueEmail(email)
+        }
+      } catch { /* non-blocking */ }
 
       return ok(reply, application, 'Application withdrawn.')
     }

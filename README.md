@@ -548,6 +548,84 @@ Added `/legal/terms` and `/legal/privacy` as Next.js App Router pages.
 
 ---
 
+## Admin RBAC and Module Permissions
+
+All changes in this section were applied on 2026-11-27.
+
+### Module permissions
+
+Staff admin accounts now have per-module access control. A `permissions` JSONB column on the `users` table stores an array of module names. Available modules: `applications`, `consultations`, `mentorships`, `ebooks`, `opportunities`, `messages`.
+
+- **staff_admin**: only sees nav items and can only hit API endpoints for modules listed in their `permissions` array.
+- **manager_admin** and **super_admin**: bypass all module checks (full access).
+
+### Middleware
+
+`requireModule(module)` replaces `requireRole(...)` on all module-scoped admin endpoints. It checks:
+1. User is an admin role
+2. If `staff_admin`, the module is in their `permissions` array
+3. Manager and super admin pass through
+
+### Staff application scoping
+
+Staff admins on the applications module only see applications assigned to them (`assignedTo = admin.id`). Stage count badges are also scoped.
+
+### Frontend
+
+- Admin sidebar filters nav items by permissions for `staff_admin`
+- Admin login stores `permissions` in localStorage and includes it in JWT
+- Admin users page: `ModuleChips` component for viewing/editing permissions inline, permissions checkboxes in invite modal
+
+### Mentorship staff assignment
+
+"Assign Mentor" now assigns team members (staff/manager/super admin) instead of mentor profiles. The modal fetches from `/admin/team-members` and shows a selectable list. The `mentorships` table has a new `assigned_to` column.
+
+### Withdrawal emails
+
+Pre-payment and post-payment withdrawal notification emails added. Wired into the withdraw handler in `applications.ts`.
+
+### Consultation slot schedule
+
+Replaced the manual per-day, per-time slot picker with a schedule-based system:
+
+- **Schedule config**: Set available days (Mon-Sat default), start/end time (12:00-18:00 default), and interval per session
+- **Bulk generation**: Pick a date range and generate all slots automatically. Deduplicates against existing slots
+- **One-off additions**: Calendar view still supports adding individual slots for exceptions
+- **Slot review**: Collapsible list of all scheduled slots with inline delete
+
+New API endpoint: `POST /admin/consultation-sessions/:id/generate-slots` accepts `{ from, to, days, startTime, endTime, slotInterval }` and bulk-inserts up to 2000 slots.
+
+### Database migration 0027
+
+`0027_rbac_permissions_mentorship_assign.sql` adds:
+- `users.permissions` (JSONB, default `[]`)
+- `mentorships.assigned_to` (UUID FK to users, ON DELETE SET NULL)
+- `consultation_sessions.schedule` (JSONB)
+
+### New and changed API endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| PATCH | /admin/users/:id/permissions | Update staff admin module permissions |
+| POST | /admin/consultation-sessions/:id/generate-slots | Bulk generate slots from schedule template |
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/src/db/schema/index.ts` | Added `permissions` on users, `assignedTo` on mentorships, `schedule` on consultationSessions |
+| `apps/api/src/middleware/auth.ts` | Added `requireModule()` middleware |
+| `apps/api/src/routes/admin.ts` | Module permissions endpoints, staff scoping, mentorship assignee join, slot generation |
+| `apps/api/src/routes/applications.ts` | Withdrawal email wiring |
+| `apps/api/src/utils/email.ts` | `withdrawalPrePaymentEmail()` and `withdrawalPostPaymentEmail()` templates |
+| `apps/web/src/components/admin/AdminAuthPage.tsx` | Store permissions on login |
+| `apps/web/src/components/admin/AdminLayout.tsx` | Nav filtering by module permissions |
+| `apps/web/src/components/admin/AdminUsersPage.tsx` | ModuleChips, permissions editor, invite modal permissions |
+| `apps/web/src/components/admin/AdminMentorshipPage.tsx` | Team member assignment modal, assignee display |
+| `apps/web/src/components/admin/AdminConsultationsPage.tsx` | ScheduleEditor replaces SlotsManager |
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -680,6 +758,8 @@ All endpoints are prefixed with `/api/v1`
 | POST   | /admin/payments/:id/refund              | Mark a payment as refunded                                                   |
 | GET    | /admin/team-members                     | List team members for assignee picker                                        |
 | PATCH  | /admin/applications/:id/assign          | Assign application to a team member                                          |
+| PATCH  | /admin/users/:id/permissions            | Update staff admin module permissions                                        |
+| POST   | /admin/consultation-sessions/:id/generate-slots | Bulk generate slots from schedule template                            |
 
 ## Environment Variables
 

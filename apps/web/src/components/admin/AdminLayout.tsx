@@ -48,12 +48,22 @@ import { clearAdminToken } from '@/lib/token'
 const NAV_ROLE_GATES: Record<string, string[]> = {
   payments:       ['manager_admin', 'super_admin'],
   users:          ['manager_admin', 'super_admin'],
-  ebooks:         ['manager_admin', 'super_admin'],
   analytics:      ['manager_admin', 'super_admin'],
   'guide-sessions': ['manager_admin', 'super_admin'],
   'saved-searches': ['manager_admin', 'super_admin'],
   avatars:        ['manager_admin', 'super_admin'],
   settings:       ['super_admin'],
+}
+
+// Nav items that map to a module permission. staff_admin must have the module
+// in their permissions array to see it. manager_admin and super_admin bypass.
+const NAV_MODULE_MAP: Record<string, string> = {
+  opportunities: 'opportunities',
+  applications: 'applications',
+  messages: 'messages',
+  consultations: 'consultations',
+  mentorship: 'mentorships',
+  ebooks: 'ebooks',
 }
 
 const NAV_ITEMS = [
@@ -326,20 +336,21 @@ interface AdminIdentity {
   name: string
   email: string
   role: string
+  permissions: string[]
   initials: string
 }
 
 function getAdminIdentity(): AdminIdentity {
-  if (typeof window === 'undefined') return { name: '', email: '', role: '', initials: '' }
+  if (typeof window === 'undefined') return { name: '', email: '', role: '', permissions: [], initials: '' }
   try {
     const raw = localStorage.getItem('oppdate_admin')
-    if (!raw) return { name: '', email: '', role: '', initials: '' }
-    const parsed = JSON.parse(raw) as { name?: string; email?: string; role?: string }
+    if (!raw) return { name: '', email: '', role: '', permissions: [], initials: '' }
+    const parsed = JSON.parse(raw) as { name?: string; email?: string; role?: string; permissions?: string[] }
     const name = parsed.name || parsed.email || ''
     const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-    return { name, email: parsed.email || '', role: parsed.role || '', initials }
+    return { name, email: parsed.email || '', role: parsed.role || '', permissions: Array.isArray(parsed.permissions) ? parsed.permissions : [], initials }
   } catch {
-    return { name: '', email: '', role: '', initials: '' }
+    return { name: '', email: '', role: '', permissions: [], initials: '' }
   }
 }
 
@@ -522,7 +533,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [railHovered, setRailHovered] = useState(false)
   const [activePanelItem, setActivePanelItem] = useState('Platform overview')
   const [accountOpen, setAccountOpen] = useState(false)
-  const [admin, setAdmin] = useState<AdminIdentity>({ name: '', email: '', role: '', initials: '' })
+  const [admin, setAdmin] = useState<AdminIdentity>({ name: '', email: '', role: '', permissions: [], initials: '' })
   const observerRef = useRef<IntersectionObserver | null>(null)
   const accountRef = useRef<HTMLButtonElement>(null)
 
@@ -676,8 +687,13 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <div className="adm-rail-nav">
             {NAV_ITEMS.filter(item => {
               const gate = NAV_ROLE_GATES[item.id]
-              if (!gate) return true
-              return gate.includes(admin.role)
+              if (gate && !gate.includes(admin.role)) return false
+              // For staff_admin, check module permissions
+              if (admin.role === 'staff_admin') {
+                const mod = NAV_MODULE_MAP[item.id]
+                if (mod && !admin.permissions.includes(mod)) return false
+              }
+              return true
             }).map(item => (
               <Link
                 key={item.id}

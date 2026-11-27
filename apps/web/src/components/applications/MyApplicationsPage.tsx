@@ -24,11 +24,13 @@ function useIsMobile(bp = 960) {
 
 const STAGES = [
   'Payment Confirmed',
-  'Application Assigned',
-  'Documents Under Review',
-  'Documents Verified',
+  'Application Received',
+  'Verifying Documents',
+  'Enhancing Application Materials',
+  'Pre-Application Setup',
+  'Application In Progress',
   'Preparing Submission',
-  'Submitted',
+  'Application Submitted',
 ]
 
 const STATUS_LABEL: Record<string, string> = {

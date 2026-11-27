@@ -60,6 +60,7 @@ interface Opportunity {
   title: string
   tagline: string
   type: string
+  tags: string[]
   eligibility: string[]
   daysLeft: number | null
   closesLabel: string
@@ -108,6 +109,7 @@ function listItemToOpportunity(item: OpportunityListItem): Opportunity {
     title:            item.title,
     tagline:          item.summary ?? '',
     type:             item.type,
+    tags:             item.tags ?? [],
     eligibility:      item.eligibility ?? [],
     daysLeft:         item.closesIn ?? null,
     closesLabel:      item.closes ?? '',
@@ -180,6 +182,7 @@ function detailRowToOpportunity(row: ApiDetailRow): Opportunity {
     title:            row.title,
     tagline:          row.summary,
     type:             row.type,
+    tags:             row.tags ?? [],
     eligibility:      [],
     daysLeft:         daysLeft >= 0 ? daysLeft : null,
     closesLabel,
@@ -248,7 +251,7 @@ function OpportunityCard({
 
   const isExpired = data.daysLeft === null
   const deadlineLabel = !isExpired ? `${data.daysLeft} days left` : 'Deadline passed'
-  const isFunded = data.award === 'Fully funded'
+  const isFunded = data.award === 'Fully funded' || data.tags.includes('Fully funded')
   const hasAmount = data.award && !isFunded
 
   const baseShadow = '0 2px 14px rgba(90,40,15,0.10), 0 1px 3px rgba(90,40,15,0.06)'
@@ -339,6 +342,36 @@ function OpportunityCard({
         </div>
         <EligibilityRow items={data.eligibility} />
       </div>
+
+      {/* Row 3b: tags + OppDate Apply badge */}
+      {(data.tags.length > 0 || data.applyForMe) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+          {data.tags.slice(0, 3).map(t => (
+            <span key={t} style={{
+              display: 'inline-flex', alignItems: 'center',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(122,45,5,0.06)', border: '1px solid rgba(122,45,5,0.15)', color: '#7A2D05',
+            }}>{t}</span>
+          ))}
+          {data.tags.length > 3 && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(122,45,5,0.06)', border: '1px solid rgba(122,45,5,0.15)', color: '#7A2D05',
+            }}>+{data.tags.length - 3} more</span>
+          )}
+          {data.applyForMe && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(14,116,144,0.08)', border: '1px solid rgba(14,116,144,0.2)', color: '#0E7490',
+            }}>+ OppDate Apply</span>
+          )}
+        </div>
+      )}
 
       {/* Row 4: deadline + close date + award */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 }}>
@@ -1209,7 +1242,7 @@ function DetailDrawer({
         {/* Who it is for */}
         <div>
           <SectionLabel>Who it is for</SectionLabel>
-          <div className="opp-rte-content" dangerouslySetInnerHTML={{ __html: data.forWho }} />
+          <div className="opp-rte-content opp-rte-checks" dangerouslySetInnerHTML={{ __html: data.forWho }} />
         </div>
 
         {/* What is offered */}

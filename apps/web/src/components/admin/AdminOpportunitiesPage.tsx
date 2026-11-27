@@ -83,6 +83,7 @@ interface FormData {
   docs: DocRow[]
   dates: KeyDate[]
   funding: string[]
+  audience: string[]
   aiQuestions: { q: string; required: boolean }[]
   internalNote: string
   institutionLogoUrl: string
@@ -90,6 +91,7 @@ interface FormData {
 
 const TYPES = ['Scholarship', 'Internship', 'Job', 'Fellowship', 'Training', 'Research Grant']
 const FUND_OPTIONS = ['Fully funded', 'Partially funded', 'Stipend', 'Travel included', 'Accommodation', 'Health insurance']
+const AUDIENCE_OPTIONS = ['Undergraduate', 'Postgraduate', 'Doctoral', 'Mid-career', 'Early-career', 'Senior', 'All levels']
 const FORMAT_OPTIONS = ['PDF', 'DOCX', 'JPG', 'PNG']
 const TZ_OPTIONS = ['GMT', 'EST', 'WAT', 'CET', 'CST', 'PST', 'SAST', 'WET']
 const STATUS_LABEL: Record<OppStatus, string> = { published: 'Published', draft: 'Draft', archived: 'Archived', expired: 'Expired' }
@@ -249,6 +251,7 @@ function apiToFormData(o: ApiOpportunity): FormData {
       : [{ type: '', required: true, formats: ['PDF'], creatable: false as const }],
     dates: [],
     funding: Array.isArray(o.tags) ? o.tags.filter(t => FUND_OPTIONS.includes(t)) : [],
+    audience: Array.isArray(o.tags) ? o.tags.filter(t => AUDIENCE_OPTIONS.includes(t)) : [],
     aiQuestions: [],
     internalNote: '',
     institutionLogoUrl: o.institutionLogoUrl || '',
@@ -1746,7 +1749,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
     editing: false, title: '', inst: '', country: '', type: '', summary: '', about: '', whoItIsFor: '', benefit: '',
     cat: '', code: '', oppFee: '', instFee: '0.00', vip: false, applyDisabledNote: '', status: 'draft', featured: false,
     criteria: [{ question: '', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }] }], docs: [{ type: '', required: true, formats: ['PDF'], creatable: false as const }],
-    dates: [], funding: [], aiQuestions: [], internalNote: '', institutionLogoUrl: '',
+    dates: [], funding: [], audience: [], aiQuestions: [], internalNote: '', institutionLogoUrl: '',
   }
 
   const [form, setForm] = useState<FormData>(initial)
@@ -2117,6 +2120,17 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
                   <span key={f} className={`adm-chip${form.funding.includes(f) ? ' on' : ''}`}
                     onClick={() => update('funding', form.funding.includes(f) ? form.funding.filter(x => x !== f) : [...form.funding, f])}>
                     {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="adm-field">
+              <label className="adm-field-label">Target audience</label>
+              <div className="adm-chips">
+                {AUDIENCE_OPTIONS.map(a => (
+                  <span key={a} className={`adm-chip${form.audience.includes(a) ? ' on' : ''}`}
+                    onClick={() => update('audience', form.audience.includes(a) ? form.audience.filter(x => x !== a) : [...form.audience, a])}>
+                    {a}
                   </span>
                 ))}
               </div>
@@ -2895,7 +2909,7 @@ export function AdminOpportunitiesPage() {
       country: formData.country,
       region: formData.country,
       summary: formData.summary || formData.title,
-      description: formData.about || formData.summary || formData.title,
+      description: formData.about || '',
       whoItsFor: formData.whoItIsFor || 'Open to all',
       whatIsOffered: formData.benefit || formData.funding.join(', ') || 'See listing for details',
       eligibilityCriteria: formData.criteria
@@ -2914,7 +2928,7 @@ export function AdminOpportunitiesPage() {
       complianceCategory: formData.cat || null,
       featured: formData.featured,
       status: kind,
-      tags: [],
+      tags: [...formData.funding, ...formData.audience],
       ...(formData.institutionLogoUrl.trim() && { institutionLogoUrl: formData.institutionLogoUrl.trim() }),
     }
     saveMutation.mutate(

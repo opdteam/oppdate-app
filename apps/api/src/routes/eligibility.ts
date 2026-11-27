@@ -104,11 +104,14 @@ Return a JSON array in this exact shape:
 ]`
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 20_000)
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
-    })
+    }, { signal: controller.signal as any })
+    clearTimeout(timeout)
 
     const text = response.content.find(b => b.type === 'text')?.text ?? ''
     const match = text.match(/\[[\s\S]*\]/)

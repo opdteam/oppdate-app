@@ -3,9 +3,9 @@ import { z } from 'zod'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
 import { db, schema } from '../db'
-import { eq, and, desc, asc, sql, ilike, or, gte, lte, lt, notInArray, gt } from 'drizzle-orm'
+import { eq, and, desc, asc, sql, ilike, or, gte, lte, lt, notInArray, gt, aliasedTable } from 'drizzle-orm'
 import { ok, created, badRequest, notFound, forbidden, paginated, unauthorised } from '../utils/response'
-import { requireRole } from '../middleware/auth'
+import { requireRole, requireModule } from '../middleware/auth'
 import { setAdminAuthCookies, clearAdminAuthCookies } from '../utils/cookies'
 import argon2 from 'argon2'
 import crypto from 'crypto'
@@ -66,12 +66,13 @@ export async function adminRoutes(server: FastifyInstance) {
 
     await db.update(schema.users).set({ lastLoginAt: new Date() }).where(eq(schema.users.id, user.id))
 
-    const accessToken = server.jwt.sign({ id: user.id, email: user.email, role: user.role }, { expiresIn: '8h' })
+    const permissions: string[] = Array.isArray(user.permissions) ? user.permissions as string[] : []
+    const accessToken = server.jwt.sign({ id: user.id, email: user.email, role: user.role, permissions }, { expiresIn: '8h' })
 
     setAdminAuthCookies(reply, accessToken)
 
     return ok(reply, {
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl, permissions },
       accessToken,
     }, 'Logged in.')
   })
@@ -281,7 +282,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/opportunities -- all statuses + app counts
   server.get(
     '/opportunities',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('opportunities')] },
     async (request, reply) => {
       const query = request.query as { status?: string; type?: string; search?: string; page?: string; limit?: string }
       const page = Math.max(Number(query.page) || 1, 1)
@@ -384,7 +385,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/opportunities/:id/metrics?period=7d|30d|90d
   server.get(
     '/opportunities/:id/metrics',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('opportunities')] },
     async (request, reply) => {
       const { id } = request.params as { id: string }
       const { period = '30d' } = request.query as { period?: string }
@@ -540,6 +541,7 @@ export async function adminRoutes(server: FastifyInstance) {
           isEmailVerified: schema.users.isEmailVerified,
           suspendedAt: schema.users.suspendedAt,
           lastLoginAt: schema.users.lastLoginAt,
+          permissions: schema.users.permissions,
           createdAt: schema.users.createdAt,
           applicationCount: sql<number>`(SELECT COUNT(*)::int FROM applications WHERE user_id = users.id)`,
           totalSpentCents: sql<number>`(SELECT COALESCE(SUM(amount_usd),0)::int FROM payments WHERE user_id = users.id AND status = 'succeeded')`,
@@ -779,6 +781,47 @@ export async function adminRoutes(server: FastifyInstance) {
     }
   )
 
+  // PATCH /api/v1/admin/users/:id/permissions -- update an admin's module permissions
+  server.patch(
+    '/users/:id/permissions',
+    { preHandler: [requireRole('super_admin', 'manager_admin')] },
+    async (request, reply) => {
+      const admin = request.user as { id: string; role: string }
+      const { id } = request.params as { id: string }
+      const body = z
+        .object({
+          permissions: z.array(z.enum(['applications', 'consultations', 'mentorships', 'ebooks', 'opportunities', 'messages'])),
+        })
+        .safeParse(request.body)
+      if (!body.success) return badRequest(reply, body.error.errors[0].message)
+
+      const [user] = await db
+        .select({ id: schema.users.id, role: schema.users.role })
+        .from(schema.users)
+        .where(eq(schema.users.id, id))
+        .limit(1)
+
+      if (!user) return notFound(reply, 'User')
+      if (!['staff_admin', 'manager_admin', 'super_admin'].includes(user.role)) {
+        return badRequest(reply, 'This user is not an admin.')
+      }
+      // Only super_admin can change another super_admin or manager_admin permissions
+      if (user.role !== 'staff_admin' && admin.role !== 'super_admin') {
+        return badRequest(reply, 'You can only update permissions for staff members.')
+      }
+
+      const [updated] = await db
+        .update(schema.users)
+        .set({ permissions: body.data.permissions, updatedAt: new Date() })
+        .where(eq(schema.users.id, id))
+        .returning()
+
+      await auditLog(admin.id, 'admin.permissions_update', 'user', id, { permissions: body.data.permissions }, request.ip)
+
+      return ok(reply, { id: updated.id, permissions: updated.permissions }, 'Permissions updated.')
+    }
+  )
+
   // ─── ADMIN ACCOUNTS ─────────────────────────────────────────────────────────
 
   // POST /api/v1/admin/invite -- invite new admin (founder only)
@@ -787,11 +830,13 @@ export async function adminRoutes(server: FastifyInstance) {
     { preHandler: [requireRole('super_admin')] },
     async (request, reply) => {
       const admin = request.user as { id: string }
+      const VALID_MODULES = ['applications', 'consultations', 'mentorships', 'ebooks', 'opportunities', 'messages']
       const body = z
         .object({
           email: z.string().email(),
           name: z.string().min(2),
           role: z.enum(['staff_admin', 'manager_admin', 'super_admin']),
+          permissions: z.array(z.enum(['applications', 'consultations', 'mentorships', 'ebooks', 'opportunities', 'messages'])).default([]),
         })
         .safeParse(request.body)
 
@@ -815,6 +860,7 @@ export async function adminRoutes(server: FastifyInstance) {
           email: body.data.email.toLowerCase(),
           name: body.data.name,
           role: body.data.role,
+          permissions: body.data.permissions,
         })
         .returning()
 
@@ -970,14 +1016,21 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/applications -- all applications with user + opportunity joins
   server.get(
     '/applications',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('applications')] },
     async (request, reply) => {
+      const admin = request.user as { id: string; role: string }
       const query = request.query as { status?: string; page?: string; limit?: string; search?: string; id?: string; sort?: string; opportunityId?: string; assignedTo?: string }
       const page = Math.max(Number(query.page) || 1, 1)
       const limit = Math.min(Number(query.limit) || 20, 100)
       const offset = (page - 1) * limit
 
       const conditions = []
+
+      // Staff only see applications assigned to them
+      if (admin.role === 'staff_admin') {
+        conditions.push(eq(schema.applications.assignedTo, admin.id))
+      }
+
       if (query.id) {
         conditions.push(eq(schema.applications.id, query.id))
       }
@@ -987,10 +1040,13 @@ export async function adminRoutes(server: FastifyInstance) {
       if (query.opportunityId) {
         conditions.push(eq(schema.applications.opportunityId, query.opportunityId))
       }
-      if (query.assignedTo === 'unassigned') {
-        conditions.push(sql`${schema.applications.assignedTo} IS NULL`)
-      } else if (query.assignedTo) {
-        conditions.push(eq(schema.applications.assignedTo, query.assignedTo))
+      // Assignee filter only applies for managers/super (staff already scoped)
+      if (admin.role !== 'staff_admin') {
+        if (query.assignedTo === 'unassigned') {
+          conditions.push(sql`${schema.applications.assignedTo} IS NULL`)
+        } else if (query.assignedTo) {
+          conditions.push(eq(schema.applications.assignedTo, query.assignedTo))
+        }
       }
       if (query.search) {
         const s = `%${query.search}%`
@@ -1052,14 +1108,17 @@ export async function adminRoutes(server: FastifyInstance) {
         .leftJoin(schema.users, eq(schema.applications.userId, schema.users.id))
         .where(whereClause)
 
-      // Always count across all statuses (ignoring the current status filter) for tab badges
-      const statusCountRows = await db
+      // Count across all statuses for tab badges (scoped for staff)
+      const stageCountQuery = db
         .select({
           status: schema.applications.status,
           count: sql<number>`count(*)::int`,
         })
         .from(schema.applications)
-        .groupBy(schema.applications.status)
+      if (admin.role === 'staff_admin') {
+        stageCountQuery.where(eq(schema.applications.assignedTo, admin.id))
+      }
+      const statusCountRows = await stageCountQuery.groupBy(schema.applications.status)
 
       const stageCounts: Record<string, number> = {}
       for (const row of statusCountRows) {
@@ -1083,7 +1142,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // PATCH /api/v1/admin/applications/:id/status -- advance/update application status
   server.patch(
     '/applications/:id/status',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('applications')] },
     async (request, reply) => {
       const { id } = request.params as { id: string }
       const body = z.object({ status: z.string(), adminNotes: z.string().optional() }).safeParse(request.body)
@@ -1117,7 +1176,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // PATCH /api/v1/admin/applications/:id/notes -- save admin notes
   server.patch(
     '/applications/:id/notes',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('applications')] },
     async (request, reply) => {
       const { id } = request.params as { id: string }
       const body = z.object({ adminNotes: z.string() }).safeParse(request.body)
@@ -1173,6 +1232,7 @@ export async function adminRoutes(server: FastifyInstance) {
           email: schema.users.email,
           role: schema.users.role,
           avatarUrl: schema.users.avatarUrl,
+          permissions: schema.users.permissions,
         })
         .from(schema.users)
         .where(sql`${schema.users.role} IN ('staff_admin', 'manager_admin', 'super_admin')`)
@@ -1184,7 +1244,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/applications/:id/documents -- fetch document slots with file metadata
   server.get(
     '/applications/:id/documents',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('applications')] },
     async (request, reply) => {
       const { id } = request.params as { id: string }
 
@@ -1562,7 +1622,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/messages -- all message threads with last message preview
   server.get(
     '/messages',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('messages')] },
     async (request, reply) => {
       const query = request.query as { status?: string; type?: string; assignedTo?: string; page?: string; limit?: string }
       const page = Math.max(Number(query.page) || 1, 1)
@@ -1668,7 +1728,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/messages/:threadId -- thread detail with all messages
   server.get(
     '/messages/:threadId',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('messages')] },
     async (request, reply) => {
       const { threadId } = request.params as { threadId: string }
 
@@ -1710,7 +1770,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // POST /api/v1/admin/messages/:threadId/reply -- send a team message
   server.post(
     '/messages/:threadId/reply',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('messages')] },
     async (request, reply) => {
       const admin = request.user as { id: string }
       const { threadId } = request.params as { threadId: string }
@@ -1761,7 +1821,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // PATCH /api/v1/admin/messages/:threadId -- update thread (status, assignedTo)
   server.patch(
     '/messages/:threadId',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('messages')] },
     async (request, reply) => {
       const admin = request.user as { id: string }
       const { threadId } = request.params as { threadId: string }
@@ -1793,7 +1853,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/ebooks -- all ebooks with purchase stats
   server.get(
     '/ebooks',
-    { preHandler: [requireRole('manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('ebooks')] },
     async (request, reply) => {
       const query = request.query as { status?: string; page?: string; limit?: string }
       const page = Math.max(Number(query.page) || 1, 1)
@@ -1853,7 +1913,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // POST /api/v1/admin/ebooks -- create ebook
   server.post(
     '/ebooks',
-    { preHandler: [requireRole('manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('ebooks')] },
     async (request, reply) => {
       const admin = request.user as { id: string }
       const body = z
@@ -1890,7 +1950,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // PATCH /api/v1/admin/ebooks/:id -- update ebook
   server.patch(
     '/ebooks/:id',
-    { preHandler: [requireRole('manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('ebooks')] },
     async (request, reply) => {
       const admin = request.user as { id: string }
       const { id } = request.params as { id: string }
@@ -1952,7 +2012,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/mentorships -- all enrolments
   server.get(
     '/mentorships',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('mentorships')] },
     async (request, reply) => {
       const query = request.query as { status?: string; page?: string; limit?: string }
       const page = Math.max(Number(query.page) || 1, 1)
@@ -1963,6 +2023,7 @@ export async function adminRoutes(server: FastifyInstance) {
       if (query.status) conditions.push(eq(schema.mentorships.status, query.status as any))
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
+      const assigneeTable = aliasedTable(schema.users, 'assignee')
       const rows = await db
         .select({
           id: schema.mentorships.id,
@@ -1980,11 +2041,15 @@ export async function adminRoutes(server: FastifyInstance) {
           programmeId: schema.mentorships.programmeId,
           programmeTitle: schema.mentorshipProgrammes.title,
           programmeMonthlyPrice: schema.mentorshipProgrammes.monthlyPriceUsd,
+          assignedTo: schema.mentorships.assignedTo,
+          assigneeName: assigneeTable.name,
+          assigneeEmail: assigneeTable.email,
         })
         .from(schema.mentorships)
         .leftJoin(schema.users, eq(schema.mentorships.userId, schema.users.id))
         .leftJoin(schema.mentorProfiles, eq(schema.mentorships.mentorProfileId, schema.mentorProfiles.id))
         .leftJoin(schema.mentorshipProgrammes, eq(schema.mentorships.programmeId, schema.mentorshipProgrammes.id))
+        .leftJoin(assigneeTable, eq(schema.mentorships.assignedTo, assigneeTable.id))
         .where(whereClause)
         .orderBy(desc(schema.mentorships.createdAt))
         .limit(limit)
@@ -2002,7 +2067,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // PATCH /api/v1/admin/mentorships/:id -- update enrolment (status, assign mentor)
   server.patch(
     '/mentorships/:id',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('mentorships')] },
     async (request, reply) => {
       const admin = request.user as { id: string }
       const { id } = request.params as { id: string }
@@ -2010,6 +2075,7 @@ export async function adminRoutes(server: FastifyInstance) {
         .object({
           status: z.enum(['pending', 'active', 'completed', 'cancelled']).optional(),
           mentorProfileId: z.string().uuid().nullable().optional(),
+          assignedTo: z.string().uuid().nullable().optional(),
           startedAt: z.string().datetime().nullable().optional(),
           completedAt: z.string().datetime().nullable().optional(),
         })
@@ -2017,7 +2083,18 @@ export async function adminRoutes(server: FastifyInstance) {
 
       if (!body.success) return badRequest(reply, body.error.errors[0].message)
 
-      // If assigning a mentor, verify it exists and is published
+      // If assigning a team member, verify they are an admin
+      if (body.data.assignedTo) {
+        const [assignee] = await db
+          .select({ id: schema.users.id, role: schema.users.role })
+          .from(schema.users)
+          .where(eq(schema.users.id, body.data.assignedTo))
+        if (!assignee || !['staff_admin', 'manager_admin', 'super_admin'].includes(assignee.role)) {
+          return badRequest(reply, 'Assignee must be a team member.')
+        }
+      }
+
+      // If assigning a mentor profile, verify it exists and is published
       if (body.data.mentorProfileId) {
         const [mentor] = await db
           .select()
@@ -2028,6 +2105,7 @@ export async function adminRoutes(server: FastifyInstance) {
 
       const updates: Record<string, unknown> = { updatedAt: new Date() }
       if (body.data.status !== undefined) updates.status = body.data.status
+      if (body.data.assignedTo !== undefined) updates.assignedTo = body.data.assignedTo
       if (body.data.mentorProfileId !== undefined) updates.mentorProfileId = body.data.mentorProfileId
       if (body.data.startedAt !== undefined) updates.startedAt = body.data.startedAt ? new Date(body.data.startedAt) : null
       if (body.data.completedAt !== undefined) updates.completedAt = body.data.completedAt ? new Date(body.data.completedAt) : null
@@ -2220,7 +2298,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // GET /api/v1/admin/consultations -- all bookings
   server.get(
     '/consultations',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('consultations')] },
     async (request, reply) => {
       const query = request.query as { status?: string; page?: string; limit?: string }
       const page = Math.max(Number(query.page) || 1, 1)
@@ -2271,7 +2349,7 @@ export async function adminRoutes(server: FastifyInstance) {
   // PATCH /api/v1/admin/consultations/:id -- update booking (status, link, notes)
   server.patch(
     '/consultations/:id',
-    { preHandler: [requireRole('staff_admin', 'manager_admin', 'super_admin')] },
+    { preHandler: [requireModule('consultations')] },
     async (request, reply) => {
       const admin = request.user as { id: string }
       const { id } = request.params as { id: string }
@@ -2350,6 +2428,12 @@ export async function adminRoutes(server: FastifyInstance) {
         priceUsd: z.number().int().positive(),
         active: z.boolean().optional().default(true),
         groupKey: z.string().max(100).optional().nullable(),
+        schedule: z.object({
+          days: z.array(z.number().min(0).max(6)),
+          startTime: z.string().regex(/^\d{2}:\d{2}$/),
+          endTime: z.string().regex(/^\d{2}:\d{2}$/),
+          slotInterval: z.number().int().min(15).max(240),
+        }).nullable().optional(),
       }).safeParse(request.body)
 
       if (!body.success) return badRequest(reply, body.error.errors[0].message)
@@ -2363,6 +2447,7 @@ export async function adminRoutes(server: FastifyInstance) {
           priceUsd: body.data.priceUsd,
           active: body.data.active,
           groupKey: body.data.groupKey ?? null,
+          schedule: body.data.schedule ?? null,
         })
         .returning()
 
@@ -2386,6 +2471,12 @@ export async function adminRoutes(server: FastifyInstance) {
         priceUsd: z.number().int().positive().optional(),
         active: z.boolean().optional(),
         groupKey: z.string().max(100).nullable().optional(),
+        schedule: z.object({
+          days: z.array(z.number().min(0).max(6)),
+          startTime: z.string().regex(/^\d{2}:\d{2}$/),
+          endTime: z.string().regex(/^\d{2}:\d{2}$/),
+          slotInterval: z.number().int().min(15).max(240),
+        }).nullable().optional(),
       }).safeParse(request.body)
 
       if (!body.success) return badRequest(reply, body.error.errors[0].message)
@@ -2494,6 +2585,81 @@ export async function adminRoutes(server: FastifyInstance) {
       await auditLog(admin.id, 'consultation_slots.added', 'consultation_session', id, { count: toInsert.length }, request.ip)
 
       return created(reply, { inserted: toInsert.length }, `${toInsert.length} slot${toInsert.length !== 1 ? 's' : ''} added.`)
+    }
+  )
+
+  // POST /api/v1/admin/consultation-sessions/:id/generate-slots -- bulk generate from schedule
+  server.post(
+    '/consultation-sessions/:id/generate-slots',
+    { preHandler: [requireRole('manager_admin', 'super_admin')] },
+    async (request, reply) => {
+      const admin = request.user as { id: string }
+      const { id } = request.params as { id: string }
+      const body = z.object({
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        days: z.array(z.number().min(0).max(6)).min(1),
+        startTime: z.string().regex(/^\d{2}:\d{2}$/),
+        endTime: z.string().regex(/^\d{2}:\d{2}$/),
+        slotInterval: z.number().int().min(15).max(240),
+      }).safeParse(request.body)
+
+      if (!body.success) return badRequest(reply, body.error.errors[0].message)
+
+      const [session] = await db
+        .select()
+        .from(schema.consultationSessions)
+        .where(eq(schema.consultationSessions.id, id))
+        .limit(1)
+      if (!session) return notFound(reply, 'Session')
+
+      const { from, to, days, startTime, endTime, slotInterval } = body.data
+      const [startH, startM] = startTime.split(':').map(Number)
+      const [endH, endM] = endTime.split(':').map(Number)
+      const startMinutes = startH * 60 + startM
+      const endMinutes = endH * 60 + endM
+      if (endMinutes <= startMinutes) return badRequest(reply, 'End time must be after start time.')
+
+      const daysSet = new Set(days)
+      const candidates: Date[] = []
+      const cursor = new Date(`${from}T00:00:00`)
+      const limit = new Date(`${to}T23:59:59`)
+      const now = new Date()
+
+      while (cursor <= limit) {
+        if (daysSet.has(cursor.getDay())) {
+          for (let min = startMinutes; min < endMinutes; min += slotInterval) {
+            const slot = new Date(cursor)
+            slot.setHours(Math.floor(min / 60), min % 60, 0, 0)
+            if (slot > now) candidates.push(new Date(slot))
+          }
+        }
+        cursor.setDate(cursor.getDate() + 1)
+      }
+
+      if (candidates.length === 0) return ok(reply, { inserted: 0 }, 'No future slots to generate in that range.')
+      if (candidates.length > 2000) return badRequest(reply, 'Too many slots. Reduce the date range or widen the interval.')
+
+      const existing = await db
+        .select({ startsAt: schema.consultationSlots.startsAt })
+        .from(schema.consultationSlots)
+        .where(eq(schema.consultationSlots.sessionId, id))
+      const existingTimes = new Set(existing.map(s => s.startsAt.toISOString()))
+
+      const toInsert = candidates.filter(dt => !existingTimes.has(dt.toISOString()))
+      if (toInsert.length === 0) return ok(reply, { inserted: 0 }, 'All slots already exist.')
+
+      // Insert in batches of 500
+      for (let i = 0; i < toInsert.length; i += 500) {
+        const batch = toInsert.slice(i, i + 500)
+        await db.insert(schema.consultationSlots).values(
+          batch.map(startsAt => ({ sessionId: id, startsAt }))
+        )
+      }
+
+      await auditLog(admin.id, 'consultation_slots.generated', 'consultation_session', id, { count: toInsert.length, from, to }, request.ip)
+
+      return created(reply, { inserted: toInsert.length }, `${toInsert.length} slot${toInsert.length !== 1 ? 's' : ''} generated.`)
     }
   )
 

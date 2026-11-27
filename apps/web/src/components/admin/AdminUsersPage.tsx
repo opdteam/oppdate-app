@@ -118,6 +118,7 @@ interface PlatformUser {
 interface AdminUser {
   id: string; name: string; email: string; initials: string
   role: 'founder' | 'manager' | 'staff'; lastActive: string
+  permissions: string[]
 }
 
 // Field mapping helpers
@@ -172,6 +173,7 @@ function toAdminUser(u: ApiAdminUser): AdminUser {
     initials: deriveInitials(u.name),
     role: mapDbRoleToDisplay(u.role),
     lastActive: u.lastLoginAt ? formatDate(u.lastLoginAt) : '-',
+    permissions: Array.isArray((u as any).permissions) ? (u as any).permissions : [],
   }
 }
 
@@ -891,6 +893,68 @@ function PermissionMatrixModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+const MODULE_OPTIONS = [
+  { value: 'applications', label: 'Applications' },
+  { value: 'consultations', label: 'Consultations' },
+  { value: 'mentorships', label: 'Mentorships' },
+  { value: 'ebooks', label: 'eBooks' },
+  { value: 'opportunities', label: 'Opportunities' },
+  { value: 'messages', label: 'Messages' },
+]
+
+function ModuleChips({ permissions, editable, onChange }: {
+  permissions: string[]
+  editable: boolean
+  onChange?: (perms: string[]) => void
+}) {
+  if (!editable) {
+    if (permissions.length === 0) return <span style={{ fontFamily: 'sans-serif', fontSize: 12, color: '#9A6A3A', fontStyle: 'italic' }}>None</span>
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {permissions.map(p => {
+          const label = MODULE_OPTIONS.find(m => m.value === p)?.label || p
+          return (
+            <span key={p} style={{
+              display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 6,
+              fontFamily: 'sans-serif', fontSize: 11, fontWeight: 600, letterSpacing: '0.02em',
+              background: 'rgba(181,83,10,0.08)', border: '1px solid rgba(181,83,10,0.18)', color: 'var(--adm-primary, #B5530A)',
+            }}>{label}</span>
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+      {MODULE_OPTIONS.map(m => {
+        const active = permissions.includes(m.value)
+        return (
+          <button
+            key={m.value}
+            type="button"
+            onClick={() => {
+              if (!onChange) return
+              onChange(active ? permissions.filter(p => p !== m.value) : [...permissions, m.value])
+            }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, height: 26, padding: '0 10px', borderRadius: 6,
+              fontFamily: 'sans-serif', fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+              border: active ? '1.5px solid var(--adm-primary, #B5530A)' : '1.5px solid rgba(42,18,6,0.12)',
+              background: active ? 'rgba(181,83,10,0.1)' : 'transparent',
+              color: active ? 'var(--adm-primary, #B5530A)' : '#7A4A1A',
+              transition: 'all 120ms ease',
+            }}
+          >
+            {active && <Check size={12} />}
+            {m.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // Admin Accounts Tab
 function AdminTab() {
   const queryClient = useQueryClient()
@@ -900,7 +964,11 @@ function AdminTab() {
   const [inviteRole, setInviteRole] = useState('manager')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName, setInviteName] = useState('')
+  const [invitePermissions, setInvitePermissions] = useState<string[]>([])
   const [permModalOpen, setPermModalOpen] = useState(false)
+  const [editingPermsId, setEditingPermsId] = useState<string | null>(null)
+  const [editingPermsValue, setEditingPermsValue] = useState<string[]>([])
+  const [permsSaving, setPermsSaving] = useState(false)
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [editingRoleValue, setEditingRoleValue] = useState<'manager' | 'staff'>('staff')
   const [roleErrorId, setRoleErrorId] = useState<string | null>(null)
@@ -932,13 +1000,23 @@ function AdminTab() {
   }, [apiResponse, revokedIds])
 
   const inviteMutation = useMutation({
-    mutationFn: ({ email, name, role }: { email: string; name: string; role: string }) =>
-      api.post('/api/v1/admin/invite', { email, name, role }),
+    mutationFn: ({ email, name, role, permissions }: { email: string; name: string; role: string; permissions: string[] }) =>
+      api.post('/api/v1/admin/invite', { email, name, role, permissions }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'admins'] })
       setInviteSent(true)
     },
   })
+
+  async function savePermissions(userId: string, permissions: string[]) {
+    setPermsSaving(true)
+    try {
+      await api.patch(`/api/v1/admin/users/${userId}/permissions`, { permissions })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'admins'] })
+      setEditingPermsId(null)
+    } catch { /* silent */ }
+    setPermsSaving(false)
+  }
 
   const roleChangeMutation = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) =>
@@ -1028,7 +1106,7 @@ function AdminTab() {
 
       <div className="adm-usr-tablewrap">
         <table className="adm-usr-table adm-usr-admintable">
-          <thead><tr><th>Admin</th><th>Role</th><th>Last active</th><th></th></tr></thead>
+          <thead><tr><th>Admin</th><th>Role</th><th>Module access</th><th>Last active</th><th></th></tr></thead>
           <tbody>
             {admins.map(a => {
               const isSelf = a.id === selfId
@@ -1098,6 +1176,46 @@ function AdminTab() {
                       </div>
                     )}
                   </td>
+                  <td>
+                    {isFounder || a.role === 'manager' ? (
+                      <span style={{ fontFamily: 'sans-serif', fontSize: 12, color: '#9A6A3A', fontStyle: 'italic' }}>Full access</span>
+                    ) : editingPermsId === a.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <ModuleChips permissions={editingPermsValue} editable onChange={setEditingPermsValue} />
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={() => savePermissions(a.id, editingPermsValue)}
+                            disabled={permsSaving}
+                            style={{ height: 26, padding: '0 10px', borderRadius: 6, border: 'none', background: '#C17F3A', color: '#fff', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            {permsSaving ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => setEditingPermsId(null)}
+                            style={{ height: 26, padding: '0 8px', borderRadius: 6, border: '1px solid rgba(42,18,6,0.12)', background: 'transparent', color: '#7A4A1A', fontSize: 11.5, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <ModuleChips permissions={a.permissions} editable={false} />
+                        {isSuperAdmin && !isSelf && a.role === 'staff' && (
+                          <button
+                            onClick={() => { setEditingPermsId(a.id); setEditingPermsValue([...a.permissions]) }}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 3, height: 22, padding: '0 8px', borderRadius: 6,
+                              border: '1px solid rgba(42,18,6,0.12)', background: 'transparent', color: '#9A6A3A',
+                              fontFamily: 'sans-serif', fontSize: 11, cursor: 'pointer', flexShrink: 0,
+                            }}
+                          >
+                            <Edit3 size={10} />Edit
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td><span className="mono">{a.lastActive}</span></td>
                   <td>
                     {isFounder ? null : (
@@ -1150,9 +1268,16 @@ function AdminTab() {
                 </div>
                 <div className="adm-usr-confirmfield">
                   <label>Role</label>
-                  <CustomSelect value={inviteRole} onChange={setInviteRole}
+                  <CustomSelect value={inviteRole} onChange={v => { setInviteRole(v); if (v !== 'staff') setInvitePermissions([]) }}
                     options={[{ value: 'manager', label: 'Manager' }, { value: 'staff', label: 'Staff' }]} />
                 </div>
+                {inviteRole === 'staff' && (
+                  <div className="adm-usr-confirmfield">
+                    <label>Module access</label>
+                    <p style={{ margin: '0 0 8px', fontFamily: 'sans-serif', fontSize: 12, color: '#9A6A3A' }}>Select which modules this staff member can access.</p>
+                    <ModuleChips permissions={invitePermissions} editable onChange={setInvitePermissions} />
+                  </div>
+                )}
                 {inviteMutation.isError && (
                   <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', color: '#F87171', fontSize: 13 }}>
                     {(inviteMutation.error as any)?.response?.data?.message || 'Invite failed. Please try again.'}
@@ -1163,7 +1288,7 @@ function AdminTab() {
                   <button
                     className="adm-usr-btn adm-usr-btn-primary"
                     disabled={!inviteEmail || !inviteName || inviteMutation.isPending}
-                    onClick={() => inviteMutation.mutate({ email: inviteEmail, name: inviteName, role: mapDisplayRoleToDb(inviteRole) })}
+                    onClick={() => inviteMutation.mutate({ email: inviteEmail, name: inviteName, role: mapDisplayRoleToDb(inviteRole), permissions: inviteRole === 'staff' ? invitePermissions : [] })}
                   >
                     <Mail size={14} />{inviteMutation.isPending ? 'Sending...' : 'Send invite'}
                   </button>
@@ -1703,6 +1828,7 @@ function MobileAdminTab() {
   const [inviteRole, setInviteRole] = useState('manager')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName, setInviteName] = useState('')
+  const [invitePermissions, setInvitePermissions] = useState<string[]>([])
   const [modal, setModal] = useState<'revoke' | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<AdminUser | null>(null)
 
@@ -1718,8 +1844,8 @@ function MobileAdminTab() {
   }, [apiResponse])
 
   const inviteMutation = useMutation({
-    mutationFn: ({ email, name, role }: { email: string; name: string; role: string }) =>
-      api.post('/api/v1/admin/invite', { email, name, role }),
+    mutationFn: ({ email, name, role, permissions }: { email: string; name: string; role: string; permissions: string[] }) =>
+      api.post('/api/v1/admin/invite', { email, name, role, permissions }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'admins'] })
       setInviteSent(true)
@@ -1747,9 +1873,16 @@ function MobileAdminTab() {
               </div>
               <div className="adm-usr-confirmfield">
                 <label>Role</label>
-                <CustomSelect value={inviteRole} onChange={setInviteRole}
+                <CustomSelect value={inviteRole} onChange={v => { setInviteRole(v); if (v !== 'staff') setInvitePermissions([]) }}
                   options={[{ value: 'manager', label: 'Manager' }, { value: 'staff', label: 'Staff' }]} />
               </div>
+              {inviteRole === 'staff' && (
+                <div className="adm-usr-confirmfield">
+                  <label>Module access</label>
+                  <p style={{ margin: '0 0 8px', fontFamily: 'sans-serif', fontSize: 12, color: '#9A6A3A' }}>Select which modules this staff member can access.</p>
+                  <ModuleChips permissions={invitePermissions} editable onChange={setInvitePermissions} />
+                </div>
+              )}
               {inviteMutation.isError && (
                 <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', color: '#F87171', fontSize: 13 }}>
                   {(inviteMutation.error as any)?.response?.data?.message || 'Invite failed. Please try again.'}
@@ -1761,7 +1894,7 @@ function MobileAdminTab() {
                   className="adm-usr-btn adm-usr-btn-primary"
                   style={{ flex: '1 1 auto', justifyContent: 'center', minHeight: 44 }}
                   disabled={!inviteEmail || !inviteName || inviteMutation.isPending}
-                  onClick={() => inviteMutation.mutate({ email: inviteEmail, name: inviteName, role: mapDisplayRoleToDb(inviteRole) })}
+                  onClick={() => inviteMutation.mutate({ email: inviteEmail, name: inviteName, role: mapDisplayRoleToDb(inviteRole), permissions: inviteRole === 'staff' ? invitePermissions : [] })}
                 >
                   <Mail size={14} />{inviteMutation.isPending ? 'Sending...' : 'Send invite'}
                 </button>

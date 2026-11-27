@@ -180,6 +180,7 @@ function LoginView({ onNavigate }: { onNavigate: (v: View) => void }) {
         name: user.name || user.email,
         email: user.email,
         role: user.role,
+        permissions: Array.isArray(user.permissions) ? user.permissions : [],
         avatarUrl: user.avatarUrl ?? null,
       }))
       window.location.href = (redirect && redirect !== '/admin') ? redirect : '/admin/dashboard'

@@ -65,7 +65,8 @@ type ApiMentorship = {
   createdAt: string; updatedAt: string; userId: string; userName: string | null
   userEmail: string | null; mentorProfileId: string | null; mentorName: string | null
   mentorSpecialty: string | null; programmeId: string | null; programmeTitle: string | null
-  programmeMonthlyPrice: number | null
+  programmeMonthlyPrice: number | null; assignedTo: string | null
+  assigneeName: string | null; assigneeEmail: string | null
 }
 
 type ApiMentorProfile = {
@@ -93,8 +94,8 @@ function mentorshipToUi(a: ApiMentorship): Programme {
     id: a.id,
     user: name,
     userEmail: a.userEmail || '',
-    mentorId: a.mentorProfileId || '',
-    mentorName: a.mentorName || 'Unassigned',
+    mentorId: a.assignedTo || a.mentorProfileId || '',
+    mentorName: a.assigneeName || a.mentorName || 'Unassigned',
     title: a.programmeTitle || 'Mentorship',
     durationWeeks: 0,
     start: startDate,
@@ -545,18 +546,25 @@ function CatalogForm({ catalogues, catalogId, onBack }: { catalogues: MpCatalog[
    ============================================================ */
 type ModalKind = 'complete' | 'cancel' | 'assign' | 'deleteprog' | null
 
-function MentorshipModal({ programmes, pending, catalogues, kind, dataId, onClose, onConfirm }: {
+type TeamMember = { id: string; name: string; email: string; role: string; avatarUrl: string | null }
+
+function MentorshipModal({ programmes, pending, catalogues, kind, dataId, onClose, onConfirm, onAssign }: {
   programmes: Programme[]; pending: PendingMatch[]; catalogues: MpCatalog[];
   kind: ModalKind; dataId: string | null; onClose: () => void; onConfirm: () => void
+  onAssign?: (mentorshipId: string, assignedTo: string) => void
 }) {
-  const [selectedMentor, setSelectedMentor] = useState<string | null>(null)
+  const [selectedMember, setSelectedMember] = useState<string | null>(null)
+
+  const { data: teamData } = useQuery<{ data: TeamMember[] }>({
+    queryKey: ['admin-team-members'],
+    queryFn: () => api.get('/api/v1/admin/team-members').then(r => r.data),
+    enabled: kind === 'assign',
+  })
+  const teamMembers = teamData?.data ?? []
 
   useEffect(() => {
-    if (kind === 'assign' && dataId) {
-      const pm = pending.find(x => x.id === dataId)
-      const prog = !pm ? programmes.find(x => x.id === dataId) : null
-      const currentId = pm ? pm.programmeId : prog?.mentorId || null
-      setSelectedMentor(currentId)
+    if (kind === 'assign') {
+      setSelectedMember(null)
     }
   }, [kind, dataId])
 
@@ -591,32 +599,41 @@ function MentorshipModal({ programmes, pending, catalogues, kind, dataId, onClos
   } else if (kind === 'assign') {
     const pm = pending.find(x => x.id === dataId)
     const prog = !pm ? programmes.find(x => x.id === dataId) : null
-    const currentId = pm ? pm.programmeId : prog?.mentorId
-    const relevantMentors = catalogues.filter(m => m.id === currentId || m.status === 'published')
+    const userName = pm ? pm.user : prog?.user || 'this enrollee'
 
     content = (
       <>
         <div className="adm-ment-modalico"><Handshake size={28} /></div>
-        <h3>{pm ? 'Assign mentor' : 'Reassign mentor'}</h3>
-        <p>{pm ? `${pm.user} enrolled in ${pm.programmeTitle}.` : `${prog?.user} will be notified by message thread and email once the mentor is reassigned.`}</p>
+        <h3>Assign team member</h3>
+        <p>Select a team member to handle {userName}&apos;s mentorship sessions.</p>
         <div className="adm-ment-mentorlist">
-          {relevantMentors.map(m => (
-            <div
-              key={m.id}
-              className={`adm-ment-mentoropt${selectedMentor === m.id ? ' selected' : ''}`}
-              onClick={() => setSelectedMentor(m.id)}
-            >
-              <div className="adm-ment-cnavatar" style={{ width: 32, height: 32 }}><Users size={16} /></div>
-              <div>
-                <span className="adm-ment-moname">{m.mentorName}</span>
-                {m.id === currentId && <span className="adm-ment-motag">Primary for this programme</span>}
+          {teamMembers.length === 0 && (
+            <p style={{ fontFamily: 'sans-serif', fontSize: 13, color: 'var(--adm-t-low)', textAlign: 'center', padding: '12px 0' }}>No team members found.</p>
+          )}
+          {teamMembers.map(m => {
+            const initials = m.name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
+            return (
+              <div
+                key={m.id}
+                className={`adm-ment-mentoropt${selectedMember === m.id ? ' selected' : ''}`}
+                onClick={() => setSelectedMember(m.id)}
+              >
+                <div className="adm-ment-cnavatar" style={{ width: 32, height: 32 }}>{initials || <Users size={16} />}</div>
+                <div>
+                  <span className="adm-ment-moname">{m.name}</span>
+                  <span style={{ fontFamily: 'sans-serif', fontSize: 11, color: 'var(--adm-t-low)', marginLeft: 6 }}>{m.role === 'super_admin' ? 'Super Admin' : m.role === 'manager_admin' ? 'Manager' : 'Staff'}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         <div className="adm-ment-modalactions">
           <button className="adm-btn adm-btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="adm-btn adm-ment-btn-outline" onClick={onConfirm}><Check size={14} /> {pm ? 'Confirm assignment' : 'Confirm reassignment'}</button>
+          <button
+            className="adm-btn adm-ment-btn-outline"
+            disabled={!selectedMember}
+            onClick={() => { if (dataId && selectedMember && onAssign) { onAssign(dataId, selectedMember); onClose() } }}
+          ><Check size={14} /> Confirm assignment</button>
         </div>
       </>
     )
@@ -1119,6 +1136,12 @@ export function AdminMentorshipPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-mentorships'] }),
   })
 
+  const assignMutation = useMutation({
+    mutationFn: ({ id, assignedTo }: { id: string; assignedTo: string }) =>
+      api.patch(`/api/v1/admin/mentorships/${id}`, { assignedTo }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-mentorships'] }),
+  })
+
   const openModal = useCallback((kind: ModalKind, id: string | null = null) => { setModal(kind); setModalData(id) }, [])
   const closeModal = useCallback(() => { setModal(null); setModalData(null) }, [])
 
@@ -1151,7 +1174,7 @@ export function AdminMentorshipPage() {
           onCancel={(id) => openModal('cancel', id)}
           onReassign={(id) => openModal('assign', id)}
         />
-        <MentorshipModal programmes={programmes} pending={pending} catalogues={catalogues} kind={modal} dataId={modalData} onClose={closeModal} onConfirm={handleConfirm} />
+        <MentorshipModal programmes={programmes} pending={pending} catalogues={catalogues} kind={modal} dataId={modalData} onClose={closeModal} onConfirm={handleConfirm} onAssign={(mid, uid) => assignMutation.mutate({ id: mid, assignedTo: uid })} />
       </div>
     )
   }
@@ -1222,7 +1245,7 @@ export function AdminMentorshipPage() {
         <button className="adm-fab" onClick={() => { setEditingMp(null); setMpView('form') }}><Plus size={26} /></button>
       )}
 
-      <MentorshipModal programmes={programmes} pending={pending} catalogues={catalogues} kind={modal} dataId={modalData} onClose={closeModal} onConfirm={handleConfirm} />
+      <MentorshipModal programmes={programmes} pending={pending} catalogues={catalogues} kind={modal} dataId={modalData} onClose={closeModal} onConfirm={handleConfirm} onAssign={(mid, uid) => assignMutation.mutate({ id: mid, assignedTo: uid })} />
     </div>
   )
 }

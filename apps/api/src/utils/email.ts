@@ -789,3 +789,60 @@ export function adminInviteEmail(
     html: layout("Your OppDate admin invitation", body),
   };
 }
+
+export function withdrawalPrePaymentEmail(
+  userName: string,
+  oppTitle: string,
+): EmailParams {
+  const body = `
+    ${heroBlock("&#9888;", "#fdf3e3", "#c4881c", "Application Withdrawn", `Your application for ${oppTitle} has been withdrawn.`)}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
+      ${greeting(userName)}
+      ${bodyText(`
+        <p style="margin:0 0 16px;">We noticed you withdrew your application for ${highlight(oppTitle)} before completing the payment step.</p>
+        <p style="margin:0 0 16px;">If you changed your mind or ran into an issue during the process, we would love to hear about it. Your feedback helps us improve the experience for everyone.</p>
+        <p style="margin:0 0 16px;">If you are still interested in this opportunity, you can start a new application any time before the deadline closes.</p>
+      `)}
+      ${calloutBlock("&#9432;", "Need help?", `If you experienced a technical issue or have questions about the application process, reach out to us at <a href="mailto:${process.env.SUPPORT_EMAIL || "support@oppdate.app"}" style="color:#c4881c;text-decoration:none;font-weight:600;">${process.env.SUPPORT_EMAIL || "support@oppdate.app"}</a>.`)}
+      ${ctaButton("Browse opportunities", `${WEB_URL}/opportunities`)}
+    </td></tr></table>
+  `;
+
+  return {
+    to: "",
+    subject: `Application withdrawn: ${oppTitle}`,
+    html: layout(
+      `Your application for ${oppTitle} has been withdrawn.`,
+      body,
+    ),
+  };
+}
+
+export function withdrawalPostPaymentEmail(
+  userName: string,
+  oppTitle: string,
+  referenceId: string,
+): EmailParams {
+  const body = `
+    ${heroBlock("&#9888;", "#fde8e8", "#ef4444", "Application Withdrawn", `Your application ${referenceId} has been withdrawn.`)}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
+      ${greeting(userName)}
+      ${bodyText(`
+        <p style="margin:0 0 16px;">We are sorry to see you withdraw your application for ${highlight(oppTitle)} (${highlight(referenceId)}).</p>
+        <p style="margin:0 0 16px;">If there is anything we could have done differently, or if you have any concerns about the process, we would really appreciate hearing from you. Your experience matters to us.</p>
+        <p style="margin:0 0 16px;">If this was done in error, please contact our team as soon as possible and we will do our best to assist you.</p>
+      `)}
+      ${calloutBlock("&#9432;", "What about my payment?", `If you have questions about your payment or need to request a review, reach out to our team at <a href="mailto:${process.env.SUPPORT_EMAIL || "support@oppdate.app"}" style="color:#c4881c;text-decoration:none;font-weight:600;">${process.env.SUPPORT_EMAIL || "support@oppdate.app"}</a>.`)}
+      ${ctaButton("Explore more opportunities", `${WEB_URL}/opportunities`)}
+    </td></tr></table>
+  `;
+
+  return {
+    to: "",
+    subject: `[${referenceId}] Application withdrawn: ${oppTitle}`,
+    html: layout(
+      `Your application ${referenceId} for ${oppTitle} has been withdrawn.`,
+      body,
+    ),
+  };
+}

@@ -150,38 +150,44 @@ function OpportunityBody({ opp }) {
   return (
     <div className="wrap" style={{ padding: '0 var(--container-pad) 40px' }}>
       {/* Info grid - pulled up */}
-      <div style={{ marginTop: -32, marginBottom: 48, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--line)', borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }} className="opp-info-grid">
-        <InfoCell label="Deadline">
-          {deadlineLabel}
-          {days != null && daysColor && (
-            <div style={{ display: 'inline-flex', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 'var(--radius-pill)', marginTop: 6, background: daysColor.bg, color: daysColor.color }}>
-              {days} day{days !== 1 ? 's' : ''} left
-            </div>
-          )}
-        </InfoCell>
-
-        {opp.awardValueUsd != null && opp.awardValueUsd > 0 ? (
-          <InfoCell label="Award value">
-            ${(opp.awardValueUsd / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+      {(() => {
+        const cells = [];
+        cells.push(
+          <InfoCell key="deadline" label="Deadline">
+            {deadlineLabel}
+            {days != null && daysColor && (
+              <div style={{ display: 'inline-flex', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 'var(--radius-pill)', marginTop: 6, background: daysColor.bg, color: daysColor.color }}>
+                {days} day{days !== 1 ? 's' : ''} left
+              </div>
+            )}
           </InfoCell>
-        ) : (
-          <InfoCell label="Region">{opp.region}</InfoCell>
-        )}
-
-        <InfoCell label={opp.fieldOfStudy ? 'Field' : 'Country'}>
-          {opp.fieldOfStudy || opp.country}
-        </InfoCell>
-
-        <InfoCell label={opp.eligibilityLevel ? 'Level' : 'Type'}>
-          {opp.eligibilityLevel ? formatType(opp.eligibilityLevel) : typeLabel}
-        </InfoCell>
-      </div>
+        );
+        cells.push(<InfoCell key="type" label="Type">{typeLabel}</InfoCell>);
+        if (opp.awardValueUsd != null && opp.awardValueUsd > 0) {
+          cells.push(<InfoCell key="award" label="Award value">${(opp.awardValueUsd / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}</InfoCell>);
+        }
+        if (opp.fieldOfStudy) {
+          cells.push(<InfoCell key="field" label="Field">{opp.fieldOfStudy}</InfoCell>);
+        }
+        if (opp.eligibilityLevel) {
+          cells.push(<InfoCell key="level" label="Level">{formatType(opp.eligibilityLevel)}</InfoCell>);
+        }
+        if (opp.region && cells.length < 4) {
+          cells.push(<InfoCell key="region" label="Region">{opp.region}</InfoCell>);
+        }
+        const count = cells.length;
+        return (
+          <div style={{ marginTop: -32, marginBottom: 48, display: 'grid', gridTemplateColumns: 'repeat(' + count + ', 1fr)', gap: 1, background: 'var(--line)', borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }} className="opp-info-grid">
+            {cells}
+          </div>
+        );
+      })()}
 
       {/* Description */}
       {opp.description && opp.description.trim() && (
         <div data-reveal style={{ marginBottom: 48 }}>
           <SectionLabel>About this opportunity</SectionLabel>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-size)', lineHeight: 'var(--type-body-leading)', color: 'var(--text-body)' }} dangerouslySetInnerHTML={{ __html: opp.description }} />
+          <div className="opp-content" dangerouslySetInnerHTML={{ __html: opp.description }} />
         </div>
       )}
 
@@ -189,7 +195,7 @@ function OpportunityBody({ opp }) {
       {opp.whoItsFor && (
         <div data-reveal style={{ marginBottom: 48, paddingTop: 40, borderTop: '1px solid var(--line)' }}>
           <SectionLabel>Who it is for</SectionLabel>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-size)', lineHeight: 'var(--type-body-leading)', color: 'var(--text-body)' }} dangerouslySetInnerHTML={{ __html: opp.whoItsFor }} />
+          <div className="opp-content" dangerouslySetInnerHTML={{ __html: opp.whoItsFor }} />
         </div>
       )}
 
@@ -197,7 +203,7 @@ function OpportunityBody({ opp }) {
       {opp.whatIsOffered && (
         <div data-reveal style={{ marginBottom: 48, paddingTop: 40, borderTop: '1px solid var(--line)' }}>
           <SectionLabel>What is offered</SectionLabel>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--type-body-size)', lineHeight: 'var(--type-body-leading)', color: 'var(--text-body)' }} dangerouslySetInnerHTML={{ __html: opp.whatIsOffered }} />
+          <div className="opp-content" dangerouslySetInnerHTML={{ __html: opp.whatIsOffered }} />
         </div>
       )}
 

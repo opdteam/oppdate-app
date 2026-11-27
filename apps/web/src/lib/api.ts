@@ -73,9 +73,15 @@ api.interceptors.response.use(
       path.startsWith('/admin/forgot') ||
       path.startsWith('/admin/reset') ||
       path.startsWith('/admin/accept-invite')
+    const isPublicPage =
+      path.startsWith('/opportunity/') ||
+      path.startsWith('/services') ||
+      path.startsWith('/pricing') ||
+      path.startsWith('/legal') ||
+      path === '/'
 
-    // Never retry on auth pages or the refresh endpoint itself
-    if (isAuthPage || originalConfig.url?.includes('/auth/refresh')) {
+    // Never retry on auth/public pages or the refresh endpoint itself
+    if (isAuthPage || isPublicPage || originalConfig.url?.includes('/auth/refresh')) {
       return Promise.reject(error)
     }
 

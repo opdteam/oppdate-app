@@ -1,10 +1,38 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { db, schema } from '../db'
-import { eq, and, gt, asc, desc } from 'drizzle-orm'
+import { eq, and, gt, asc, desc, sql } from 'drizzle-orm'
 import { ok, created, badRequest, notFound } from '../utils/response'
 import { requireAuth, requireRole } from '../middleware/auth'
 import { createCalendarEvent } from '../utils/googleCalendar'
+
+interface Schedule { days: number[]; startTime: string; endTime: string; slotInterval: number }
+
+export function computeSlots(schedule: Schedule, windowDays = 28): Date[] {
+  const now = new Date()
+  const [startH, startM] = schedule.startTime.split(':').map(Number)
+  const [endH, endM] = schedule.endTime.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  if (endMinutes <= startMinutes) return []
+  const daysSet = new Set(schedule.days)
+  const slots: Date[] = []
+  const cursor = new Date()
+  cursor.setHours(0, 0, 0, 0)
+  const limit = new Date(cursor)
+  limit.setDate(limit.getDate() + windowDays)
+  while (cursor <= limit) {
+    if (daysSet.has(cursor.getDay())) {
+      for (let min = startMinutes; min < endMinutes; min += schedule.slotInterval) {
+        const slot = new Date(cursor)
+        slot.setHours(Math.floor(min / 60), min % 60, 0, 0)
+        if (slot > now) slots.push(new Date(slot))
+      }
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return slots
+}
 
 const setMeetingSchema = z.object({
   meetingLink: z.string().url(),
@@ -35,26 +63,30 @@ export async function consultationRoutes(server: FastifyInstance) {
       .where(eq(schema.consultationSessions.active, true))
       .orderBy(asc(schema.consultationSessions.createdAt))
 
-    // Count available slots per session
-    const allSlots = await db
-      .select()
-      .from(schema.consultationSlots)
-      .where(
-        and(
-          eq(schema.consultationSlots.claimed, false),
-          gt(schema.consultationSlots.startsAt, new Date())
-        )
-      )
+    // Batch-fetch all active bookings to subtract from computed slots
+    const activeBookings = await db
+      .select({ sessionId: schema.consultations.sessionId, scheduledAt: schema.consultations.scheduledAt })
+      .from(schema.consultations)
+      .where(and(
+        sql`${schema.consultations.status} IN ('pending', 'confirmed')`,
+        gt(schema.consultations.scheduledAt, new Date())
+      ))
 
-    const slotCountMap: Record<string, number> = {}
-    allSlots.forEach(s => {
-      slotCountMap[s.sessionId] = (slotCountMap[s.sessionId] ?? 0) + 1
+    const bookedMap: Record<string, Set<string>> = {}
+    activeBookings.forEach(b => {
+      if (!b.sessionId) return
+      if (!bookedMap[b.sessionId]) bookedMap[b.sessionId] = new Set()
+      bookedMap[b.sessionId].add(new Date(b.scheduledAt).toISOString())
     })
 
-    const result = sessions.map(s => ({
-      ...s,
-      availableSlots: slotCountMap[s.id] ?? 0,
-    }))
+    const result = sessions.map(s => {
+      const schedule = s.schedule as Schedule | null
+      if (!schedule) return { ...s, availableSlots: 0 }
+      const allSlots = computeSlots(schedule)
+      const booked = bookedMap[s.id] ?? new Set()
+      const available = allSlots.filter(slot => !booked.has(slot.toISOString()))
+      return { ...s, availableSlots: available.length }
+    })
 
     return ok(reply, result)
   })
@@ -76,19 +108,28 @@ export async function consultationRoutes(server: FastifyInstance) {
 
     if (!session) return notFound(reply, 'Session')
 
-    const slots = await db
-      .select({ id: schema.consultationSlots.id, startsAt: schema.consultationSlots.startsAt })
-      .from(schema.consultationSlots)
-      .where(
-        and(
-          eq(schema.consultationSlots.sessionId, sessionId),
-          eq(schema.consultationSlots.claimed, false),
-          gt(schema.consultationSlots.startsAt, new Date())
-        )
-      )
-      .orderBy(asc(schema.consultationSlots.startsAt))
+    const schedule = session.schedule as Schedule | null
+    if (!schedule) return ok(reply, [])
 
-    return ok(reply, slots)
+    const allSlots = computeSlots(schedule)
+
+    // Fetch already-booked times for this session
+    const booked = await db
+      .select({ scheduledAt: schema.consultations.scheduledAt })
+      .from(schema.consultations)
+      .where(and(
+        eq(schema.consultations.sessionId, sessionId),
+        sql`${schema.consultations.status} IN ('pending', 'confirmed')`,
+        gt(schema.consultations.scheduledAt, new Date())
+      ))
+
+    const bookedSet = new Set(booked.map(b => new Date(b.scheduledAt).toISOString()))
+
+    const available = allSlots
+      .filter(slot => !bookedSet.has(slot.toISOString()))
+      .map(slot => ({ id: `${sessionId}_${slot.toISOString()}`, startsAt: slot.toISOString() }))
+
+    return ok(reply, available)
   })
 
   // GET /api/v1/consultations -- list bookings (user sees own, admin sees all)
@@ -145,16 +186,18 @@ export async function consultationRoutes(server: FastifyInstance) {
     return ok(reply, rows)
   })
 
-  // POST /api/v1/consultations -- book a consultation by claiming a slot
+  // POST /api/v1/consultations -- book a consultation
   server.post('/', { preHandler: [requireAuth] }, async (request, reply) => {
     const user = request.user as { id: string }
     const body = z.object({
       sessionId: z.string().uuid(),
-      slotId: z.string().uuid(),
+      scheduledAt: z.string(),
     }).safeParse(request.body)
     if (!body.success) return badRequest(reply, body.error.errors[0].message)
 
-    const { sessionId, slotId } = body.data
+    const { sessionId } = body.data
+    const scheduledAt = new Date(body.data.scheduledAt)
+    if (isNaN(scheduledAt.getTime())) return badRequest(reply, 'Invalid date.')
 
     // Verify session is active
     const [session] = await db
@@ -170,55 +213,47 @@ export async function consultationRoutes(server: FastifyInstance) {
 
     if (!session) return notFound(reply, 'Session')
 
-    // Verify slot belongs to session, is unclaimed, and is in the future
-    const [slot] = await db
-      .select()
-      .from(schema.consultationSlots)
-      .where(
-        and(
-          eq(schema.consultationSlots.id, slotId),
-          eq(schema.consultationSlots.sessionId, sessionId),
-          eq(schema.consultationSlots.claimed, false),
-          gt(schema.consultationSlots.startsAt, new Date())
-        )
-      )
-      .limit(1)
+    // Validate scheduledAt against session schedule
+    const schedule = session.schedule as Schedule | null
+    if (!schedule) return badRequest(reply, 'This session has no schedule configured.')
 
-    if (!slot) return badRequest(reply, 'This slot is no longer available. Please choose another time.')
+    const now = new Date()
+    if (scheduledAt <= now) return badRequest(reply, 'Cannot book a time in the past.')
 
-    // Create booking then claim slot — use the claimed=false WHERE clause as an optimistic lock
-    const [booking] = await db
-      .insert(schema.consultations)
-      .values({
-        userId: user.id,
-        sessionId,
-        slotId,
-        durationMinutes: session.durationMinutes,
-        priceUsd: session.priceUsd,
-        scheduledAt: slot.startsAt,
-        status: 'pending',
-      })
-      .returning()
+    const maxDate = new Date()
+    maxDate.setDate(maxDate.getDate() + 28)
+    if (scheduledAt > maxDate) return badRequest(reply, 'Cannot book more than 28 days in advance.')
 
-    // Claim the slot only if it is still unclaimed (race condition guard)
-    const claimed = await db
-      .update(schema.consultationSlots)
-      .set({ claimed: true, consultationId: booking.id })
-      .where(
-        and(
-          eq(schema.consultationSlots.id, slotId),
-          eq(schema.consultationSlots.claimed, false)
-        )
-      )
-      .returning()
+    const dayOfWeek = scheduledAt.getDay()
+    if (!schedule.days.includes(dayOfWeek)) return badRequest(reply, 'This day is not available for bookings.')
 
-    if (!claimed.length) {
-      // Another request claimed it first — delete the orphaned booking
-      await db.delete(schema.consultations).where(eq(schema.consultations.id, booking.id))
-      return badRequest(reply, 'This slot was just taken. Please choose another time.')
+    const [startH, startM] = schedule.startTime.split(':').map(Number)
+    const [endH, endM] = schedule.endTime.split(':').map(Number)
+    const slotMinutes = scheduledAt.getHours() * 60 + scheduledAt.getMinutes()
+    const startMinutes = startH * 60 + startM
+    const endMinutes = endH * 60 + endM
+    if (slotMinutes < startMinutes || slotMinutes >= endMinutes) return badRequest(reply, 'This time is outside the available window.')
+    if ((slotMinutes - startMinutes) % schedule.slotInterval !== 0) return badRequest(reply, 'This time does not align with the schedule interval.')
+
+    // Insert booking -- unique partial index on (sessionId, scheduledAt) for active bookings guards against races
+    try {
+      const [booking] = await db
+        .insert(schema.consultations)
+        .values({
+          userId: user.id,
+          sessionId,
+          durationMinutes: session.durationMinutes,
+          priceUsd: session.priceUsd,
+          scheduledAt,
+          status: 'pending',
+        })
+        .returning()
+
+      return created(reply, booking, 'Consultation booked. Proceed to payment.')
+    } catch (err: any) {
+      if (err.code === '23505') return badRequest(reply, 'This time slot was just taken. Please choose another time.')
+      throw err
     }
-
-    return created(reply, booking, 'Consultation booked. Proceed to payment.')
   })
 
   // GET /api/v1/consultations/:id -- booking detail
@@ -317,13 +352,7 @@ export async function consultationRoutes(server: FastifyInstance) {
 
       if (!rows[0]) return notFound(reply, 'Consultation')
 
-      // Release the slot back to available when a booking is cancelled
-      if (body.data.status === 'cancelled' && rows[0].slotId) {
-        await db
-          .update(schema.consultationSlots)
-          .set({ claimed: false, consultationId: null })
-          .where(eq(schema.consultationSlots.id, rows[0].slotId))
-      }
+      // No slot release needed -- dynamic computation excludes cancelled bookings automatically
 
       return ok(reply, rows[0])
     }

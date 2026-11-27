@@ -206,7 +206,6 @@ const PANEL_CONFIGS: Record<string, PanelConfig> = {
         items: [
           { label: 'Calendar view', icon: Calendar },
           { label: 'List view', icon: List },
-          { label: 'Consultant profiles', icon: Users },
         ],
       },
     ],

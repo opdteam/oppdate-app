@@ -48,7 +48,7 @@ interface ApiSlot {
 interface BookingResult {
   id: string
   sessionId: string
-  slotId: string
+  slotId?: string
   scheduledAt: string
   durationMinutes: number
   priceUsd: number
@@ -113,7 +113,7 @@ export function ConsultationsBookingPage() {
           const sessions = sessionsRes.data?.data ?? []
           const session = sessions.find(s => s.id === booking?.sessionId)
           if (booking && session) {
-            const fakeSlot: ApiSlot = { id: booking.slotId, startsAt: booking.scheduledAt }
+            const fakeSlot: ApiSlot = { id: booking.id, startsAt: booking.scheduledAt }
             setView({ screen: 'confirmation', session, slot: fakeSlot, booking })
           }
         })
@@ -645,7 +645,7 @@ function ReviewScreen({ session, slot, mob, onBack }: {
       // Step 1: reserve the slot and create a pending booking
       const bookingRes = await api.post<{ data: BookingResult }>('/api/v1/consultations', {
         sessionId: session.id,
-        slotId: slot.id,
+        scheduledAt: slot.startsAt,
       })
       const booking = bookingRes.data.data
 

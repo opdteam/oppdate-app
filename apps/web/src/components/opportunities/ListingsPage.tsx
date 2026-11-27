@@ -1282,6 +1282,17 @@ function DetailDrawer({
           </div>
         </div>
 
+        {/* Source link */}
+        {hasUrl && (
+          <a href={data.sourceUrl!} target="_blank" rel="noopener noreferrer" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500,
+            color: GINGER, textDecoration: 'none',
+          }}>
+            <ExternalLink size={14} /> View original listing
+          </a>
+        )}
+
         {/* Apply disabled note */}
         {data.applyDisabledNote && (
           <div className="opp-apply-disabled-note">

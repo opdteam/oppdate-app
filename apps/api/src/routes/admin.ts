@@ -9,7 +9,8 @@ import { requireRole, requireModule } from '../middleware/auth'
 import { setAdminAuthCookies, clearAdminAuthCookies } from '../utils/cookies'
 import argon2 from 'argon2'
 import crypto from 'crypto'
-import { sendEmail, applicationStatusEmail, adminInviteEmail } from '../utils/email'
+import { sendEmail, applicationStatusEmail, adminInviteEmail, assignmentNotificationEmail } from '../utils/email'
+import { computeSlots } from './consultations'
 
 const LOGO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
@@ -1203,10 +1204,12 @@ export async function adminRoutes(server: FastifyInstance) {
       if (!body.success) return badRequest(reply, 'Invalid body.')
 
       // Verify assignee is an admin if provided
+      let assigneeInfo: { name: string | null; email: string; role: string } | null = null
       if (body.data.assignedTo) {
-        const [assignee] = await db.select({ role: schema.users.role }).from(schema.users).where(eq(schema.users.id, body.data.assignedTo))
+        const [assignee] = await db.select({ name: schema.users.name, email: schema.users.email, role: schema.users.role }).from(schema.users).where(eq(schema.users.id, body.data.assignedTo))
         if (!assignee) return badRequest(reply, 'Assignee not found.')
         if (!['staff_admin', 'manager_admin', 'super_admin'].includes(assignee.role)) return badRequest(reply, 'Assignee must be an admin team member.')
+        assigneeInfo = assignee
       }
 
       const [row] = await db
@@ -1216,6 +1219,23 @@ export async function adminRoutes(server: FastifyInstance) {
         .returning()
 
       if (!row) return notFound(reply, 'Application not found.')
+
+      if (assigneeInfo) {
+        const [appCtx] = await db.select({
+          userName: schema.users.name,
+          oppTitle: schema.opportunities.title,
+        })
+          .from(schema.applications)
+          .innerJoin(schema.users, eq(schema.applications.userId, schema.users.id))
+          .innerJoin(schema.opportunities, eq(schema.applications.opportunityId, schema.opportunities.id))
+          .where(eq(schema.applications.id, id))
+        if (appCtx) {
+          const email = assignmentNotificationEmail(assigneeInfo.name || 'Team member', 'application', appCtx.oppTitle || '', appCtx.userName || 'a user')
+          email.to = assigneeInfo.email
+          sendEmail(email).catch(() => {})
+        }
+      }
+
       return ok(reply, row, 'Application assigned.')
     }
   )
@@ -2084,14 +2104,16 @@ export async function adminRoutes(server: FastifyInstance) {
       if (!body.success) return badRequest(reply, body.error.errors[0].message)
 
       // If assigning a team member, verify they are an admin
+      let assigneeInfo: { name: string | null; email: string; role: string } | null = null
       if (body.data.assignedTo) {
         const [assignee] = await db
-          .select({ id: schema.users.id, role: schema.users.role })
+          .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, role: schema.users.role })
           .from(schema.users)
           .where(eq(schema.users.id, body.data.assignedTo))
         if (!assignee || !['staff_admin', 'manager_admin', 'super_admin'].includes(assignee.role)) {
           return badRequest(reply, 'Assignee must be a team member.')
         }
+        assigneeInfo = assignee
       }
 
       // If assigning a mentor profile, verify it exists and is published
@@ -2122,6 +2144,22 @@ export async function adminRoutes(server: FastifyInstance) {
       if (!rows[0]) return notFound(reply, 'Mentorship')
 
       await auditLog(admin.id, 'mentorship.update', 'mentorship', id, body.data, request.ip)
+
+      if (assigneeInfo && body.data.assignedTo) {
+        const [mentCtx] = await db.select({
+          userName: schema.users.name,
+          progTitle: schema.mentorshipProgrammes.title,
+        })
+          .from(schema.mentorships)
+          .innerJoin(schema.users, eq(schema.mentorships.userId, schema.users.id))
+          .leftJoin(schema.mentorshipProgrammes, eq(schema.mentorships.programmeId, schema.mentorshipProgrammes.id))
+          .where(eq(schema.mentorships.id, id))
+        if (mentCtx) {
+          const email = assignmentNotificationEmail(assigneeInfo.name || 'Team member', 'mentorship', mentCtx.progTitle || '', mentCtx.userName || 'a user')
+          email.to = assigneeInfo.email
+          sendEmail(email).catch(() => {})
+        }
+      }
 
       return ok(reply, rows[0])
     }
@@ -2398,16 +2436,22 @@ export async function adminRoutes(server: FastifyInstance) {
         .from(schema.consultationSessions)
         .orderBy(desc(schema.consultationSessions.createdAt))
 
-      const allSlots = await db
-        .select()
-        .from(schema.consultationSlots)
+      const activeBookings = await db
+        .select({ sessionId: schema.consultations.sessionId })
+        .from(schema.consultations)
+        .where(sql`${schema.consultations.status} IN ('pending', 'confirmed')`)
+
+      const bookingCountMap: Record<string, number> = {}
+      activeBookings.forEach(b => {
+        if (b.sessionId) bookingCountMap[b.sessionId] = (bookingCountMap[b.sessionId] ?? 0) + 1
+      })
 
       const result = sessions.map(s => {
-        const sessionSlots = allSlots.filter(sl => sl.sessionId === s.id)
+        const schedule = s.schedule as { days: number[]; startTime: string; endTime: string; slotInterval: number } | null
         return {
           ...s,
-          totalSlots: sessionSlots.length,
-          claimedSlots: sessionSlots.filter(sl => sl.claimed).length,
+          totalSlots: schedule ? computeSlots(schedule).length : 0,
+          claimedSlots: bookingCountMap[s.id] ?? 0,
         }
       })
 
@@ -2503,22 +2547,20 @@ export async function adminRoutes(server: FastifyInstance) {
       const admin = request.user as { id: string }
       const { id } = request.params as { id: string }
 
-      const claimedSlots = await db
-        .select({ id: schema.consultationSlots.id })
-        .from(schema.consultationSlots)
-        .where(
-          and(
-            eq(schema.consultationSlots.sessionId, id),
-            eq(schema.consultationSlots.claimed, true)
-          )
-        )
+      const activeBookings = await db
+        .select({ id: schema.consultations.id })
+        .from(schema.consultations)
+        .where(and(
+          eq(schema.consultations.sessionId, id),
+          sql`${schema.consultations.status} IN ('pending', 'confirmed')`
+        ))
         .limit(1)
 
-      if (claimedSlots.length > 0) {
-        return badRequest(reply, 'Cannot delete a session with confirmed bookings.')
+      if (activeBookings.length > 0) {
+        return badRequest(reply, 'Cannot delete a session with active bookings.')
       }
 
-      // Delete unclaimed slots first, then the session
+      // Clean up any legacy slot rows, then delete the session
       await db.delete(schema.consultationSlots).where(eq(schema.consultationSlots.sessionId, id))
       await db.delete(schema.consultationSessions).where(eq(schema.consultationSessions.id, id))
 
@@ -2528,16 +2570,21 @@ export async function adminRoutes(server: FastifyInstance) {
     }
   )
 
-  // GET /api/v1/admin/consultation-slots -- all slots (date dots for calendar view)
+  // GET /api/v1/admin/consultation-slots -- booked times for calendar view
   server.get(
     '/consultation-slots',
     { preHandler: [requireRole('manager_admin', 'super_admin')] },
     async (_request, reply) => {
-      const slots = await db
-        .select({ id: schema.consultationSlots.id, startsAt: schema.consultationSlots.startsAt, sessionId: schema.consultationSlots.sessionId, claimed: schema.consultationSlots.claimed })
-        .from(schema.consultationSlots)
-        .orderBy(asc(schema.consultationSlots.startsAt))
-      return ok(reply, slots)
+      const bookings = await db
+        .select({
+          id: schema.consultations.id,
+          startsAt: schema.consultations.scheduledAt,
+          sessionId: schema.consultations.sessionId,
+        })
+        .from(schema.consultations)
+        .where(sql`${schema.consultations.status} IN ('pending', 'confirmed')`)
+        .orderBy(asc(schema.consultations.scheduledAt))
+      return ok(reply, bookings.map(b => ({ ...b, claimed: true })))
     }
   )
 

@@ -846,3 +846,29 @@ export function withdrawalPostPaymentEmail(
     ),
   };
 }
+
+export function assignmentNotificationEmail(
+  assigneeName: string,
+  type: 'application' | 'mentorship',
+  contextLabel: string,
+  userName: string,
+): EmailParams {
+  const typeLabel = type === 'application' ? 'Application' : 'Mentorship';
+  const dashboardUrl = `${WEB_URL}/admin`;
+  const body = `
+    ${heroBlock("&#10132;", "#fdf3e3", "#c4881c", `${typeLabel} Assigned`, `You have been assigned a new ${type}.`)}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 36px 32px;">
+      ${greeting(assigneeName)}
+      ${bodyText(`
+        <p style="margin:0 0 16px;">You have been assigned to handle <strong>${userName}</strong>'s ${type}${contextLabel ? ` for <strong>${contextLabel}</strong>` : ''}.</p>
+        <p style="margin:0 0 16px;">Log in to the admin panel to review the details and take action.</p>
+      `)}
+      ${ctaButton("Open admin panel", dashboardUrl)}
+    </td></tr></table>
+  `;
+  return {
+    to: "",
+    subject: `New ${type} assignment: ${userName}`,
+    html: layout(`You have been assigned a ${type}`, body),
+  };
+}

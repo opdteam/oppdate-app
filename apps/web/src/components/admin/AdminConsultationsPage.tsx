@@ -1200,48 +1200,8 @@ function ScheduleEditor({ sessionId, session, label }: { sessionId: string; sess
   const [startTime, setStartTime] = useState(saved?.startTime ?? DEFAULT_SCHEDULE.startTime)
   const [endTime, setEndTime] = useState(saved?.endTime ?? DEFAULT_SCHEDULE.endTime)
   const [slotInterval, setSlotInterval] = useState(saved?.slotInterval ?? session.durationMinutes)
-  const [fromDate, setFromDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() + 1)
-    return d.toISOString().slice(0, 10)
-  })
-  const [toDate, setToDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() + 29)
-    return d.toISOString().slice(0, 10)
-  })
   const [schedSaving, setSchedSaving] = useState(false)
   const [schedSaved, setSchedSaved] = useState(false)
-  const [genResult, setGenResult] = useState<string | null>(null)
-
-  const [confirmingId, setConfirmingId] = useState<string | null>(null)
-  const [showSlots, setShowSlots] = useState(false)
-
-  const { data, isLoading } = useQuery<{ data: Array<{ id: string; startsAt: string }> }>({
-    queryKey: ['consultation-slots', sessionId],
-    queryFn: () => api.get(`/api/v1/consultations/sessions/${sessionId}/slots`).then(r => r.data),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (slotId: string) => api.delete(`/api/v1/admin/consultation-slots/${slotId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['consultation-slots', sessionId] })
-      queryClient.invalidateQueries({ queryKey: ['admin-all-slots'] })
-    },
-  })
-
-  const generateMutation = useMutation({
-    mutationFn: () =>
-      api.post(`/api/v1/admin/consultation-sessions/${sessionId}/generate-slots`, {
-        from: fromDate, to: toDate, days, startTime, endTime, slotInterval,
-      }),
-    onSuccess: (res) => {
-      const count = res.data?.data?.inserted ?? 0
-      setGenResult(count > 0 ? `${count} slot${count !== 1 ? 's' : ''} generated.` : 'No new slots to add (all already exist).')
-      queryClient.invalidateQueries({ queryKey: ['consultation-slots', sessionId] })
-      queryClient.invalidateQueries({ queryKey: ['admin-all-slots'] })
-      setTimeout(() => setGenResult(null), 4000)
-    },
-    onError: () => setGenResult('Failed to generate slots.'),
-  })
 
   function toggleDay(d: number) {
     setDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort())
@@ -1267,28 +1227,6 @@ function ScheduleEditor({ sessionId, session, label }: { sessionId: string; sess
   const startMin = startH * 60 + startM
   const endMin = endH * 60 + endM
   const slotsPerDay = endMin > startMin ? Math.floor((endMin - startMin) / slotInterval) : 0
-
-  // Count days in range
-  let daysInRange = 0
-  if (fromDate && toDate && days.length > 0) {
-    const daysSet = new Set(days)
-    const cursor = new Date(`${fromDate}T00:00:00`)
-    const limit = new Date(`${toDate}T23:59:59`)
-    while (cursor <= limit) {
-      if (daysSet.has(cursor.getDay())) daysInRange++
-      cursor.setDate(cursor.getDate() + 1)
-    }
-  }
-  const estimatedSlots = daysInRange * slotsPerDay
-
-  const slots = data?.data ?? []
-  const slotsByDate: Record<string, Array<{ id: string; startsAt: string }>> = {}
-  for (const s of slots) {
-    const day = s.startsAt.slice(0, 10)
-    if (!slotsByDate[day]) slotsByDate[day] = []
-    slotsByDate[day].push(s)
-  }
-  const sortedDates = Object.keys(slotsByDate).sort()
 
   return (
     <div className="adm-cons-slots-mgr">
@@ -1348,83 +1286,8 @@ function ScheduleEditor({ sessionId, session, label }: { sessionId: string; sess
         </div>
       </div>
 
-      {/* Generate slots */}
-      <div style={{ marginTop: 14, padding: '16px 18px', borderRadius: 12, background: 'rgba(28,12,3,0.45)', border: '1px solid rgba(181,83,10,0.18)' }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--adm-t-mid)', marginBottom: 8 }}>Generate slots for date range</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--adm-t-low)', marginBottom: 3 }}>From</div>
-            <input className="adm-cons-inp" type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
-          </div>
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--adm-t-low)', marginBottom: 3 }}>To</div>
-            <input className="adm-cons-inp" type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-          <button
-            className="adm-btn adm-cons-btn-outline"
-            style={{ padding: '5px 14px', fontSize: 12 }}
-            disabled={generateMutation.isPending || days.length === 0 || !fromDate || !toDate || estimatedSlots === 0}
-            onClick={() => generateMutation.mutate()}
-          >
-            {generateMutation.isPending ? 'Generating...' : `Generate ~${estimatedSlots} slots`}
-          </button>
-          {genResult && <span style={{ fontSize: 12, color: genResult.includes('Failed') ? '#F87171' : '#34D399' }}>{genResult}</span>}
-        </div>
-      </div>
-
-      {/* Existing slots */}
-      <div style={{ marginTop: 14 }}>
-        <div
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '8px 0' }}
-          onClick={() => setShowSlots(!showSlots)}
-        >
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--adm-t-mid)' }}>
-            {isLoading ? 'Loading...' : `${slots.length} slot${slots.length !== 1 ? 's' : ''} scheduled`}
-          </span>
-          <ChevronDown size={14} style={{ color: 'var(--adm-t-low)', transform: showSlots ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
-        </div>
-
-        {showSlots && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
-            {sortedDates.length === 0 ? (
-              <div style={{ color: 'var(--adm-t-low)', fontSize: 13 }}>No slots yet. Generate from your schedule above.</div>
-            ) : (
-              sortedDates.map(day => {
-                const daySlots = slotsByDate[day].slice().sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-                const dayLabel = new Date(`${day}T00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                return (
-                  <div key={day}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--adm-t-low)', marginBottom: 6 }}>{dayLabel}</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {daySlots.map(s => {
-                        const d = new Date(s.startsAt)
-                        const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-                        const confirming = confirmingId === s.id
-                        return (
-                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 6, background: confirming ? 'rgba(248,113,113,0.10)' : 'rgba(28,12,3,0.45)', border: `1px solid ${confirming ? 'rgba(248,113,113,0.35)' : 'rgba(181,83,10,0.18)'}`, transition: 'background 150ms, border-color 150ms' }}>
-                            <span style={{ fontSize: 12, color: 'var(--adm-t-mid)' }}>{t}</span>
-                            {confirming ? (
-                              <>
-                                <button onClick={() => { deleteMutation.mutate(s.id); setConfirmingId(null) }} style={{ height: 20, padding: '0 6px', borderRadius: 4, border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.18)', color: '#F87171', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>Yes</button>
-                                <button onClick={() => setConfirmingId(null)} style={{ height: 20, padding: '0 6px', borderRadius: 4, border: '1px solid rgba(181,83,10,0.2)', background: 'transparent', color: 'var(--adm-t-mid)', fontSize: 10, cursor: 'pointer' }}>No</button>
-                              </>
-                            ) : (
-                              <button title="Remove" onClick={() => setConfirmingId(s.id)} style={{ width: 18, height: 18, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--adm-t-low)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-                                <X size={11} />
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        )}
+      <div style={{ marginTop: 10, fontSize: 12, color: 'var(--adm-t-low)' }}>
+        Slots are computed automatically from this schedule for a rolling 28-day window. No manual generation needed.
       </div>
     </div>
   )
@@ -1769,8 +1632,8 @@ function SessionCard({ variants, onEdit }: { variants: ApiConsultationSession[];
       </div>
       {lead.totalSlots !== undefined && (
         <div style={{ fontSize: 12, color: 'var(--adm-t-low)', marginTop: 4 }}>
-          {variants.reduce((s, v) => s + (v.totalSlots ?? 0), 0)} slots total,{' '}
-          {variants.reduce((s, v) => s + (v.claimedSlots ?? 0), 0)} claimed
+          {variants.reduce((s, v) => s + (v.totalSlots ?? 0), 0)} upcoming slots,{' '}
+          {variants.reduce((s, v) => s + (v.claimedSlots ?? 0), 0)} booked
         </div>
       )}
       <div className="adm-cons-cnactions">

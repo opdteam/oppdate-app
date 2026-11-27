@@ -4754,7 +4754,7 @@ button.adm-ment-iconbtn.sm { width: 24px; height: 24px; }
   padding: 32px; max-width: 440px; width: 90%; text-align: center;
   backdrop-filter: blur(24px) saturate(140%);
 }
-.adm-ment-modalico { margin-bottom: 16px; color: var(--adm-primary-hi); }
+.adm-ment-modalico { margin-bottom: 16px; color: var(--adm-primary-hi); display: flex; justify-content: center; }
 .adm-ment-modalico.red { color: #F87171; }
 .adm-ment-modal h3 { font-size: 18px; font-weight: 600; color: var(--adm-t-hi); margin: 0 0 8px; }
 .adm-ment-modal p { font-size: 13px; color: var(--adm-t-low); margin: 0 0 20px; }

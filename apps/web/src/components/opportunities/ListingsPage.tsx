@@ -11,12 +11,13 @@ import {
   Check, Globe, ExternalLink, ClipboardList, MessageCircle,
   CheckCircle, Info, Lock, BookmarkPlus, Trash2,
   AlertTriangle, XCircle, Sparkles, ChevronRight, ChevronLeft,
-  BellRing, BellOff,
+  BellRing, BellOff, Share2,
 } from 'lucide-react'
 // GuidePanel removed — Guide now lives in /messages as a persistent thread
 import { UpgradeModal } from '@/components/premium/UpgradeModal'
 import { useInfiniteListings, type ListingFilters, type SortOption } from '@/hooks/useInfiniteListings'
 import type { OpportunityListItem } from '@/components/opportunities/types'
+import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { keys, fetchers, type ApiSavedSearch, type ApiSavedOpportunity, type ApiUser, type ApiRecommendation } from '@/lib/queries'
 
@@ -33,6 +34,7 @@ const GINGER = '#7A2D05'
 const GINGER_MID = '#B5530A'
 const HAIRLINE = 'rgba(42,18,6,0.08)'
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
+const FUND_TAGS = ['Fully funded', 'Partially funded', 'Stipend', 'Travel included', 'Accommodation', 'Health insurance']
 
 type FilterId = 'All' | 'Scholarships' | 'Internships' | 'Jobs' | 'Training' | 'Funded only'
 const FILTERS: FilterId[] = ['All', 'Scholarships', 'Internships', 'Jobs', 'Training', 'Funded only']
@@ -51,6 +53,7 @@ const PARAM_TO_FILTER: Record<string, FilterId> = Object.fromEntries(
 
 interface Opportunity {
   id: string
+  slug: string
   isLocked?: boolean
   org: string
   orgInit: string
@@ -100,6 +103,7 @@ function deriveFlag(countryCode: string | null | undefined): string {
 function listItemToOpportunity(item: OpportunityListItem): Opportunity {
   return {
     id:               item.id,
+    slug:             item.slug,
     isLocked:         item.isLocked ?? false,
     org:              item.org,
     orgInit:          item.orgInit,
@@ -174,6 +178,7 @@ function detailRowToOpportunity(row: ApiDetailRow): Opportunity {
 
   return {
     id:               row.id,
+    slug:             row.slug,
     org:              row.institution,
     orgInit:          row.institution.slice(0, 2).toUpperCase(),
     orgLogoUrl:       row.institutionLogoUrl ?? null,
@@ -251,8 +256,8 @@ function OpportunityCard({
 
   const isExpired = data.daysLeft === null
   const deadlineLabel = !isExpired ? `${data.daysLeft} days left` : 'Deadline passed'
-  const isFunded = data.award === 'Fully funded' || data.tags.includes('Fully funded')
-  const hasAmount = data.award && !isFunded
+  const fundingTag = FUND_TAGS.find(f => data.tags.includes(f)) ?? (data.award === 'Fully funded' ? 'Fully funded' : null)
+  const hasAmount = data.award && !fundingTag
 
   const baseShadow = '0 2px 14px rgba(90,40,15,0.10), 0 1px 3px rgba(90,40,15,0.06)'
   const hoverShadow = '0 6px 24px rgba(90,40,15,0.16), 0 2px 6px rgba(90,40,15,0.08)'
@@ -343,35 +348,31 @@ function OpportunityCard({
         <EligibilityRow items={data.eligibility} />
       </div>
 
-      {/* Row 3b: tags + OppDate Apply badge */}
-      {(data.tags.length > 0 || data.applyForMe) && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-          {data.tags.slice(0, 3).map(t => (
-            <span key={t} style={{
-              display: 'inline-flex', alignItems: 'center',
-              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
-              padding: '3px 10px', borderRadius: 999,
-              background: 'rgba(122,45,5,0.06)', border: '1px solid rgba(122,45,5,0.15)', color: '#7A2D05',
-            }}>{t}</span>
-          ))}
-          {data.tags.length > 3 && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center',
-              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
-              padding: '3px 10px', borderRadius: 999,
-              background: 'rgba(122,45,5,0.06)', border: '1px solid rgba(122,45,5,0.15)', color: '#7A2D05',
-            }}>+{data.tags.length - 3} more</span>
-          )}
-          {data.applyForMe && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center',
-              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
-              padding: '3px 10px', borderRadius: 999,
-              background: 'rgba(14,116,144,0.08)', border: '1px solid rgba(14,116,144,0.2)', color: '#0E7490',
-            }}>+ OppDate Apply</span>
-          )}
-        </div>
-      )}
+      {/* Row 3b: tags (excluding funding tags — those show in bottom row) */}
+      {(() => {
+        const displayTags = data.tags.filter(t => !FUND_TAGS.includes(t))
+        if (displayTags.length === 0) return null
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+            {displayTags.slice(0, 3).map(t => (
+              <span key={t} style={{
+                display: 'inline-flex', alignItems: 'center',
+                fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
+                padding: '3px 10px', borderRadius: 999,
+                background: 'rgba(122,45,5,0.06)', border: '1px solid rgba(122,45,5,0.15)', color: '#7A2D05',
+              }}>{t}</span>
+            ))}
+            {displayTags.length > 3 && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center',
+                fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
+                padding: '3px 10px', borderRadius: 999,
+                background: 'rgba(122,45,5,0.06)', border: '1px solid rgba(122,45,5,0.15)', color: '#7A2D05',
+              }}>+{displayTags.length - 3} more</span>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Row 4: deadline + close date + award */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 }}>
@@ -392,19 +393,29 @@ function OpportunityCard({
             </span>
           )}
         </div>
-        {isFunded && (
-          <span style={{
-            flexShrink: 0, display: 'inline-flex', alignItems: 'center',
-            fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, lineHeight: 1,
-            padding: '4px 10px', borderRadius: 999,
-            background: 'rgba(14,116,144,0.08)', border: '1px solid rgba(14,116,144,0.2)', color: '#0E7490',
-          }}>Fully funded</span>
-        )}
-        {hasAmount && (
-          <span style={{ flexShrink: 0, fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: INK, whiteSpace: 'nowrap' }}>
-            {data.award}
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {data.applyForMe && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
+              padding: '3px 10px', borderRadius: 999,
+              background: 'rgba(14,116,144,0.08)', border: '1px solid rgba(14,116,144,0.2)', color: '#0E7490',
+            }}>+ OppDate Apply</span>
+          )}
+          {fundingTag && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center',
+              fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, lineHeight: 1,
+              padding: '4px 10px', borderRadius: 999,
+              background: 'rgba(14,116,144,0.08)', border: '1px solid rgba(14,116,144,0.2)', color: '#0E7490',
+            }}>{fundingTag}</span>
+          )}
+          {hasAmount && (
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: INK, whiteSpace: 'nowrap' }}>
+              {data.award}
+            </span>
+          )}
+        </div>
       </div>
     </article>
   )
@@ -1219,15 +1230,20 @@ function DetailDrawer({
           )}
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <OutlineBtn onClick={onSave} full={!hasUrl}>
+            <OutlineBtn onClick={onSave}>
               <Bookmark size={16} fill={saved ? 'currentColor' : 'none'} style={{ color: saved ? GINGER : 'currentColor' }} />
               {saved ? 'Saved' : 'Save listing'}
             </OutlineBtn>
-            {hasUrl && (
-              <OutlineBtn>
-                <ExternalLink size={15} /> Visit Website
-              </OutlineBtn>
-            )}
+            <OutlineBtn onClick={() => {
+              const shareUrl = `${window.location.origin}/opportunity/${data.slug}`
+              if (navigator.share) {
+                navigator.share({ title: data.title, text: `${data.title} - ${data.org}`, url: shareUrl }).catch(() => {})
+              } else {
+                navigator.clipboard.writeText(shareUrl).then(() => toast('Link copied to clipboard')).catch(() => {})
+              }
+            }}>
+              <Share2 size={15} /> Share
+            </OutlineBtn>
           </div>
 
           <DetailGuideCTA onClick={onOpenGuide} />

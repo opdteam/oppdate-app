@@ -546,7 +546,7 @@ function CatalogForm({ catalogues, catalogId, onBack }: { catalogues: MpCatalog[
    ============================================================ */
 type ModalKind = 'complete' | 'cancel' | 'assign' | 'deleteprog' | null
 
-type TeamMember = { id: string; name: string; email: string; role: string; avatarUrl: string | null }
+type TeamMember = { id: string; name: string | null; email: string; role: string; avatarUrl: string | null }
 
 function MentorshipModal({ programmes, pending, catalogues, kind, dataId, onClose, onConfirm, onAssign }: {
   programmes: Programme[]; pending: PendingMatch[]; catalogues: MpCatalog[];
@@ -611,7 +611,8 @@ function MentorshipModal({ programmes, pending, catalogues, kind, dataId, onClos
             <p style={{ fontFamily: 'sans-serif', fontSize: 13, color: 'var(--adm-t-low)', textAlign: 'center', padding: '12px 0' }}>No team members found.</p>
           )}
           {teamMembers.map(m => {
-            const initials = m.name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
+            const displayName = m.name || m.email
+            const initials = displayName.split(/[\s@]/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
             return (
               <div
                 key={m.id}
@@ -620,7 +621,7 @@ function MentorshipModal({ programmes, pending, catalogues, kind, dataId, onClos
               >
                 <div className="adm-ment-cnavatar" style={{ width: 32, height: 32 }}>{initials || <Users size={16} />}</div>
                 <div>
-                  <span className="adm-ment-moname">{m.name}</span>
+                  <span className="adm-ment-moname">{displayName}</span>
                   <span style={{ fontFamily: 'sans-serif', fontSize: 11, color: 'var(--adm-t-low)', marginLeft: 6 }}>{m.role === 'super_admin' ? 'Super Admin' : m.role === 'manager_admin' ? 'Manager' : 'Staff'}</span>
                 </div>
               </div>

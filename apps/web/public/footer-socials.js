@@ -9,6 +9,7 @@ var SLUG_MAP = {
   twitter:   'x',
   facebook:  'facebook',
   youtube:   'youtube',
+  tiktok:    'tiktok',
 };
 
 // Slugs the design system footer already renders — these get patched in place

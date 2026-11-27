@@ -622,7 +622,7 @@ async function handleCheckoutCompleted(server: FastifyInstance, session: Stripe.
 
     if (app) {
       const [opp] = await db
-        .select({ institution: schema.opportunities.institution })
+        .select({ institution: schema.opportunities.institution, complianceCategory: schema.opportunities.complianceCategory })
         .from(schema.opportunities)
         .where(eq(schema.opportunities.id, app.opportunityId))
         .limit(1)
@@ -721,11 +721,15 @@ async function handleCheckoutCompleted(server: FastifyInstance, session: Stripe.
 
         if (!existingMsg) {
           const confirmedRef = existingApp?.status === 'awaiting_payment' ? appRef : (existingApp?.referenceId ?? appRef)
+          const isCategoryB = opp?.complianceCategory === 'B'
+          const nextSteps = isCategoryB
+            ? `- Our team will review your profile and reach out within 24-48 hours with a document checklist tailored to this opportunity\n- We'll prepare all your documents and guide you through the final submission steps\n- You'll receive a status update at each stage`
+            : `- Our team will review your profile and reach out within 24-48 hours with a document checklist tailored to this opportunity\n- Once your documents are in order, we handle the full submission on your behalf\n- You'll receive a status update at each stage`
           await db.insert(schema.messages).values({
             threadId: thread.id,
             senderId: userId,
             senderType: 'system',
-            content: `Hi ${firstName}, your application has been confirmed - reference ${confirmedRef}.\n\nHere's what to expect next:\n- Our team will review your profile and reach out within 24-48 hours with a document checklist tailored to this opportunity\n- Once your documents are in order, we handle the full submission on your behalf\n- You'll receive a status update at each stage\n\nIn the meantime, make sure your profile is up to date - we pull your details from there when preparing your application. You can update it here: /profile\n\nQuestions? Just reply here - a real person will respond.`,
+            content: `Hi ${firstName}, your application has been confirmed - reference ${confirmedRef}.\n\nHere's what to expect next:\n${nextSteps}\n\nIn the meantime, make sure your profile is up to date - we pull your details from there when preparing your application. You can update it here: /profile\n\nQuestions? Just reply here - a real person will respond.`,
           })
 
           await db

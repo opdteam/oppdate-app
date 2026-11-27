@@ -9,12 +9,21 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-const SOCIAL_PLATFORMS: { value: string; label: string; Icon: LucideIcon }[] = [
+function TikTokIcon({ size = 24, ...props }: { size?: number } & React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+    </svg>
+  )
+}
+
+const SOCIAL_PLATFORMS: { value: string; label: string; Icon: LucideIcon | typeof TikTokIcon }[] = [
   { value: 'instagram', label: 'Instagram', Icon: Instagram },
   { value: 'linkedin',  label: 'LinkedIn',  Icon: Linkedin },
   { value: 'twitter',   label: 'X (Twitter)', Icon: Twitter },
   { value: 'facebook',  label: 'Facebook',  Icon: Facebook },
   { value: 'youtube',   label: 'YouTube',   Icon: Youtube },
+  { value: 'tiktok',    label: 'TikTok',    Icon: TikTokIcon },
 ]
 
 function getPlatformIcon(platform: string) {

@@ -283,6 +283,43 @@ export async function opportunityRoutes(server: FastifyInstance) {
     return ok(reply, opportunity)
   })
 
+  // GET /api/v1/opportunities/:slug/preview - public, no auth, limited fields for sharing
+  server.get('/:slug/preview', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const { slug } = request.params as { slug: string }
+
+    const [opp] = await db
+      .select({
+        id: schema.opportunities.id,
+        title: schema.opportunities.title,
+        slug: schema.opportunities.slug,
+        type: schema.opportunities.type,
+        institution: schema.opportunities.institution,
+        institutionLogoUrl: schema.opportunities.institutionLogoUrl,
+        country: schema.opportunities.country,
+        region: schema.opportunities.region,
+        summary: schema.opportunities.summary,
+        deadline: schema.opportunities.deadline,
+        awardValueUsd: schema.opportunities.awardValueUsd,
+        fieldOfStudy: schema.opportunities.fieldOfStudy,
+        eligibilityLevel: schema.opportunities.eligibilityLevel,
+        oppDateApply: schema.opportunities.oppDateApply,
+        whoItsFor: schema.opportunities.whoItsFor,
+        whatIsOffered: schema.opportunities.whatIsOffered,
+      })
+      .from(schema.opportunities)
+      .where(
+        and(
+          eq(schema.opportunities.slug, slug),
+          eq(schema.opportunities.status, 'published')
+        )
+      )
+      .limit(1)
+
+    if (!opp) return notFound(reply, 'Opportunity')
+
+    return ok(reply, opp)
+  })
+
   // POST /api/v1/opportunities -admin only
   server.post(
     '/',

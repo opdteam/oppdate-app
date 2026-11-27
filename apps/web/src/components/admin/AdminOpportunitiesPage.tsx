@@ -82,16 +82,13 @@ interface FormData {
   criteria: EligCriterion[]
   docs: DocRow[]
   dates: KeyDate[]
-  funding: string[]
-  audience: string[]
+  customTags: string[]
   aiQuestions: { q: string; required: boolean }[]
   internalNote: string
   institutionLogoUrl: string
 }
 
 const TYPES = ['Scholarship', 'Internship', 'Job', 'Fellowship', 'Training', 'Research Grant']
-const FUND_OPTIONS = ['Fully funded', 'Partially funded', 'Stipend', 'Travel included', 'Accommodation', 'Health insurance']
-const AUDIENCE_OPTIONS = ['Undergraduate', 'Postgraduate', 'Doctoral', 'Mid-career', 'Early-career', 'Senior', 'All levels']
 const FORMAT_OPTIONS = ['PDF', 'DOCX', 'JPG', 'PNG']
 const TZ_OPTIONS = ['GMT', 'EST', 'WAT', 'CET', 'CST', 'PST', 'SAST', 'WET']
 const STATUS_LABEL: Record<OppStatus, string> = { published: 'Published', draft: 'Draft', archived: 'Archived', expired: 'Expired' }
@@ -250,8 +247,7 @@ function apiToFormData(o: ApiOpportunity): FormData {
           : { type: (d as any).type ?? '', required: (d as any).required ?? true, formats: (d as any).formats || ['PDF'], creatable: ((d as any).creatable ?? false) as 'writes' | 'guides' | false })
       : [{ type: '', required: true, formats: ['PDF'], creatable: false as const }],
     dates: [],
-    funding: Array.isArray(o.tags) ? o.tags.filter(t => FUND_OPTIONS.includes(t)) : [],
-    audience: Array.isArray(o.tags) ? o.tags.filter(t => AUDIENCE_OPTIONS.includes(t)) : [],
+    customTags: Array.isArray(o.tags) ? o.tags : [],
     aiQuestions: [],
     internalNote: '',
     institutionLogoUrl: o.institutionLogoUrl || '',
@@ -1749,7 +1745,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
     editing: false, title: '', inst: '', country: '', type: '', summary: '', about: '', whoItIsFor: '', benefit: '',
     cat: '', code: '', oppFee: '', instFee: '0.00', vip: false, applyDisabledNote: '', status: 'draft', featured: false,
     criteria: [{ question: '', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }] }], docs: [{ type: '', required: true, formats: ['PDF'], creatable: false as const }],
-    dates: [], funding: [], audience: [], aiQuestions: [], internalNote: '', institutionLogoUrl: '',
+    dates: [], customTags: [], aiQuestions: [], internalNote: '', institutionLogoUrl: '',
   }
 
   const [form, setForm] = useState<FormData>(initial)
@@ -1854,7 +1850,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
     const s: Record<number, 'complete' | 'incomplete' | 'empty'> = {}
     s[1] = form.title && form.type && form.summary ? 'complete' : (form.title || form.type || form.summary) ? 'incomplete' : 'empty'
     s[2] = form.criteria.some(c => c.question?.trim()) ? 'complete' : 'empty'
-    s[3] = form.funding.length > 0 ? 'complete' : 'empty'
+    s[3] = form.customTags.length > 0 ? 'complete' : 'empty'
     s[4] = form.oppFee ? 'complete' : 'incomplete'
     s[5] = form.docs.some(d => d.type?.trim()) ? 'complete' : 'empty'
     s[6] = deadlineDate ? 'complete' : 'incomplete'
@@ -1867,7 +1863,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
     const s: Record<number, string> = {}
     s[1] = [form.title, form.inst].filter(Boolean).join(' - ') || 'Not started'
     s[2] = form.criteria.filter(c => c.question?.trim()).length > 0 ? `${form.criteria.filter(c => c.question?.trim()).length} questions` : 'Not started'
-    s[3] = form.funding.length > 0 ? form.funding.join(', ') : 'Not started'
+    s[3] = form.customTags.length > 0 ? form.customTags.join(', ') : 'Not started'
     s[4] = form.oppFee ? `$${total} total` : 'Not started'
     s[5] = form.docs.filter(d => d.type?.trim()).length > 0 ? `${form.docs.filter(d => d.type?.trim()).length} documents` : 'Not started'
     s[6] = deadlineDate || 'Not started'
@@ -2114,26 +2110,28 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
                 defaultValue={''} />
             </div>
             <div className="adm-field">
-              <label className="adm-field-label">Funding type</label>
-              <div className="adm-chips">
-                {FUND_OPTIONS.map(f => (
-                  <span key={f} className={`adm-chip${form.funding.includes(f) ? ' on' : ''}`}
-                    onClick={() => update('funding', form.funding.includes(f) ? form.funding.filter(x => x !== f) : [...form.funding, f])}>
-                    {f}
+              <label className="adm-field-label">Tags</label>
+              <div className="adm-tags-input-wrap">
+                {form.customTags.map((tag, i) => (
+                  <span key={i} className="adm-chip on adm-tag-chip">
+                    {tag}
+                    <X size={14} style={{ marginLeft: 4, cursor: 'pointer' }}
+                      onClick={() => update('customTags', form.customTags.filter((_, j) => j !== i))} />
                   </span>
                 ))}
+                <input className="adm-tags-text-input" placeholder="Type a tag and press Enter"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      const val = (e.target as HTMLInputElement).value.trim().replace(/,$/g, '')
+                      if (val && !form.customTags.includes(val)) {
+                        update('customTags', [...form.customTags, val])
+                      }
+                      ;(e.target as HTMLInputElement).value = ''
+                    }
+                  }} />
               </div>
-            </div>
-            <div className="adm-field">
-              <label className="adm-field-label">Target audience</label>
-              <div className="adm-chips">
-                {AUDIENCE_OPTIONS.map(a => (
-                  <span key={a} className={`adm-chip${form.audience.includes(a) ? ' on' : ''}`}
-                    onClick={() => update('audience', form.audience.includes(a) ? form.audience.filter(x => x !== a) : [...form.audience, a])}>
-                    {a}
-                  </span>
-                ))}
-              </div>
+              <span className="adm-field-help">Press Enter or comma to add tags. E.g. Fully funded, Scholarship, Africans</span>
             </div>
           </FormSection>
 
@@ -2911,7 +2909,7 @@ export function AdminOpportunitiesPage() {
       summary: formData.summary || formData.title,
       description: formData.about || '',
       whoItsFor: formData.whoItIsFor || 'Open to all',
-      whatIsOffered: formData.benefit || formData.funding.join(', ') || 'See listing for details',
+      whatIsOffered: formData.benefit || 'See listing for details',
       eligibilityCriteria: formData.criteria
         .filter(c => c.question?.trim())
         .map(c => ({
@@ -2928,7 +2926,7 @@ export function AdminOpportunitiesPage() {
       complianceCategory: formData.cat || null,
       featured: formData.featured,
       status: kind,
-      tags: [...formData.funding, ...formData.audience],
+      tags: [...formData.customTags],
       ...(formData.institutionLogoUrl.trim() && { institutionLogoUrl: formData.institutionLogoUrl.trim() }),
     }
     saveMutation.mutate(

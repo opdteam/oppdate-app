@@ -627,9 +627,9 @@ function DiscoveryStrip({ compact }: { compact?: boolean }) {
   const [hovered, setHovered] = useState(-1)
   const rows = [
     { icon: Bookmark, text: 'You may be eligible for these opportunities', link: 'Browse opportunities', href: '/opportunities' },
-    { icon: Calendar, text: 'Get expert guidance on your next application', link: 'Book a consultation', href: '/consultations' },
-    { icon: User, text: 'Work with a mentor over weeks or months', link: 'Explore mentorship', href: '/mentorship' },
-    { icon: BookOpen, text: 'Strengthen your applications with our resources', link: 'Browse eBooks', href: '/ebooks' },
+    { icon: Calendar, text: 'Get expert guidance on your next application', link: 'Book a consultation', href: '/services/consultations' },
+    { icon: User, text: 'Work with a mentor over weeks or months', link: 'Explore mentorship', href: '/services/mentorship' },
+    { icon: BookOpen, text: 'Strengthen your applications with our resources', link: 'Browse eBooks', href: '/services/ebooks' },
   ]
 
   if (compact) {

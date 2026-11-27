@@ -626,6 +626,28 @@ New API endpoint: `POST /admin/consultation-sessions/:id/generate-slots` accepts
 
 ---
 
+## Client Fixes (2026-11-27)
+
+### Compliance category automated message
+
+The automated first message sent after payment confirmation now branches based on the opportunity's `complianceCategory`:
+- **Category A**: "we handle the full submission on your behalf"
+- **Category B**: "we'll prepare all your documents and guide you through the final submission steps"
+
+Previously, all applications received the Category A message regardless of compliance category.
+
+### TikTok social platform
+
+Added TikTok as a social media option in admin settings and footer rendering:
+- Admin settings: custom TikTok SVG icon (lucide-react does not include one), added to `SOCIAL_PLATFORMS` array
+- Footer: `tiktok` added to `SLUG_MAP` in `footer-socials.js`, renders via SimpleIcons CDN
+
+### Team member name display fix
+
+The mentor assignment modal now handles null names gracefully. Staff members who have not set a display name show their email address instead, with initials derived from the email prefix.
+
+---
+
 ## Getting Started
 
 ### Prerequisites

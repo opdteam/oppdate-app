@@ -142,12 +142,15 @@ const scheduledWorker = new Worker<ScheduledJobData>(
       case 'deadline_reminder': {
         const now = new Date()
         const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+        const todayStart = new Date(now)
+        todayStart.setUTCHours(0, 0, 0, 0)
 
         // Find applications with upcoming opportunity deadlines (within 3 days)
         const upcoming = await db
           .select({
             applicationId: schema.applications.id,
             userId: schema.applications.userId,
+            opportunityId: schema.applications.opportunityId,
             referenceId: schema.applications.referenceId,
             oppTitle: schema.opportunities.title,
             deadline: schema.opportunities.deadline,
@@ -161,9 +164,34 @@ const scheduledWorker = new Worker<ScheduledJobData>(
             )
           )
 
-        for (const app of upcoming) {
+        // Deduplicate: one notification per user per opportunity
+        const seen = new Set<string>()
+        const deduped = upcoming.filter(app => {
+          const key = `${app.userId}:${app.opportunityId}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+
+        for (const app of deduped) {
           if (!app.deadline) continue
           const daysLeft = Math.ceil((app.deadline.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+
+          // Skip if we already sent a deadline reminder for this application today
+          const [alreadySent] = await db
+            .select({ id: schema.notifications.id })
+            .from(schema.notifications)
+            .where(
+              and(
+                eq(schema.notifications.userId, app.userId),
+                eq(schema.notifications.type, 'deadline_reminder' as any),
+                eq(schema.notifications.referenceId, app.applicationId),
+                gte(schema.notifications.createdAt, todayStart)
+              )
+            )
+            .limit(1)
+
+          if (alreadySent) continue
 
           const [user] = await db
             .select({ name: schema.users.name, email: schema.users.email, preferences: schema.users.preferences })

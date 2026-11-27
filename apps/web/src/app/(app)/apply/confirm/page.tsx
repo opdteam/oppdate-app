@@ -446,9 +446,9 @@ function ConfirmContent() {
         </div>
         <div style={{ background: 'rgba(250,247,244,0.7)', border: `1px solid ${AP.hairline}`, borderRadius: 16, padding: '6px 24px', boxSizing: 'border-box' }}>
           {[
-            { Icon: CalendarDays, text: 'Get expert guidance on your next application', link: 'Book a consultation', href: '/consultations' },
-            { Icon: Users,        text: 'Work with a mentor over weeks or months',      link: 'Explore mentorship',  href: '/mentorship' },
-            { Icon: BookOpen,     text: 'Strengthen your applications with our resources', link: 'Browse eBooks',   href: '/ebooks' },
+            { Icon: CalendarDays, text: 'Get expert guidance on your next application', link: 'Book a consultation', href: '/services/consultations' },
+            { Icon: Users,        text: 'Work with a mentor over weeks or months',      link: 'Explore mentorship',  href: '/services/mentorship' },
+            { Icon: BookOpen,     text: 'Strengthen your applications with our resources', link: 'Browse eBooks',   href: '/services/ebooks' },
           ].map((r, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '0 -24px', padding: '13px 24px', borderTop: i === 0 ? 'none' : '1px solid rgba(216,204,196,0.5)', transition: 'background 130ms' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(122,45,5,0.03)')}

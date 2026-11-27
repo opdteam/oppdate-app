@@ -62,16 +62,16 @@ function resolveHref(type: string, referenceType: string | null | undefined, ref
       return '/messages'
     case 'payment_confirmed':
       if (referenceType === 'application') return referenceId ? `/apply/confirm?applicationId=${referenceId}` : '/applications'
-      if (referenceType === 'consultation') return '/consultations'
-      if (referenceType === 'mentorship') return '/mentorships'
+      if (referenceType === 'consultation') return '/dashboard'
+      if (referenceType === 'mentorship') return '/dashboard'
       if (referenceType === 'premium') return '/profile'
       return '/dashboard'
     case 'deadline_reminder':
       return '/opportunities'
     case 'consultation_confirmed':
-      return '/consultations'
+      return '/dashboard'
     case 'mentorship_update':
-      return '/mentorships'
+      return '/dashboard'
     case 'saved_search_alert':
       return '/opportunities'
     default:

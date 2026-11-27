@@ -2485,6 +2485,12 @@ button.adm-fab:active { transform: scale(0.94); }
 .adm-chip:hover { border-color: var(--adm-primary); color: var(--adm-t-hi); }
 .adm-chip.on { background: var(--adm-primary); border-color: var(--adm-primary); color: #fff; font-weight: 600; }
 
+.adm-tags-input-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--adm-card-border); border-radius: 10px; background: var(--adm-card-bg); min-height: 44px; cursor: text; }
+.adm-tags-input-wrap:focus-within { border-color: var(--adm-primary); box-shadow: 0 0 0 2px rgba(181,83,10,0.1); }
+.adm-tag-chip { display: inline-flex; align-items: center; gap: 2px; padding-right: 8px !important; }
+.adm-tags-text-input { border: none; outline: none; background: transparent; font-size: 13px; color: var(--adm-t-hi); flex: 1; min-width: 120px; padding: 4px 0; font-family: inherit; }
+.adm-tags-text-input::placeholder { color: var(--adm-t-low); }
+
 /* fees total display */
 .adm-total-due { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: rgba(181,83,10,.1); border: 1px solid var(--adm-card-border-strong); border-radius: 10px; }
 .adm-total-due .adm-tl { font-size: 13px; font-weight: 600; color: var(--adm-t-hi); }

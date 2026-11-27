@@ -154,6 +154,7 @@ interface ApiDetailRow {
   institutionFeeUsd: number
   tags: string[]
   institutionLogoUrl: string | null
+  sourceUrl: string | null
   eligibilityCriteria: { question: string; options: (string | { text: string; score: number })[] }[]
 }
 
@@ -196,7 +197,7 @@ function detailRowToOpportunity(row: ApiDetailRow): Opportunity {
     awardBig:         awardLabel,
     applyForMe:       row.oppDateApply,
     applyDisabledNote: row.applyDisabledNote ?? null,
-    sourceUrl:        null,
+    sourceUrl:        row.sourceUrl ?? null,
     compliance:       row.complianceCategory ?? null,
     description:      row.description,
     forWho:           row.whoItsFor ?? '',

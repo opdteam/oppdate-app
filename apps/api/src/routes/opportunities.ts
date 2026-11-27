@@ -194,6 +194,7 @@ export async function opportunityRoutes(server: FastifyInstance) {
           pinned: schema.opportunities.pinned,
           oppDateApply: schema.opportunities.oppDateApply,
           applyDisabledNote: schema.opportunities.applyDisabledNote,
+          sourceUrl: schema.opportunities.sourceUrl,
         })
         .from(schema.opportunities)
         .where(and(...conditions))

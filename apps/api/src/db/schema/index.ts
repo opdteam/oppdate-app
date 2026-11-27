@@ -259,6 +259,7 @@ export const opportunities = pgTable(
     featured: boolean('featured').notNull().default(false),
     pinned: boolean('pinned').notNull().default(false),
     institutionLogoUrl: text('institution_logo_url'),
+    sourceUrl: text('source_url'),
     tags: jsonb('tags').notNull().default([]),
     viewCount: integer('view_count').notNull().default(0),
     applyCount: integer('apply_count').notNull().default(0),

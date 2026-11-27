@@ -330,6 +330,8 @@ export async function adminRoutes(server: FastifyInstance) {
           eligibilityCriteria: schema.opportunities.eligibilityCriteria,
           requiredDocuments: schema.opportunities.requiredDocuments,
           tags: schema.opportunities.tags,
+          institutionLogoUrl: schema.opportunities.institutionLogoUrl,
+          sourceUrl: schema.opportunities.sourceUrl,
           createdAt: schema.opportunities.createdAt,
           updatedAt: schema.opportunities.updatedAt,
           viewCount: schema.opportunities.viewCount,

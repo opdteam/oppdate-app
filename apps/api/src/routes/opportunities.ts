@@ -53,6 +53,7 @@ const createOpportunitySchema = z.object({
   featured: z.boolean().default(false),
   pinned: z.boolean().default(false),
   institutionLogoUrl: z.string().url().optional().nullable(),
+  sourceUrl: z.string().url().optional().nullable(),
   tags: z.array(z.string()).default([]),
   oppDateApply: z.boolean().optional(),
   applyDisabledNote: z.string().nullable().optional(),
@@ -305,6 +306,9 @@ export async function opportunityRoutes(server: FastifyInstance) {
         oppDateApply: schema.opportunities.oppDateApply,
         whoItsFor: schema.opportunities.whoItsFor,
         whatIsOffered: schema.opportunities.whatIsOffered,
+        description: schema.opportunities.description,
+        tags: schema.opportunities.tags,
+        sourceUrl: schema.opportunities.sourceUrl,
       })
       .from(schema.opportunities)
       .where(

@@ -21,6 +21,9 @@ interface OppPreview {
   oppDateApply: boolean
   whoItsFor: string
   whatIsOffered: string
+  description: string
+  tags: string[]
+  sourceUrl: string | null
 }
 
 async function fetchPreview(slug: string): Promise<OppPreview | null> {

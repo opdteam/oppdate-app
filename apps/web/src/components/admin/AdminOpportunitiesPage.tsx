@@ -86,6 +86,7 @@ interface FormData {
   aiQuestions: { q: string; required: boolean }[]
   internalNote: string
   institutionLogoUrl: string
+  sourceUrl: string
 }
 
 const TYPES = ['Scholarship', 'Internship', 'Job', 'Fellowship', 'Training', 'Research Grant']
@@ -125,6 +126,7 @@ interface ApiOpportunity {
   requiredDocuments: unknown[]
   tags: string[]
   institutionLogoUrl: string | null
+  sourceUrl: string | null
   createdAt: string
   updatedAt: string
   viewCount: number
@@ -251,6 +253,7 @@ function apiToFormData(o: ApiOpportunity): FormData {
     aiQuestions: [],
     internalNote: '',
     institutionLogoUrl: o.institutionLogoUrl || '',
+    sourceUrl: o.sourceUrl || '',
   }
 }
 
@@ -1745,7 +1748,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
     editing: false, title: '', inst: '', country: '', type: '', summary: '', about: '', whoItIsFor: '', benefit: '',
     cat: '', code: '', oppFee: '', instFee: '0.00', vip: false, applyDisabledNote: '', status: 'draft', featured: false,
     criteria: [{ question: '', options: [{ text: 'Yes', score: 0 }, { text: 'No', score: -100 }] }], docs: [{ type: '', required: true, formats: ['PDF'], creatable: false as const }],
-    dates: [], customTags: [], aiQuestions: [], internalNote: '', institutionLogoUrl: '',
+    dates: [], customTags: [], aiQuestions: [], internalNote: '', institutionLogoUrl: '', sourceUrl: '',
   }
 
   const [form, setForm] = useState<FormData>(initial)
@@ -2362,7 +2365,7 @@ function FormView({ editId, listings, apiListings, role, onBack, onSaved, saving
             sectionRef={el => { sectionRefs.current[7] = el }}>
             <div className="adm-field">
               <label className="adm-field-label">Source URL</label>
-              <input className="adm-inp" placeholder="https://..." defaultValue={''} />
+              <input className="adm-inp" placeholder="https://..." value={form.sourceUrl} onChange={e => update('sourceUrl', e.target.value)} />
             </div>
             <div className="adm-setrow">
               <div>
@@ -2928,6 +2931,7 @@ export function AdminOpportunitiesPage() {
       status: kind,
       tags: [...formData.customTags],
       ...(formData.institutionLogoUrl.trim() && { institutionLogoUrl: formData.institutionLogoUrl.trim() }),
+      sourceUrl: formData.sourceUrl.trim() || null,
     }
     saveMutation.mutate(
       { id: editId, payload },

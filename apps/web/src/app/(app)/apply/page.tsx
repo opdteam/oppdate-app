@@ -1469,14 +1469,14 @@ function PaymentStepView({
               <ShieldCheck size={16} style={{ color: AP.ginger, flexShrink: 0 }} />
               <span style={{ fontFamily: AP.sans, fontSize: 13, fontWeight: 600, color: AP.ink }}>Representation Authorization</span>
             </div>
-            {catA ? (
+            {catB ? (
               <span style={{ fontFamily: AP.sans, fontSize: 11, fontWeight: 600, color: AP.amber, background: 'rgba(212,132,58,0.10)', border: '1px solid rgba(212,132,58,0.22)', borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>You submit</span>
             ) : (
               <span style={{ fontFamily: AP.sans, fontSize: 11, fontWeight: 600, color: '#059669', background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.22)', borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>OppDate submits</span>
             )}
           </div>
           <p style={{ fontFamily: AP.sans, fontSize: 13, color: AP.sec, lineHeight: 1.6, margin: '0 0 10px' }}>
-            {catA ? (
+            {catB ? (
               <>
                 By proceeding, you authorize OppDate to prepare your complete application package under our{' '}
                 <a href="/legal/terms" target="_blank" rel="noopener noreferrer" style={{ color: AP.ginger, textDecoration: 'underline', textUnderlineOffset: 2 }}>Terms of Service</a>.
@@ -1514,7 +1514,7 @@ function PaymentStepView({
               {authChecked && <Check size={10} style={{ color: '#fff', strokeWidth: 3 }} />}
             </div>
             <span style={{ fontFamily: AP.sans, fontSize: 13, color: AP.ink, lineHeight: 1.5 }} onClick={e => e.stopPropagation()}>
-              {catA ? (
+              {catB ? (
                 <>
                   I authorize OppDate to prepare my application package. I understand I will complete the final submission step myself and that this is governed by OppDate&apos;s{' '}
                   <a href="/legal/terms" target="_blank" rel="noopener noreferrer" style={{ color: AP.ginger, textDecoration: 'underline', textUnderlineOffset: 2 }}>Terms of Service</a>.

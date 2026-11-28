@@ -461,17 +461,19 @@ function BlogSkeleton() {
         <div className="adm-skel" style={{ width: 120, height: 28 }} />
         <div className="adm-skel" style={{ width: 100, height: 36, borderRadius: 8 }} />
       </div>
-      <div className="adm-blog-grid">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="adm-blog-card">
-            <div className="adm-skel" style={{ height: 140, borderRadius: '8px 8px 0 0' }} />
-            <div style={{ padding: 16 }}>
-              <div className="adm-skel" style={{ width: '70%', height: 16, marginBottom: 8 }} />
-              <div className="adm-skel" style={{ width: '90%', height: 12, marginBottom: 4 }} />
-              <div className="adm-skel" style={{ width: '50%', height: 12 }} />
+      <div className="adm-blog-body">
+        <div className="adm-blog-grid">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="adm-blog-card">
+              <div className="adm-skel" style={{ height: 140, borderRadius: '8px 8px 0 0' }} />
+              <div style={{ padding: 16 }}>
+                <div className="adm-skel" style={{ width: '70%', height: 16, marginBottom: 8 }} />
+                <div className="adm-skel" style={{ width: '90%', height: 12, marginBottom: 4 }} />
+                <div className="adm-skel" style={{ width: '50%', height: 12 }} />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -540,65 +542,67 @@ export function AdminBlogPage() {
         </button>
       </div>
 
-      <div className="adm-blog-controls">
-        <div className="adm-blog-tabs">
-          {(['all', 'published', 'draft', 'archived'] as StatusFilter[]).map(f => (
-            <button
-              key={f}
-              className={`adm-blog-tab${filter === f ? ' active' : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-              <span className="adm-blog-tab-count">{counts[f]}</span>
-            </button>
-          ))}
+      <div className="adm-blog-body">
+        <div className="adm-blog-controls">
+          <div className="adm-blog-tabs">
+            {(['all', 'published', 'draft', 'archived'] as StatusFilter[]).map(f => (
+              <button
+                key={f}
+                className={`adm-blog-tab${filter === f ? ' active' : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+                <span className="adm-blog-tab-count">{counts[f]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="adm-blog-search">
+            <Search size={15} />
+            <input
+              placeholder="Search posts..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="adm-blog-search">
-          <Search size={15} />
-          <input
-            placeholder="Search posts..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
 
-      {posts.length === 0 ? (
-        <div className="adm-blog-empty">
-          <FileText size={40} style={{ opacity: 0.3 }} />
-          <p>{filter === 'all' ? 'No posts yet. Create your first blog post.' : `No ${filter} posts.`}</p>
-        </div>
-      ) : (
-        <div className="adm-blog-grid">
-          {posts.map(post => (
-            <div key={post.id} className="adm-blog-card" onClick={() => { setEditId(post.id); setView('editor') }}>
-              {post.coverImageUrl ? (
-                <img className="adm-blog-card-img" src={post.coverImageUrl} alt="" />
-              ) : (
-                <div className="adm-blog-card-noimg">
-                  <FileText size={24} style={{ opacity: 0.3 }} />
+        {posts.length === 0 ? (
+          <div className="adm-blog-empty">
+            <FileText size={40} style={{ opacity: 0.3 }} />
+            <p>{filter === 'all' ? 'No posts yet. Create your first blog post.' : `No ${filter} posts.`}</p>
+          </div>
+        ) : (
+          <div className="adm-blog-grid">
+            {posts.map(post => (
+              <div key={post.id} className="adm-blog-card" onClick={() => { setEditId(post.id); setView('editor') }}>
+                {post.coverImageUrl ? (
+                  <img className="adm-blog-card-img" src={post.coverImageUrl} alt="" />
+                ) : (
+                  <div className="adm-blog-card-noimg">
+                    <FileText size={24} style={{ opacity: 0.3 }} />
+                  </div>
+                )}
+                <div className="adm-blog-card-body">
+                  <div className="adm-blog-card-top">
+                    <StatusBadge status={post.status} />
+                    {post.categoryName && <span className="adm-blog-card-cat">{post.categoryName}</span>}
+                  </div>
+                  <h3 className="adm-blog-card-title">{post.title}</h3>
+                  {post.excerpt && <p className="adm-blog-card-excerpt">{post.excerpt}</p>}
+                  <div className="adm-blog-card-meta">
+                    <span><Eye size={12} /> {post.viewCount}</span>
+                    <span><Calendar size={12} /> {formatDate(post.publishedAt || post.createdAt)}</span>
+                  </div>
                 </div>
-              )}
-              <div className="adm-blog-card-body">
-                <div className="adm-blog-card-top">
-                  <StatusBadge status={post.status} />
-                  {post.categoryName && <span className="adm-blog-card-cat">{post.categoryName}</span>}
-                </div>
-                <h3 className="adm-blog-card-title">{post.title}</h3>
-                {post.excerpt && <p className="adm-blog-card-excerpt">{post.excerpt}</p>}
-                <div className="adm-blog-card-meta">
-                  <span><Eye size={12} /> {post.viewCount}</span>
-                  <span><Calendar size={12} /> {formatDate(post.publishedAt || post.createdAt)}</span>
+                <div className="adm-blog-card-actions" onClick={e => e.stopPropagation()}>
+                  <button title="Edit" onClick={() => { setEditId(post.id); setView('editor') }}><Edit3 size={14} /></button>
+                  <button title="Delete" className="danger" onClick={() => setDeleteId(post.id)}><Trash2 size={14} /></button>
                 </div>
               </div>
-              <div className="adm-blog-card-actions" onClick={e => e.stopPropagation()}>
-                <button title="Edit" onClick={() => { setEditId(post.id); setView('editor') }}><Edit3 size={14} /></button>
-                <button title="Delete" className="danger" onClick={() => setDeleteId(post.id)}><Trash2 size={14} /></button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
       <DeleteModal
         post={deleteId ? posts.find(p => p.id === deleteId) || null : null}

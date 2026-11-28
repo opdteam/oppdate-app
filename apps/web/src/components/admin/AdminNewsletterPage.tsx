@@ -652,16 +652,18 @@ function NewsletterSkeleton() {
       <div className="adm-news-head">
         <div className="adm-skel" style={{ width: 140, height: 28 }} />
       </div>
-      <div className="adm-news-stats-row">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="adm-news-stat">
-            <div className="adm-skel" style={{ width: 40, height: 40, borderRadius: 10 }} />
-            <div>
-              <div className="adm-skel" style={{ width: 60, height: 20, marginBottom: 4 }} />
-              <div className="adm-skel" style={{ width: 80, height: 12 }} />
+      <div className="adm-news-body">
+        <div className="adm-news-stats-row">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="adm-news-stat">
+              <div className="adm-skel" style={{ width: 40, height: 40, borderRadius: 10 }} />
+              <div>
+                <div className="adm-skel" style={{ width: 60, height: 20, marginBottom: 4 }} />
+                <div className="adm-skel" style={{ width: 80, height: 12 }} />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -690,11 +692,13 @@ export function AdminNewsletterPage() {
   if (tab === 'compose') {
     return (
       <div className="adm-news-wrap">
-        <ComposeView
-          editionId={composeEditionId}
-          onBack={() => { setTab('dashboard'); setComposeEditionId(null) }}
-          onSent={() => { setTab('dashboard'); setComposeEditionId(null) }}
-        />
+        <div className="adm-news-body">
+          <ComposeView
+            editionId={composeEditionId}
+            onBack={() => { setTab('dashboard'); setComposeEditionId(null) }}
+            onSent={() => { setTab('dashboard'); setComposeEditionId(null) }}
+          />
+        </div>
       </div>
     )
   }
@@ -702,10 +706,12 @@ export function AdminNewsletterPage() {
   if (tab === 'detail' && detailEditionId) {
     return (
       <div className="adm-news-wrap">
-        <EditionDetail
-          editionId={detailEditionId}
-          onBack={() => { setTab('dashboard'); setDetailEditionId(null) }}
-        />
+        <div className="adm-news-body">
+          <EditionDetail
+            editionId={detailEditionId}
+            onBack={() => { setTab('dashboard'); setDetailEditionId(null) }}
+          />
+        </div>
       </div>
     )
   }
@@ -716,27 +722,29 @@ export function AdminNewsletterPage() {
         <h1>Newsletter</h1>
       </div>
 
-      <div className="adm-news-tabs">
-        <button className={`adm-news-tab${tab === 'dashboard' ? ' active' : ''}`} onClick={() => setTab('dashboard')}>
-          <BarChart3 size={15} /> Dashboard
-        </button>
-        <button className={`adm-news-tab${tab === 'subscribers' ? ' active' : ''}`} onClick={() => setTab('subscribers')}>
-          <Users size={15} /> Subscribers
-        </button>
+      <div className="adm-news-body">
+        <div className="adm-news-tabs">
+          <button className={`adm-news-tab${tab === 'dashboard' ? ' active' : ''}`} onClick={() => setTab('dashboard')}>
+            <BarChart3 size={15} /> Dashboard
+          </button>
+          <button className={`adm-news-tab${tab === 'subscribers' ? ' active' : ''}`} onClick={() => setTab('subscribers')}>
+            <Users size={15} /> Subscribers
+          </button>
+        </div>
+
+        {tab === 'dashboard' && (
+          <DashboardView
+            stats={stats}
+            editions={editions}
+            onComposeNew={() => { setComposeEditionId(null); setTab('compose') }}
+            onViewEdition={(id) => { setDetailEditionId(id); setTab('detail') }}
+          />
+        )}
+
+        {tab === 'subscribers' && (
+          <SubscribersView onImport={() => {}} />
+        )}
       </div>
-
-      {tab === 'dashboard' && (
-        <DashboardView
-          stats={stats}
-          editions={editions}
-          onComposeNew={() => { setComposeEditionId(null); setTab('compose') }}
-          onViewEdition={(id) => { setDetailEditionId(id); setTab('detail') }}
-        />
-      )}
-
-      {tab === 'subscribers' && (
-        <SubscribersView onImport={() => {}} />
-      )}
     </div>
   )
 }

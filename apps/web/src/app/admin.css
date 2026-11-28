@@ -7402,7 +7402,7 @@ button.adm-usr-btn-dangersolid:disabled { opacity: .4; cursor: not-allowed; poin
 
 /* --- ADMIN BLOG --- */
 
-.adm-blog-wrap { padding: 0; min-height: 100%; background: var(--adm-content-bg); }
+.adm-blog-wrap { padding: 0; min-height: 100%; }
 .adm-blog-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 26px 32px 18px;
@@ -7503,7 +7503,7 @@ button.adm-usr-btn-dangersolid:disabled { opacity: .4; cursor: not-allowed; poin
 }
 .adm-blog-empty p { margin: 0; font-size: 14px; }
 
-.adm-blog-editor { padding: 0; background: var(--adm-content-bg); min-height: 100%; }
+.adm-blog-editor { padding: 0; min-height: 100%; }
 .adm-blog-editor-top {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 28px; border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -7662,7 +7662,7 @@ button.adm-usr-btn-dangersolid:disabled { opacity: .4; cursor: not-allowed; poin
 
 /* --- ADMIN NEWSLETTER --- */
 
-.adm-news-wrap { padding: 0; min-height: 100%; background: var(--adm-content-bg); }
+.adm-news-wrap { padding: 0; min-height: 100%; }
 .adm-news-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 26px 32px 18px;

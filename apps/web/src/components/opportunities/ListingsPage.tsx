@@ -393,16 +393,16 @@ function OpportunityCard({
               {data.closeDate}
             </span>
           )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           {data.applyForMe && (
             <span style={{
               display: 'inline-flex', alignItems: 'center',
               fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, lineHeight: 1,
               padding: '3px 10px', borderRadius: 999,
-              background: 'rgba(14,116,144,0.08)', border: '1px solid rgba(14,116,144,0.2)', color: '#0E7490',
+              background: 'rgba(122,45,5,0.08)', border: '1px solid rgba(122,45,5,0.2)', color: GINGER,
             }}>+ OppDate Apply</span>
           )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           {fundingTag && (
             <span style={{
               display: 'inline-flex', alignItems: 'center',

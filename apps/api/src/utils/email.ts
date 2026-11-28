@@ -872,3 +872,182 @@ export function assignmentNotificationEmail(
     html: layout(`You have been assigned a ${type}`, body),
   };
 }
+
+// ─── NEWSLETTER EDITION TEMPLATE ─────────────────────────────────────────────
+// Separate editorial layout, distinct from transactional email wrapper
+
+interface NewsletterBlogPost {
+  title: string;
+  excerpt: string;
+  coverImageUrl: string;
+  slug: string;
+  webUrl: string;
+}
+
+interface NewsletterEditionParams {
+  subject: string;
+  bodyHtml: string;
+  preheaderText: string;
+  unsubscribeUrl: string;
+  trackingPixelUrl: string;
+  blogPost?: NewsletterBlogPost;
+}
+
+export function newsletterEditionEmail(params: NewsletterEditionParams): { subject: string; html: string } {
+  const { subject, bodyHtml, preheaderText, unsubscribeUrl, trackingPixelUrl, blogPost } = params;
+  const webUrl = blogPost?.webUrl || WEB_URL;
+
+  const now = new Date();
+  const editionDate = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const blogPostSection = blogPost ? `
+    <!-- Featured article card -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;">
+      <tr>
+        <td style="padding:0;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fdf7f2;border-radius:12px;overflow:hidden;border:1px solid #f0e6d9;">
+            ${blogPost.coverImageUrl ? `<tr>
+              <td style="padding:0;">
+                <a href="${webUrl}/blog/${blogPost.slug}" style="text-decoration:none;">
+                  <img src="${blogPost.coverImageUrl}" alt="${blogPost.title}" width="520" style="display:block;width:100%;max-width:520px;height:auto;border:0;" />
+                </a>
+              </td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding:24px 28px;">
+                <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#c4881c;font-weight:700;">Featured article</p>
+                <a href="${webUrl}/blog/${blogPost.slug}" style="text-decoration:none;">
+                  <h3 style="margin:0 0 10px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.3;color:#1a0a00;">${blogPost.title}</h3>
+                </a>
+                <p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#5a4a3a;">${blogPost.excerpt}</p>
+                <a href="${webUrl}/blog/${blogPost.slug}" style="display:inline-block;padding:10px 24px;background:#c4881c;color:#ffffff;border-radius:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;text-decoration:none;">Read on the blog</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  ` : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>${subject}</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#1a0a00;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+<!-- preheader -->
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheaderText}&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;&nbsp;&#847;</div>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a0a00;">
+  <tr>
+    <td align="center" style="padding:0;">
+
+      <!-- Dark header band -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a0a00;">
+        <tr>
+          <td align="center" style="padding:40px 16px 32px;">
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+              <tr>
+                <td align="center" style="padding:0 0 20px;">
+                  <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="vertical-align:middle;padding-right:14px;">
+                        <img src="${LOGO_URL}" alt="OppDate" width="40" height="40" style="display:block;border:0;" />
+                      </td>
+                      <td style="vertical-align:middle;border-left:2px solid rgba(196,136,28,0.4);padding-left:14px;">
+                        <img src="${WORDMARK_URL}" alt="OppDate" height="24" style="display:block;border:0;height:24px;width:auto;" />
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding:0;">
+                  <h1 style="margin:0 0 6px;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.2;color:#ffffff;font-weight:700;">${subject}</h1>
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:rgba(255,255,255,0.5);letter-spacing:0.5px;">${editionDate}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Ginger accent bar -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="height:3px;background:linear-gradient(90deg,#7a2d05,#c4881c,#e4b86a,#c4881c,#7a2d05);font-size:0;line-height:0;">&nbsp;</td>
+        </tr>
+      </table>
+
+      <!-- White content card -->
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;">
+        <tr>
+          <td style="padding:40px 40px 20px;">
+            <!-- Editorial body content -->
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.7;color:#2a1a0a;">
+              ${bodyHtml}
+            </div>
+
+            ${blogPostSection}
+          </td>
+        </tr>
+
+        <!-- Divider -->
+        <tr>
+          <td style="padding:0 40px;">
+            <div style="height:1px;background:linear-gradient(90deg,transparent,#e8d5c0,transparent);"></div>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:28px 40px 36px;">
+            <!-- Social links -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="padding:0 0 20px;">
+                  <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#c4881c;font-style:italic;font-weight:700;">Stay OppDated.</p>
+                </td>
+              </tr>
+            </table>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="padding:0 0 16px;">
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#9a8a7a;">
+                    You are receiving this because you subscribed to the OppDate newsletter.<br />
+                    <a href="${unsubscribeUrl}" style="color:#c4881c;text-decoration:underline;">Unsubscribe</a>
+                    &nbsp;&middot;&nbsp;
+                    <a href="${webUrl}" style="color:#c4881c;text-decoration:underline;">Visit OppDate</a>
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td align="center">
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#b8a898;">
+                    &copy; ${now.getFullYear()} OppDate. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+${trackingPixelUrl ? `<img src="${trackingPixelUrl}" alt="" width="1" height="1" style="display:none;border:0;" />` : ''}
+</body>
+</html>`;
+
+  return { subject, html };
+}

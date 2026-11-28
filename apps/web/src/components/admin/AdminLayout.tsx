@@ -39,6 +39,8 @@ import {
   BellRing,
   Shield,
   Smile,
+  FileText,
+  Newspaper,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -80,6 +82,8 @@ const NAV_ITEMS = [
   { id: 'guide-sessions', icon: Bot, href: '/admin/guide-sessions' },
   { id: 'saved-searches', icon: BellRing, href: '/admin/saved-searches' },
   { id: 'avatars', icon: Smile, href: '/admin/avatars' },
+  { id: 'blog', icon: FileText, href: '/admin/blog' },
+  { id: 'newsletter', icon: Newspaper, href: '/admin/newsletter' },
 ]
 
 type PanelConfig = {

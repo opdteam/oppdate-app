@@ -64,6 +64,8 @@
 
   const BaseNewsletter = NS.NewsletterForm;
 
+  const API_BASE = window.__API_URL || (window.location.hostname === "localhost" ? "http://localhost:4000" : "");
+
   function NewsletterFormBadged({
     placeholder = "Your email address",
     ctaLabel = "Stay OppDated",
@@ -73,13 +75,66 @@
     ...rest
   }) {
     const [focus, setFocus] = React.useState(false);
+    const [email, setEmail] = React.useState("");
+    const [state, setState] = React.useState("idle"); // idle | loading | success | error
+    const [msg, setMsg] = React.useState("");
+    const inputRef = React.useRef(null);
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      if (onSubmit) onSubmit(e);
+      if (!email.trim()) return;
+      setState("loading");
+      try {
+        const res = await fetch(API_BASE + "/api/v1/newsletter/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setState("success");
+          setMsg(data.message || "You are subscribed!");
+        } else {
+          setState("error");
+          setMsg(data.error || "Something went wrong.");
+        }
+      } catch {
+        setState("error");
+        setMsg("Network error. Please try again.");
+      }
+    }
+
+    if (state === "success") {
+      return (
+        <div
+          className={"om-newsletter" + (className ? " " + className : "")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 380,
+            maxWidth: "100%",
+            borderRadius: "var(--radius-pill)",
+            padding: "12px 24px",
+            background: "rgba(196,136,28,0.12)",
+            border: "1px solid rgba(196,136,28,0.3)",
+            animation: "om-fade-in 400ms var(--ease-out-soft)",
+            ...style,
+          }}
+        >
+          <Icon name="check-circle" size={18} style={{ color: "#c4881c", marginRight: 10, flexShrink: 0 }} />
+          <span style={{ color: "var(--text-on-dark)", fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 500 }}>
+            {msg}
+          </span>
+        </div>
+      );
+    }
+
     return (
       <form
         className={"om-newsletter" + (className ? " " + className : "")}
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (onSubmit) onSubmit(e);
-        }}
+        onSubmit={handleSubmit}
         style={{
           display: "flex",
           alignItems: "stretch",
@@ -90,18 +145,25 @@
           background: "rgba(255,249,244,0.08)",
           border:
             "1px solid " +
-            (focus ? "rgba(232,168,77,0.60)" : "rgba(255,249,244,0.20)"),
+            (state === "error"
+              ? "rgba(220,80,60,0.6)"
+              : focus ? "rgba(232,168,77,0.60)" : "rgba(255,249,244,0.20)"),
           transition: "border-color var(--duration-fast) var(--ease-out-soft)",
           ...style,
         }}
         {...rest}
       >
         <input
+          ref={inputRef}
           type="email"
+          required
           aria-label="Email"
           placeholder={placeholder}
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); if (state === "error") setState("idle"); }}
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
+          disabled={state === "loading"}
           style={{
             flex: 1,
             minWidth: 0,
@@ -111,10 +173,11 @@
             color: "var(--text-on-dark)",
             fontFamily: "var(--font-sans)",
             fontSize: 14,
+            opacity: state === "loading" ? 0.6 : 1,
           }}
         />
-        <ButtonWithBadge type="submit" size="sm">
-          {ctaLabel}
+        <ButtonWithBadge type="submit" size="sm" disabled={state === "loading"} style={state === "loading" ? { opacity: 0.7, pointerEvents: "none" } : undefined}>
+          {state === "loading" ? "..." : ctaLabel}
         </ButtonWithBadge>
       </form>
     );

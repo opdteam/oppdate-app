@@ -18,6 +18,8 @@ import { supportRoutes } from './support'
 import { guideSessionRoutes } from './guideSessions'
 import { eligibilityRoutes } from './eligibility'
 import { inquiryRoutes } from './inquiries'
+import { blogRoutes } from './blog'
+import { newsletterRoutes } from './newsletter'
 
 export async function registerRoutes(server: FastifyInstance) {
   const API_PREFIX = '/api/v1'
@@ -40,6 +42,8 @@ export async function registerRoutes(server: FastifyInstance) {
   await server.register(guideSessionRoutes,       { prefix: `${API_PREFIX}/guide-sessions` })
   await server.register(eligibilityRoutes,        { prefix: `${API_PREFIX}/opportunities` })
   await server.register(inquiryRoutes,            { prefix: `${API_PREFIX}/inquiries` })
+  await server.register(blogRoutes,              { prefix: `${API_PREFIX}/blog` })
+  await server.register(newsletterRoutes,        { prefix: `${API_PREFIX}/newsletter` })
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {

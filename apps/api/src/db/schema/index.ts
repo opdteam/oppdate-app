@@ -924,3 +924,152 @@ export const eligibilityChecksRelations = relations(eligibilityChecks, ({ one })
   user:    one(users, { fields: [eligibilityChecks.userId], references: [users.id] }),
   listing: one(opportunities, { fields: [eligibilityChecks.listingId], references: [opportunities.id] }),
 }))
+
+// ─── BLOG ────────────────────────────────────────────────────────────────────
+
+export const blogPostStatusEnum = pgEnum('blog_post_status', [
+  'draft',
+  'published',
+  'archived',
+])
+
+export const blogCategories = pgTable(
+  'blog_categories',
+  {
+    id:          uuid('id').primaryKey().defaultRandom(),
+    name:        varchar('name', { length: 100 }).notNull(),
+    slug:        varchar('slug', { length: 120 }).notNull(),
+    description: text('description'),
+    sortOrder:   integer('sort_order').notNull().default(0),
+    createdAt:   timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex('blog_categories_slug_idx').on(t.slug),
+  })
+)
+
+export const blogPosts = pgTable(
+  'blog_posts',
+  {
+    id:                 uuid('id').primaryKey().defaultRandom(),
+    title:              varchar('title', { length: 300 }).notNull(),
+    slug:               varchar('slug', { length: 350 }).notNull(),
+    status:             blogPostStatusEnum('status').notNull().default('draft'),
+    excerpt:            text('excerpt'),
+    content:            text('content'),
+    coverImageUrl:      text('cover_image_url'),
+    categoryId:         uuid('category_id').references(() => blogCategories.id, { onDelete: 'set null' }),
+    tags:               jsonb('tags').default([]),
+    authorId:           uuid('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    readingTimeMinutes: integer('reading_time_minutes').notNull().default(1),
+    metaTitle:          varchar('meta_title', { length: 200 }),
+    metaDescription:    varchar('meta_description', { length: 500 }),
+    viewCount:          integer('view_count').notNull().default(0),
+    publishedAt:        timestamp('published_at', { withTimezone: true }),
+    createdAt:          timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt:          timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    slugIdx:     uniqueIndex('blog_posts_slug_idx').on(t.slug),
+    statusIdx:   index('blog_posts_status_idx').on(t.status),
+    categoryIdx: index('blog_posts_category_idx').on(t.categoryId),
+    authorIdx:   index('blog_posts_author_idx').on(t.authorId),
+  })
+)
+
+export const blogCategoriesRelations = relations(blogCategories, ({ many }) => ({
+  posts: many(blogPosts),
+}))
+
+export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
+  category: one(blogCategories, { fields: [blogPosts.categoryId], references: [blogCategories.id] }),
+  author:   one(users, { fields: [blogPosts.authorId], references: [users.id] }),
+}))
+
+// ─── NEWSLETTER ──────────────────────────────────────────────────────────────
+
+export const newsletterEditionStatusEnum = pgEnum('newsletter_edition_status', [
+  'draft',
+  'scheduled',
+  'sending',
+  'sent',
+  'failed',
+])
+
+export const subscriberStatusEnum = pgEnum('subscriber_status', [
+  'active',
+  'unsubscribed',
+  'bounced',
+])
+
+export const newsletterSubscribers = pgTable(
+  'newsletter_subscribers',
+  {
+    id:               uuid('id').primaryKey().defaultRandom(),
+    email:            varchar('email', { length: 255 }).notNull(),
+    name:             varchar('name', { length: 255 }),
+    status:           subscriberStatusEnum('status').notNull().default('active'),
+    source:           varchar('source', { length: 50 }).notNull().default('footer_form'),
+    unsubscribeToken: varchar('unsubscribe_token', { length: 64 }).notNull(),
+    unsubscribedAt:   timestamp('unsubscribed_at', { withTimezone: true }),
+    subscribedAt:     timestamp('subscribed_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt:        timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    emailIdx:  uniqueIndex('newsletter_subscribers_email_idx').on(t.email),
+    statusIdx: index('newsletter_subscribers_status_idx').on(t.status),
+    tokenIdx:  uniqueIndex('newsletter_subscribers_token_idx').on(t.unsubscribeToken),
+  })
+)
+
+export const newsletterEditions = pgTable(
+  'newsletter_editions',
+  {
+    id:            uuid('id').primaryKey().defaultRandom(),
+    subject:       varchar('subject', { length: 500 }).notNull(),
+    preheaderText: varchar('preheader_text', { length: 300 }),
+    bodyHtml:      text('body_html'),
+    blogPostId:    uuid('blog_post_id').references(() => blogPosts.id, { onDelete: 'set null' }),
+    status:        newsletterEditionStatusEnum('status').notNull().default('draft'),
+    scheduledAt:   timestamp('scheduled_at', { withTimezone: true }),
+    sentAt:        timestamp('sent_at', { withTimezone: true }),
+    sentCount:     integer('sent_count').notNull().default(0),
+    openCount:     integer('open_count').notNull().default(0),
+    createdBy:     uuid('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt:     timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt:     timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index('newsletter_editions_status_idx').on(t.status),
+  })
+)
+
+export const newsletterSendLog = pgTable(
+  'newsletter_send_log',
+  {
+    id:           uuid('id').primaryKey().defaultRandom(),
+    editionId:    uuid('edition_id').notNull().references(() => newsletterEditions.id, { onDelete: 'cascade' }),
+    subscriberId: uuid('subscriber_id').notNull().references(() => newsletterSubscribers.id, { onDelete: 'cascade' }),
+    sentAt:       timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+    openedAt:     timestamp('opened_at', { withTimezone: true }),
+  },
+  (t) => ({
+    editionSubIdx: uniqueIndex('newsletter_send_log_edition_sub_idx').on(t.editionId, t.subscriberId),
+    editionIdx:    index('newsletter_send_log_edition_idx').on(t.editionId),
+  })
+)
+
+export const newsletterSubscribersRelations = relations(newsletterSubscribers, ({ many }) => ({
+  sendLogs: many(newsletterSendLog),
+}))
+
+export const newsletterEditionsRelations = relations(newsletterEditions, ({ one, many }) => ({
+  blogPost:  one(blogPosts, { fields: [newsletterEditions.blogPostId], references: [blogPosts.id] }),
+  createdByUser: one(users, { fields: [newsletterEditions.createdBy], references: [users.id] }),
+  sendLogs:  many(newsletterSendLog),
+}))
+
+export const newsletterSendLogRelations = relations(newsletterSendLog, ({ one }) => ({
+  edition:    one(newsletterEditions, { fields: [newsletterSendLog.editionId], references: [newsletterEditions.id] }),
+  subscriber: one(newsletterSubscribers, { fields: [newsletterSendLog.subscriberId], references: [newsletterSubscribers.id] }),
+}))
